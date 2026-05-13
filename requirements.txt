@@ -1,0 +1,38 @@
+# GUI
+PyQt6>=6.6.0
+PyQt6-Qt6>=6.6.0
+
+# Database
+SQLAlchemy>=2.0.0
+alembic>=1.13.0
+
+# Documents
+openpyxl>=3.1.0
+python-docx>=1.1.0
+reportlab>=4.0.0
+
+# Utils
+python-dateutil>=2.8.0
+bcrypt>=4.1.0
+
+# Optional
+psycopg2-binary>=2.9.0  # PostgreSQL support
+matplotlib>=3.8.0        # Charts
+python-barcode>=0.15.1   # Code128 для модуля "Производство"
+Pillow>=10.0.0           # для PNG-вывода штрих-кодов
+
+# v10: Web client
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-jose[cryptography]>=3.3.0
+pydantic>=2.0.0
+
+# v10: IoT
+paho-mqtt>=2.1.0
+
+# v10: AI Assistant, CAD
+numpy>=1.26.0
+steputils>=0.1
+
+# v10: Testing
+httpx>=0.27.0

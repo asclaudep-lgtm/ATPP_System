@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATPP Web v10</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#333}
+#app{max-width:1200px;margin:0 auto;padding:16px}
+.header{display:flex;justify-content:space-between;align-items:center;
+  background:#fff;padding:12px 20px;border-radius:8px;margin-bottom:16px;
+  box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.header h1{font-size:20px;color:#1976d2}
+.nav{display:flex;gap:8px;margin-bottom:16px}
+.nav button{padding:8px 20px;border:none;border-radius:6px;cursor:pointer;
+  background:#e3e8ef;font-size:14px}
+.nav button.active{background:#1976d2;color:#fff}
+.card{background:#fff;border-radius:8px;padding:20px;margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px}
+.stat{padding:16px;text-align:center;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.stat .num{font-size:28px;font-weight:bold}
+.stat .lbl{font-size:12px;opacity:.85;margin-top:4px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #eee;
+  font-size:13px}
+th{background:#f8f9fa;font-weight:600;color:#666}
+.status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;
+  font-weight:600}
+.status-draft{background:#fff3cd;color:#856404}
+.status-approved{background:#d4edda;color:#155724}
+.status-in-progress{background:#d1ecf1;color:#0c5460}
+.login-form{max-width:400px;margin:100px auto;padding:32px;background:#fff;
+  border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.login-form input{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;
+  border-radius:4px;font-size:14px}
+.login-form button{width:100%;padding:10px;background:#1976d2;color:#fff;
+  border:none;border-radius:4px;font-size:16px;cursor:pointer;margin-top:12px}
+.error{color:#d32f2f;font-size:12px;margin-top:4px}
+.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;
+  margin-left:4px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- Login -->
+<div v-if="!token">
+  <div class="login-form">
+    <h2 style="margin-bottom:16px;color:#1976d2">ATPP System v10</h2>
+    <input v-model="login.username" placeholder="Логин" @keyup.enter="doLogin">
+    <input v-model="login.password" type="password" placeholder="Пароль" @keyup.enter="doLogin">
+    <div class="error" v-if="loginError">{{ loginError }}</div>
+    <button @click="doLogin">Войти</button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div v-else>
+  <div class="header">
+    <h1>ATPP Web v10</h1>
+    <div>
+      <span style="margin-right:12px">{{ user.full_name || user.username }}</span>
+      <button @click="logout" style="padding:4px 12px;cursor:pointer">Выход</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button :class="{active:page==='dashboard'}" @click="page='dashboard'">📊 Дашборд</button>
+    <button :class="{active:page==='products'}" @click="page='products';loadProducts()">📦 Изделия</button>
+    <button :class="{active:page==='tps'}" @click="page='tps';loadTPs()">📋 Техпроцессы</button>
+    <button :class="{active:page==='orders'}" @click="page='orders';loadOrders()">🏭 Наряды</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div v-if="page==='dashboard'">
+    <div class="stats">
+      <div class="stat"><div class="num">{{ stats.total_products }}</div><div class="lbl">Изделий</div></div>
+      <div class="stat"><div class="num">{{ stats.total_tech_processes }}</div><div class="lbl">Техпроцессов</div></div>
+      <div class="stat"><div class="num">{{ stats.total_work_orders }}</div><div class="lbl">Нарядов</div></div>
+      <div class="stat"><div class="num">{{ stats.active_work_orders }}</div><div class="lbl">В работе</div></div>
+      <div class="stat"><div class="num">{{ stats.total_users }}</div><div class="lbl">Пользователей</div></div>
+    </div>
+  </div>
+
+  <!-- Products list -->
+  <div v-if="page==='products'">
+    <div class="card">
+      <input v-model="search" placeholder="Поиск по обозначению..." @input="loadProducts"
+             style="padding:8px;width:300px;border:1px solid #ddd;border-radius:4px">
+      <table>
+        <thead><tr><th>Обозначение</th><th>Наименование</th><th>Масса</th><th>Габариты</th><th>Класс точн.</th></tr></thead>
+        <tbody>
+          <tr v-for="p in products" :key="p.id" @click="loadBOM(p.id)"
+              style="cursor:pointer" :title="'Нажмите для BOM'">
+            <td><b>{{ p.designation }}</b></td><td>{{ p.name }}</td>
+            <td>{{ p.mass || '—' }}</td><td>{{ p.dimensions || '—' }}</td>
+            <td>{{ p.accuracy_class || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:8px;color:#666;font-size:12px">
+        Всего: {{ productsTotal }} | Страница {{ page_num }} из {{ Math.ceil(productsTotal/50) || 1 }}
+        <button @click="page_num--;loadProducts()" :disabled="page_num<=1">←</button>
+        <button @click="page_num++;loadProducts()" :disabled="page_num*50>=productsTotal">→</button>
+      </div>
+    </div>
+    <!-- BOM display -->
+    <div class="card" v-if="bomTree.length">
+      <h3>Состав изделия (BOM):</h3>
+      <div v-for="node in bomTree" :key="node.id" style="margin-left:0">
+        <bom-node :node="node"></bom-node>
+      </div>
+    </div>
+  </div>
+
+  <!-- TPs list -->
+  <div v-if="page==='tps'">
+    <div class="card">
+      <input v-model="tpSearch" placeholder="Поиск по номеру ТП..." @input="loadTPs"
+             style="padding:8px;width:300px;border:1px solid #ddd;border-radius:4px">
+      <table>
+        <thead><tr><th>Номер ТП</th><th>Изделие</th><th>Статус</th><th>Версия</th><th>Вариант</th></tr></thead>
+        <tbody>
+          <tr v-for="tp in tps" :key="tp.id" @click="loadTPDetail(tp.id)" style="cursor:pointer">
+            <td><b>{{ tp.number }}</b></td>
+            <td>{{ tp.product_designation || '—' }}</td>
+            <td><span :class="'status status-'+tp.status.toLowerCase()">{{ tp.status }}</span></td>
+            <td>{{ tp.version || '—' }}</td>
+            <td>{{ tp.execution_variant || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- TP detail -->
+    <div class="card" v-if="tpDetail">
+      <h3>{{ tpDetail.number }} — {{ tpDetail.product_designation }} {{ tpDetail.product_name }}</h3>
+      <p>Статус: {{ tpDetail.status }} | Технология: {{ tpDetail.technology_type }}</p>
+      <table style="margin-top:8px">
+        <thead><tr><th>№</th><th>Операция</th><th>Оборудование</th><th>Тпз</th><th>Тшт</th><th>Цех</th></tr></thead>
+        <tbody>
+          <tr v-for="op in tpDetail.operations" :key="op.number">
+            <td>{{ op.number }}</td><td>{{ op.name }}</td><td>{{ op.equipment }}</td>
+            <td>{{ op.t_setup }}</td><td>{{ op.t_piece }}</td><td>{{ op.shop }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Work Orders -->
+  <div v-if="page==='orders'">
+    <div class="card">
+      <table>
+        <thead><tr><th>Наряд</th><th>Изделие</th><th>Статус</th><th>Кол-во</th><th>Выполнено</th><th>Срок</th></tr></thead>
+        <tbody>
+          <tr v-for="wo in orders" :key="wo.id">
+            <td><b>{{ wo.number }}</b></td>
+            <td>{{ wo.product_designation || '—' }}</td>
+            <td><span :class="'status status-in-progress'">{{ wo.status }}</span></td>
+            <td>{{ wo.qty_total }}</td><td>{{ wo.qty_done }}</td>
+            <td>{{ wo.due_date || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- end v-else -->
+</div>
+
+<script>
+const { createApp } = Vue
+
+createApp({
+  data() {
+    return {
+      token: localStorage.getItem('atpp_token'),
+      user: JSON.parse(localStorage.getItem('atpp_user') || '{}'),
+      login: { username: 'admin', password: 'admin' },
+      loginError: '',
+      page: 'dashboard',
+      stats: {},
+      search: '', tpSearch: '',
+      products: [], productsTotal: 0, page_num: 1,
+      tps: [], tpDetail: null,
+      orders: [],
+      bomTree: [],
+      Math: Math,
+    }
+  },
+  methods: {
+    async api(path, opts={}) {
+      const h = { 'Content-Type': 'application/json' }
+      if (this.token) h['Authorization'] = 'Bearer ' + this.token
+      const r = await fetch(path, { headers: h, ...opts })
+      return r.status === 204 ? null : r.json()
+    },
+    async doLogin() {
+      this.loginError = ''
+      try {
+        const d = await this.api('/api/auth/login', {
+          method: 'POST', body: JSON.stringify(this.login) })
+        if (!d || !d.access_token) { this.loginError = 'Неверный логин/пароль'; return }
+        this.token = d.access_token
+        this.user = d.user
+        localStorage.setItem('atpp_token', this.token)
+        localStorage.setItem('atpp_user', JSON.stringify(this.user))
+        this.loadStats()
+      } catch(e) { this.loginError = 'Ошибка подключения' }
+    },
+    logout() {
+      localStorage.removeItem('atpp_token')
+      localStorage.removeItem('atpp_user')
+      this.token = ''; this.user = {}
+    },
+    async loadStats() {
+      try { this.stats = await this.api('/api/dashboard/stats') } catch(e) {}
+    },
+    async loadProducts() {
+      const p = this.page_num; const s = this.search
+      try {
+        const d = await this.api(`/api/products?page=${p}&page_size=50&search=${encodeURIComponent(s)}`)
+        this.products = d.items; this.productsTotal = d.total
+      } catch(e) {}
+    },
+    async loadTPs() {
+      try {
+        const d = await this.api(`/api/tech-processes?search=${encodeURIComponent(this.tpSearch)}&page_size=100`)
+        if (d) this.tps = d.items
+      } catch(e) {}
+    },
+    async loadTPDetail(tpId) {
+      try { this.tpDetail = await this.api('/api/tech-processes/' + tpId) } catch(e) {}
+    },
+    async loadOrders() {
+      try { const d = await this.api('/api/work-orders?page_size=100'); if (d) this.orders = d.items } catch(e) {}
+    },
+    async loadBOM(productId) {
+      try { const d = await this.api('/api/bom/' + productId); this.bomTree = d?.tree || [] } catch(e) {}
+    },
+  },
+  mounted() {
+    if (this.token) this.loadStats()
+  },
+}).component('bom-node', {
+  props: ['node'],
+  template: `
+    <div :style="{marginLeft:'20px',padding:'4px 0'}">
+      <span :style="{fontWeight:node.has_tp?'bold':'normal'}">
+        📦 {{ node.designation }} — {{ node.name }}
+      </span>
+      <span style="color:#666;font-size:12px;margin-left:8px">
+        {{ node.level }} ×{{ node.quantity }}
+        <span v-if="node.position">({{ node.position }})</span>
+        <span class="badge" :style="{background:node.has_tp?'#d4edda':'#fff3cd'}">{{ node.has_tp?'ТП есть':'Нет ТП'}}</span>
+      </span>
+      <bom-node v-for="c in node.children" :key="c.id" :node="c"></bom-node>
+    </div>`
+}).mount('#app')
+</script>
+</body>
+</html>

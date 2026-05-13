@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Command 7z -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command \"7z.exe\" -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

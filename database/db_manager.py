@@ -1,0 +1,554 @@
+"""
+Менеджер базы данных
+"""
+from datetime import datetime
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.pool import StaticPool
+import bcrypt
+from contextlib import contextmanager
+
+from .models import (Base, User, Material, Equipment, Tool, Profession,
+                     Product, ProductGroup, TechProcess, Workshop,
+                     BOMItem, AssemblyLevel)
+from config import DATABASE_URL
+
+
+class DatabaseManager:
+    """Менеджер для работы с базой данных"""
+    
+    def __init__(self, database_url=None):
+        self.database_url = database_url or DATABASE_URL
+        
+        # Для SQLite используем StaticPool для многопоточности
+        if self.database_url.startswith('sqlite'):
+            self.engine = create_engine(
+                self.database_url,
+                connect_args={'check_same_thread': False},
+                poolclass=StaticPool
+            )
+        else:
+            self.engine = create_engine(self.database_url)
+        
+        # Создаём фабрику сессий
+        session_factory = sessionmaker(bind=self.engine)
+        self.Session = scoped_session(session_factory)
+    
+    def init_database(self):
+        """Инициализация базы данных"""
+        # Создаём все таблицы
+        Base.metadata.create_all(self.engine)
+
+        # Лёгкие миграции (ALTER TABLE для новых полей)
+        self._run_lightweight_migrations()
+
+        # Создаём начальные данные
+        self._create_initial_data()
+    
+    def _run_lightweight_migrations(self):
+        """Добавляет отсутствующие колонки в существующие таблицы (без Alembic).
+
+        SQLite поддерживает ALTER TABLE ... ADD COLUMN, чего достаточно
+        для nullable-полей.
+        """
+        try:
+            inspector = inspect(self.engine)
+
+            tp_columns = {c['name'] for c in inspector.get_columns('tech_processes')}
+            tp_migrations = {
+                'execution_variant':
+                    'ALTER TABLE tech_processes ADD COLUMN execution_variant VARCHAR(100)',
+                'is_deleted':
+                    'ALTER TABLE tech_processes ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0',
+                'deleted_at':
+                    'ALTER TABLE tech_processes ADD COLUMN deleted_at DATETIME',
+                'deleted_by':
+                    'ALTER TABLE tech_processes ADD COLUMN deleted_by INTEGER',
+                # v7.7d
+                'is_default_for_product':
+                    'ALTER TABLE tech_processes ADD COLUMN is_default_for_product '
+                    'BOOLEAN NOT NULL DEFAULT 0',
+                # v7.7e
+                'is_template':
+                    'ALTER TABLE tech_processes ADD COLUMN is_template '
+                    'BOOLEAN NOT NULL DEFAULT 0',
+                # v10
+                'bom_item_id':
+                    'ALTER TABLE tech_processes ADD COLUMN bom_item_id '
+                    'INTEGER REFERENCES bom_items(id)',
+            }
+            for col, ddl in tp_migrations.items():
+                if col not in tp_columns:
+                    with self.engine.begin() as conn:
+                        conn.execute(text(ddl))
+
+            op_columns = {c['name'] for c in inspector.get_columns('operations')}
+            op_migrations = {
+                'include_in_mtp':
+                    'ALTER TABLE operations ADD COLUMN include_in_mtp BOOLEAN NOT NULL DEFAULT 1',
+                'is_deleted':
+                    'ALTER TABLE operations ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0',
+                'deleted_at':
+                    'ALTER TABLE operations ADD COLUMN deleted_at DATETIME',
+            }
+            for col, ddl in op_migrations.items():
+                if col not in op_columns:
+                    with self.engine.begin() as conn:
+                        conn.execute(text(ddl))
+
+            # OperationTemplate: расширенные поля
+            tmpl_tables = inspector.get_table_names()
+            if 'operation_templates' in tmpl_tables:
+                tmpl_columns = {c['name'] for c in
+                                inspector.get_columns('operation_templates')}
+                tmpl_migrations = {
+                    'shop':
+                        'ALTER TABLE operation_templates ADD COLUMN shop VARCHAR(100)',
+                    'grade':
+                        'ALTER TABLE operation_templates ADD COLUMN grade INTEGER',
+                    't_setup':
+                        'ALTER TABLE operation_templates ADD COLUMN t_setup FLOAT DEFAULT 0',
+                    't_piece':
+                        'ALTER TABLE operation_templates ADD COLUMN t_piece FLOAT DEFAULT 0',
+                    'usage_count':
+                        'ALTER TABLE operation_templates ADD COLUMN usage_count INTEGER DEFAULT 0',
+                }
+                for col, ddl in tmpl_migrations.items():
+                    if col not in tmpl_columns:
+                        with self.engine.begin() as conn:
+                            conn.execute(text(ddl))
+
+            # v6: User — must_change_password / password_changed_at
+            user_columns = {c['name'] for c in inspector.get_columns('users')}
+            user_migrations = {
+                'must_change_password':
+                    'ALTER TABLE users ADD COLUMN must_change_password '
+                    'BOOLEAN NOT NULL DEFAULT 0',
+                'password_changed_at':
+                    'ALTER TABLE users ADD COLUMN password_changed_at DATETIME',
+            }
+            for col, ddl in user_migrations.items():
+                if col not in user_columns:
+                    with self.engine.begin() as conn:
+                        conn.execute(text(ddl))
+
+            # v8: Soft delete для деталей (Product). Корзина.
+            try:
+                prod_columns = {
+                    c['name'] for c in inspector.get_columns('products')
+                }
+                prod_migrations = {
+                    'is_deleted':
+                        'ALTER TABLE products ADD COLUMN is_deleted '
+                        'BOOLEAN NOT NULL DEFAULT 0',
+                    'deleted_at':
+                        'ALTER TABLE products ADD COLUMN deleted_at DATETIME',
+                    'deleted_by':
+                        'ALTER TABLE products ADD COLUMN deleted_by INTEGER',
+                }
+                for col, ddl in prod_migrations.items():
+                    if col not in prod_columns:
+                        with self.engine.begin() as conn:
+                            conn.execute(text(ddl))
+            except Exception as e:
+                print(f'[migrate] products soft-delete skipped: {e}')
+
+            # v8: Soft delete для нарядов (WorkOrder). Корзина.
+            try:
+                wo_cols_now = {
+                    c['name'] for c in inspector.get_columns('work_orders')
+                }
+                wo_soft_migrations = {
+                    'is_deleted':
+                        'ALTER TABLE work_orders ADD COLUMN is_deleted '
+                        'BOOLEAN NOT NULL DEFAULT 0',
+                    'deleted_at':
+                        'ALTER TABLE work_orders ADD COLUMN deleted_at '
+                        'DATETIME',
+                    'deleted_by':
+                        'ALTER TABLE work_orders ADD COLUMN deleted_by '
+                        'INTEGER',
+                }
+                for col, ddl in wo_soft_migrations.items():
+                    if col not in wo_cols_now:
+                        with self.engine.begin() as conn:
+                            conn.execute(text(ddl))
+            except Exception as e:
+                print(f'[migrate] work_orders soft-delete skipped: {e}')
+
+            # v7: WorkOrder.barcode — один штрих-код на МТП
+            try:
+                wo_columns = {
+                    c['name'] for c in inspector.get_columns('work_orders')
+                }
+                if 'barcode' not in wo_columns:
+                    with self.engine.begin() as conn:
+                        conn.execute(text(
+                            'ALTER TABLE work_orders ADD COLUMN '
+                            'barcode VARCHAR(40)'))
+                    self._fill_work_order_barcodes()
+                else:
+                    # Гарантируем, что у всех уже существующих нарядов есть код.
+                    self._fill_work_order_barcodes()
+                self._ensure_index('work_orders',
+                                   'ix_work_orders_barcode',
+                                   ['barcode'])
+            except Exception as e:
+                print(f'[migrate] work_orders.barcode skipped: {e}')
+
+            # v6: индексы для производственных таблиц (C14)
+            self._ensure_index('production_events',
+                               'ix_prod_events_wo_at',
+                               ['work_order_id', 'at'])
+            self._ensure_index('production_events',
+                               'ix_prod_events_event_type',
+                               ['event_type'])
+            self._ensure_index('production_issues',
+                               'ix_prod_issues_status',
+                               ['status'])
+            self._ensure_index('production_issues',
+                               'ix_prod_issues_assignee',
+                               ['assignee_id'])
+            self._ensure_index('work_order_items',
+                               'ix_wo_items_workshop',
+                               ['current_workshop_id'])
+            self._ensure_index('route_steps',
+                               'ix_route_steps_status_seq',
+                               ['status', 'seq'])
+        except Exception as e:
+            print(f'[migrate] WARN: {e}')
+
+    def _fill_work_order_barcodes(self):
+        """Дозаполняет WorkOrder.barcode уникальным значением для существующих
+        нарядов, у которых поле пустое (после миграции с v6)."""
+        try:
+            from database.models import WorkOrder
+            with self.get_session() as s:
+                rows = (s.query(WorkOrder)
+                        .filter((WorkOrder.barcode.is_(None)) |
+                                 (WorkOrder.barcode == '')).all())
+                if not rows:
+                    return
+                for wo in rows:
+                    # Базовый формат — номер наряда (он уже уникальный).
+                    # Code128 принимает любой ASCII-текст.
+                    wo.barcode = wo.number or f'WO-{wo.id}'
+        except Exception as e:
+            print(f'[migrate] fill barcodes skipped: {e}')
+
+    def _ensure_index(self, table: str, name: str, columns: list[str]):
+        """Создаёт индекс, если он отсутствует. Безопасно для SQLite/PG."""
+        try:
+            inspector = inspect(self.engine)
+            tables = inspector.get_table_names()
+            if table not in tables:
+                return
+            existing = {ix['name'] for ix in inspector.get_indexes(table)}
+            if name in existing:
+                return
+            cols = ', '.join(columns)
+            ddl = f'CREATE INDEX {name} ON {table} ({cols})'
+            with self.engine.begin() as conn:
+                conn.execute(text(ddl))
+        except Exception as e:
+            print(f'[migrate] index {name} on {table} skipped: {e}')
+
+    def _create_initial_data(self):
+        """Создание начальных данных"""
+        session = self.Session()
+        try:
+            # Проверяем есть ли пользователи
+            if session.query(User).count() == 0:
+                # Создаём администратора. Принудительно требуем сменить
+                # пароль при первом входе (D15) — стандартный admin/admin
+                # не должен «жить вечно».
+                admin = User(
+                    username='admin',
+                    password_hash=self._hash_password('admin'),
+                    full_name='Администратор',
+                    role='admin',
+                    is_active=True,
+                    must_change_password=True,
+                )
+                session.add(admin)
+            
+            # Добавляем базовые материалы
+            if session.query(Material).count() == 0:
+                materials = [
+                    Material(name='Сталь 45', grade='45', gost='ГОСТ 1050-88', density=7850, price_per_kg=50),
+                    Material(name='Сталь 40Х', grade='40Х', gost='ГОСТ 4543-71', density=7850, price_per_kg=65),
+                    Material(name='Д16Т', grade='Д16Т', gost='ГОСТ 4784-97', density=2780, price_per_kg=350),
+                    Material(name='АМг6', grade='АМг6', gost='ГОСТ 4784-97', density=2640, price_per_kg=320),
+                    Material(name='Бронза БрАЖ9-4', grade='БрАЖ9-4', gost='ГОСТ 18175-78', density=7600, price_per_kg=800),
+                ]
+                session.add_all(materials)
+            
+            # Добавляем базовое оборудование
+            if session.query(Equipment).count() == 0:
+                equipment = [
+                    Equipment(name='Станок токарный 16К20', model='16К20', type='Токарный', power=10, cost_per_hour=150),
+                    Equipment(name='Станок фрезерный 6Р12', model='6Р12', type='Фрезерный', power=7.5, cost_per_hour=120),
+                    Equipment(name='Станок шлифовальный 3М151', model='3М151', type='Шлифовальный', power=5, cost_per_hour=100),
+                    Equipment(name='Пресс гидравлический', model='П6330', type='Прессовое', power=15, cost_per_hour=200),
+                ]
+                session.add_all(equipment)
+            
+            # Добавляем профессии
+            if session.query(Profession).count() == 0:
+                professions = [
+                    Profession(name='Токарь', typical_grade=3, 
+                              hourly_rates='{"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}'),
+                    Profession(name='Фрезеровщик', typical_grade=3,
+                              hourly_rates='{"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}'),
+                    Profession(name='Шлифовщик', typical_grade=4,
+                              hourly_rates='{"1": 210, "2": 230, "3": 260, "4": 290, "5": 330, "6": 370}'),
+                    Profession(name='Слесарь', typical_grade=3,
+                              hourly_rates='{"1": 190, "2": 210, "3": 240, "4": 270, "5": 310, "6": 350}'),
+                    Profession(name='Контролёр', typical_grade=3,
+                              hourly_rates='{"1": 180, "2": 200, "3": 230, "4": 260, "5": 300, "6": 340}'),
+                ]
+                session.add_all(professions)
+            
+            # Добавим демонстрационные группы и изделия, чтобы UI имел что отображать
+            if session.query(ProductGroup).count() == 0:
+                g1 = ProductGroup(name='G1', display_name='Группа 1', sort_order=1)
+                g2 = ProductGroup(name='G2', display_name='Группа 2', sort_order=2)
+                session.add_all([g1, g2])
+                session.flush()
+
+                # Пример изделия
+                # Выбираем любой материал если он есть
+                mat = session.query(Material).first()
+                prod1 = Product(
+                    designation='P-001',
+                    name='Деталь образца 1',
+                    group_id=g1.id,
+                    material_id=mat.id if mat else None,
+                    mass=1.2,
+                    dimensions='100x50x20',
+                    blank_type='Обозначение',
+                    accuracy_class='IT7',
+                    roughness='Ra1.6',
+                    quantity_in_assembly=1,
+                    description='Пример детали для демонстрации',
+                    author_id=admin.id if 'admin' in locals() else None,
+                )
+                session.add(prod1)
+            
+            # Базовые производственные участки (для модуля «Производство»)
+            if session.query(Workshop).count() == 0:
+                workshops = [
+                    Workshop(code='WH', name='Склад', sort_order=1),
+                    Workshop(code='TURN1', name='Токарный участок 1',
+                             sort_order=10),
+                    Workshop(code='MILL1', name='Фрезерный участок 1',
+                             sort_order=20),
+                    Workshop(code='ASSY', name='Слесарно-сборочный',
+                             sort_order=30),
+                    Workshop(code='QC', name='ОТК', sort_order=99),
+                ]
+                session.add_all(workshops)
+
+            if session.query(BOMItem).count() == 0:
+                # Демо-БОМ: привязываем к первому демо-изделию
+                demo_product = session.query(Product).filter(
+                    Product.designation == 'P-001').first()
+                if demo_product:
+                    root = BOMItem(product_id=demo_product.id,
+                                   level=AssemblyLevel.PRODUCT,
+                                   quantity=1, sort_order=0, position='')
+                    session.add(root)
+                    session.flush()
+                    # Добавим пару дочерних компонентов
+                    for i, (des, name, lev, qty, pos) in enumerate([
+                        ('P-001-001', 'Корпус', AssemblyLevel.SUBASSEMBLY,
+                         1, 'поз.1'),
+                        ('P-001-002', 'Вал', AssemblyLevel.DETAIL,
+                         2, 'поз.2'),
+                    ]):
+                        child_p = session.query(Product).filter(
+                            Product.designation == des).first()
+                        if not child_p:
+                            child_p = Product(
+                                designation=des, name=name,
+                                author_id=1,
+                                group_id=demo_product.group_id,
+                            )
+                            session.add(child_p)
+                            session.flush()
+                        item = BOMItem(
+                            parent_id=root.id,
+                            product_id=child_p.id,
+                            level=lev, quantity=qty,
+                            position=pos,
+                            sort_order=i + 1,
+                        )
+                        session.add(item)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    @staticmethod
+    def _hash_password(password: str) -> str:
+        """Хеширование пароля"""
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    @staticmethod
+    def verify_password(password: str, password_hash: str) -> bool:
+        """Проверка пароля"""
+        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+    
+    @contextmanager
+    def get_session(self):
+        """Контекстный менеджер для работы с сессией"""
+        session = self.Session()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+    
+    def authenticate_user(self, username: str, password: str):
+        """Аутентификация пользователя"""
+        session = self.Session()
+        try:
+            user = session.query(User).filter_by(username=username, is_active=True).first()
+            if user and self.verify_password(password, user.password_hash):
+                # Сохраняем данные в переменные СРАЗУ после запроса
+                user_id = user.id
+                username_val = user.username
+                full_name_val = user.full_name
+                email_val = user.email
+                role_val = user.role
+                is_active_val = user.is_active
+                created_at_val = user.created_at
+                last_login_val = user.last_login
+                must_change_pw = bool(user.must_change_password)
+
+                # Обновляем время последнего входа
+                user.last_login = datetime.now()
+                session.commit()
+
+                # Логируем факт входа в user_sessions (C13). Делаем это
+                # отдельной операцией, чтобы её провал не ронял аутентификацию.
+                try:
+                    self._log_login(user_id)
+                except Exception as e:
+                    print(f'[auth] log_login skipped: {e}')
+
+                # Возвращаем словарь с сохранёнными данными
+                return {
+                    'id': user_id,
+                    'username': username_val,
+                    'full_name': full_name_val,
+                    'email': email_val,
+                    'role': role_val,
+                    'is_active': is_active_val,
+                    'created_at': created_at_val,
+                    'last_login': datetime.now(),
+                    'must_change_password': must_change_pw,
+                }
+            return None
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    def create_user(self, username: str, password: str, full_name: str = None,
+                   email: str = None, role: str = 'user',
+                   must_change_password: bool = True):
+        """Создание нового пользователя.
+
+        ``must_change_password`` — по умолчанию True: новый пользователь
+        обязан сменить пароль при первом входе (D15).
+        """
+        with self.get_session() as session:
+            user = User(
+                username=username,
+                password_hash=self._hash_password(password),
+                full_name=full_name,
+                email=email,
+                role=role,
+                must_change_password=bool(must_change_password),
+            )
+            session.add(user)
+            session.flush()
+            return user.id
+
+    # ──────────────────────────────────────────────────────────────────
+    # Лог входов / выходов (C13) и смена пароля (D15)
+    # ──────────────────────────────────────────────────────────────────
+
+    def _log_login(self, user_id: int) -> int:
+        """Создаёт запись в user_sessions. Возвращает id сессии."""
+        from .models import UserSession
+        import socket
+        try:
+            host = socket.gethostname()
+        except Exception:
+            host = None
+        try:
+            from config import APP_VERSION
+            ver = APP_VERSION
+        except Exception:
+            ver = None
+        with self.get_session() as s:
+            us = UserSession(user_id=user_id, hostname=host, app_version=ver)
+            s.add(us)
+            s.flush()
+            return us.id
+
+    def end_user_session(self, user_id: int):
+        """Закрывает все открытые user_sessions данного пользователя."""
+        from .models import UserSession
+        try:
+            with self.get_session() as s:
+                rows = (s.query(UserSession)
+                        .filter(UserSession.user_id == user_id,
+                                UserSession.ended_at.is_(None)).all())
+                for row in rows:
+                    row.ended_at = datetime.now()
+        except Exception as e:
+            print(f'[auth] end_user_session skipped: {e}')
+
+    def change_user_password(self, user_id: int, new_password: str,
+                              clear_must_change: bool = True):
+        """Меняет пароль пользователя и снимает флаг must_change_password."""
+        with self.get_session() as s:
+            u = s.query(User).get(user_id)
+            if u is None:
+                raise ValueError(f'Пользователь id={user_id} не найден.')
+            u.password_hash = self._hash_password(new_password)
+            u.password_changed_at = datetime.now()
+            if clear_must_change:
+                u.must_change_password = False
+    
+    def close(self):
+        """Закрытие соединения"""
+        self.Session.remove()
+        self.engine.dispose()
+
+    def summarize_data(self):
+        """Возвращает сводку по данным в БД (для диагностики Seed)"""
+        session = self.Session()
+        try:
+            return {
+                'users': session.query(User).count(),
+                'materials': session.query(Material).count(),
+                'equipment': session.query(Equipment).count(),
+                'tools': session.query(Tool).count(),
+                'professions': session.query(Profession).count(),
+                'product_groups': session.query(ProductGroup).count(),
+                'products': session.query(Product).count(),
+                'tech_processes': session.query(TechProcess).count(),
+            }
+        finally:
+            session.close()
