@@ -102,6 +102,16 @@ th{background:#f8f9fa;font-weight:600;color:#666}
       <div class="stat"><div class="num">{{ stats.active_work_orders }}</div><div class="lbl">В работе</div></div>
       <div class="stat"><div class="num">{{ stats.total_users }}</div><div class="lbl">Пользователей</div></div>
     </div>
+    <div class="card" v-if="liveStats" style="background:#e8f5e9">
+      <h3>🔴 Live KPI</h3>
+      <div style="display:flex;gap:24px;margin-top:8px">
+        <div><b>{{ liveStats.products }}</b> изделий</div>
+        <div><b>{{ liveStats.tech_processes }}</b> ТП</div>
+        <div><b>{{ liveStats.active_orders }}</b> нарядов в работе</div>
+        <div><b>{{ liveStats.scrap_today }}</b> брак сегодня</div>
+        <div style="color:#27ae60">● {{ liveStats.health }}</div>
+      </div>
+    </div>
     <div class="card" v-if="equipLoad.length">
       <h3>Загрузка оборудования</h3>
       <div class="chart-box" id="equip-chart"></div>
@@ -277,7 +287,7 @@ createApp({
       token: localStorage.getItem('atpp_token'),
       user: JSON.parse(localStorage.getItem('atpp_user') || '{}'),
       login: { username: '', password: '' }, loginError: '',
-      page: 'dashboard', stats: {}, equipLoad: [],
+      page: 'dashboard', stats: {}, equipLoad: [], liveStats: null,
       search: '', tpSearch: '', barcode: '', toolingSearch: '',
       products: [], productsTotal: 0, page_num: 1,
       tps: [], tpDetail: null,
@@ -315,6 +325,18 @@ createApp({
         this.equipLoad = await this.api('/api/production/equipment-load')
         this.$nextTick(() => this.renderEquipChart())
       } catch(e) { /* silently ignore */ }
+    },
+    connectKPI() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const ws = new WebSocket(proto + '//' + location.host + '/ws/kpi')
+      this._kpiWs = ws
+      ws.onmessage = (evt) => {
+        const msg = JSON.parse(evt.data)
+        if (msg.type === 'kpi') {
+          this.liveStats = msg.data
+        }
+      }
+      ws.onclose = () => { setTimeout(() => this.connectKPI(), 5000) }
     },
     renderEquipChart() {
       const el = document.getElementById('equip-chart')
@@ -373,7 +395,10 @@ createApp({
     },
   },
   mounted() {
-    if (this.token) this.loadDashboard()
+    if (this.token) { this.loadDashboard(); this.connectKPI() }
+  },
+  unmounted() {
+    if (this._kpiWs) this._kpiWs.close()
   },
 }).component('bom-node', {
   props: ['node'],

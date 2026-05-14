@@ -24,7 +24,8 @@ from web.config import CORS_ORIGINS, STATIC_DIR
 from web.deps import _get_db_manager
 from web.schemas import LoginRequest
 from web.routers import (products, tech_processes, work_orders,
-                          approval, bom, dashboard, production, tooling)
+                          approval, bom, dashboard, production, tooling,
+                          mobile)
 
 app = FastAPI(title="ATPP Web API", version="10.0.0")
 
@@ -45,6 +46,7 @@ app.include_router(bom.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(production.router, prefix="/api")
 app.include_router(tooling.router, prefix="/api")
+app.include_router(mobile.router, prefix="/api")
 
 
 @app.post("/api/auth/login")
@@ -157,6 +159,48 @@ async def ws_iot(websocket: WebSocket):
             await websocket.send_text(json.dumps({
                 'type': 'machine_status',
                 'data': machines,
+                'ts': datetime.now().isoformat(),
+            }))
+            await asyncio.sleep(3)
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+
+
+@app.websocket("/ws/kpi")
+async def ws_kpi(websocket: WebSocket):
+    """Live KPI dashboard — broadcast stats every 3 seconds."""
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            db = _get_db_manager()
+            with db.get_session() as s:
+                from database.models import (
+                    Product, TechProcess, WorkOrder,
+                    ScrapRecord,
+                )
+                total_products = s.query(Product).filter(
+                    Product.is_deleted == False).count()
+                total_tps = s.query(TechProcess).filter(
+                    TechProcess.is_deleted == False).count()
+                active_wos = s.query(WorkOrder).filter(
+                    WorkOrder.is_deleted == False,
+                    WorkOrder.status.in_([
+                        'RELEASED', 'REGISTERED', 'IN_PROGRESS']),
+                ).count()
+                today = __import__('datetime').datetime.now().strftime(
+                    '%Y-%m-%d')
+                scrap_today = s.query(ScrapRecord).filter(
+                    ScrapRecord.created_at >= today).count()
+
+            await websocket.send_text(json.dumps({
+                'type': 'kpi',
+                'data': {
+                    'products': total_products,
+                    'tech_processes': total_tps,
+                    'active_orders': active_wos,
+                    'scrap_today': scrap_today,
+                    'health': 'ok',
+                },
                 'ts': datetime.now().isoformat(),
             }))
             await asyncio.sleep(3)

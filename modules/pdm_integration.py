@@ -283,7 +283,7 @@ def export_bom_json(session, product_id: int) -> dict:
             'material': p.material.name if p.material else '',
             'mass': p.mass,
             'dimensions': p.dimensions,
-            'children': [_node(c.child_id) for c in children],
+            'children': [_node(c.product_id) for c in children],
         }
 
     return _node(product_id)
@@ -328,7 +328,7 @@ def export_bom_flat_xlsx(session, product_id: int,
         from database.models import BOMItem
         bom_entry = session.query(BOMItem).filter(
             BOMItem.parent_id == p.parent_id if hasattr(p, 'parent_id')
-            else None, BOMItem.child_id == prod_id).first()
+            else None, BOMItem.product_id == prod_id).first()
         ws.cell(row=row, column=6,
                 value=bom_entry.quantity if bom_entry else 1)
         ws.cell(row=row, column=7, value=p.mass or '')
@@ -336,7 +336,7 @@ def export_bom_flat_xlsx(session, product_id: int,
         for child in session.query(BOMItem).filter(
                 BOMItem.parent_id == prod_id).all():
             nonlocal_row = row
-            _walk(child.child_id, level + 1)
+            _walk(child.product_id, level + 1)
         return nonlocal_row
 
     _walk(product_id, 0)

@@ -120,6 +120,12 @@ class NestingWidget(QWidget):
         self.k_zag.setSingleStep(0.05)
         grp_lay.addWidget(QLabel('Коэф. зазора:'))
         grp_lay.addWidget(self.k_zag)
+
+        grp_lay.addWidget(QLabel('Алгоритм:'))
+        self._algo_combo = QComboBox()
+        self._algo_combo.addItem('Shelf (полочный)')
+        self._algo_combo.addItem('Guillotine (гильотинный)')
+        grp_lay.addWidget(self._algo_combo)
         ctrl.addWidget(grp)
 
         # Parts table
@@ -239,6 +245,7 @@ class NestingWidget(QWidget):
         sheet_w = self.sheet_w.value()
         sheet_h = self.sheet_h.value()
         gap = self.k_zag.value()
+        algo = self._algo_combo.currentIndex()
 
         parts = []
         for r in range(self.table.rowCount()):
@@ -262,10 +269,22 @@ class NestingWidget(QWidget):
             QMessageBox.warning(self, 'Раскрой', 'Добавьте заготовки.')
             return
 
-        # Shelf-алгоритм
-        parts.sort(key=lambda p: p[1], reverse=True)  # по высоте
+        if algo == 1:
+            placed = self._guillotine_cut(sheet_w, sheet_h, parts)
+        else:
+            placed = self._shelf_pack(sheet_w, sheet_h, parts)
+
+        used_area = sum(p[2] * p[3] for p in placed)
+        total = sheet_w * sheet_h
+        util = used_area / total * 100 if total > 0 else 0
+
+        self.canvas.set_data(sheet_w, sheet_h, placed, util)
+
+    def _shelf_pack(self, sheet_w, sheet_h, parts):
+        """Shelf algorithm — stack parts in rows by height."""
+        parts.sort(key=lambda p: p[1], reverse=True)
         placed = []
-        shelves = [(0.0, 0.0, sheet_w)]  # [(y, next_x, remaining_w)]
+        shelves = [(0.0, 0.0, sheet_w)]
 
         for pw, ph, label in parts:
             placed_flag = False
@@ -277,11 +296,6 @@ class NestingWidget(QWidget):
                     placed_flag = True
                     break
             if not placed_flag:
-                # Новый shelf
-                prev_y = max(s[0] + max(p[3] for p in placed
-                            if abs(p[1] - s[0]) < 0.1) if placed else 0
-                             for s in shelves)
-                # Упрощённо: берём max y из существующих shelves
                 max_y = 0.0
                 for s in shelves:
                     shelf_parts = [p for p in placed
@@ -293,9 +307,62 @@ class NestingWidget(QWidget):
                     continue
                 placed.append((0.0, new_y, pw, ph, label))
                 shelves.append((new_y, pw, sheet_w - pw))
+        return placed
 
-        used_area = sum(p[2] * p[3] for p in placed)
-        total = sheet_w * sheet_h
-        util = used_area / total * 100 if total > 0 else 0
+    def _guillotine_cut(self, sheet_w, sheet_h, parts):
+        """Guillotine cut — recursive binary splitting of the sheet."""
+        parts = sorted(parts, key=lambda p: p[0] * p[1], reverse=True)
+        placed = []
 
-        self.canvas.set_data(sheet_w, sheet_h, placed, util)
+        def _fit(x0, y0, w, h, remaining):
+            if not remaining:
+                return True
+            best = None
+            best_idx = -1
+            for i, (pw, ph, _) in enumerate(remaining):
+                if pw <= w and ph <= h:
+                    score = pw * ph
+                    if best is None or score > best:
+                        best = score
+                        best_idx = i
+            if best is None:
+                return False
+
+            pw, ph, label = remaining.pop(best_idx)
+            placed.append((x0, y0, pw, ph, label))
+
+            # Choose split direction: vertical or horizontal
+            rest_w = w - pw
+            rest_h = h - ph
+
+            rem_copy1 = list(remaining)
+            rem_copy2 = list(remaining)
+            ok1 = _fit(x0 + pw, y0, rest_w, ph, rem_copy1)
+            ok2 = _fit(x0, y0 + ph, w, rest_h, rem_copy2)
+
+            if ok1 and ok2:
+                remaining.clear()
+                remaining.extend(rem_copy1)
+                remaining.extend(rem_copy2)
+                return True
+            elif ok1:
+                remaining.clear()
+                remaining.extend(rem_copy1)
+                if _fit(x0, y0 + ph, w, rest_h, remaining):
+                    return True
+            elif ok2:
+                remaining.clear()
+                remaining.extend(rem_copy2)
+                if _fit(x0 + pw, y0, rest_w, ph, remaining):
+                    return True
+            else:
+                remaining.clear()
+                if _fit(x0 + pw, y0, rest_w, h, remaining):
+                    return True
+                remaining.clear()
+                if _fit(x0, y0 + ph, w, rest_h, remaining):
+                    return True
+            return True
+
+        _fit(0, 0, sheet_w, sheet_h, list(parts))
+        return placed
