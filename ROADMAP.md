@@ -59,5 +59,5 @@
 - [x] Prometheus-метрики — `/metrics` endpoint, счётчики запросов/ошибок/латентности
 - [x] Мобильное приложение (PWA) — manifest.json + Service Worker
 - [x] Расширенная PDM-интеграция — AbstractPdmAdapter, Mock, JSON-экспорт BOM
-- [ ] E2E-тесты (Playwright) — отложено (нет прав на установку браузеров)
+- [x] E2E-тесты (Playwright) — 13 тестов: API TestClient + Playwright browser
 - [x] Международная документация (ISO) — таблица ГОСТ→ISO в docs/iso_mapping.md
