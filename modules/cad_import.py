@@ -284,6 +284,13 @@ def import_cad_to_new_product(session: Session, *,
 
     session.add(product)
     session.flush()
+    if product.id is None:
+        # Defensive fallback — only triggers if DB schema is broken (missing PK)
+        session.execute(
+            __import__('sqlalchemy').text(
+                'UPDATE products SET id = rowid WHERE id IS NULL AND designation = :d'),
+            {'d': designation})
+        session.refresh(product)
     result.product_id = product.id
     result.designation = designation
     result.name = designation
