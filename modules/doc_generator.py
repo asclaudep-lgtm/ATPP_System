@@ -460,30 +460,269 @@ class DocumentGenerator:
         wb.save(str(out_path))
         return out_path
 
-    def generate_document_pack(self, tech_process_id: int) -> List[Path]:
-        """Сгенерировать полный комплект документов одной кнопкой.
+    # ──────────────────────────────────────────────────────────────
+    # Operation cards — all operations in a TP
+    # ──────────────────────────────────────────────────────────────
 
-        Создаёт: МК, ОК (на каждую операцию), материальную спецификацию.
-        Возвращает список путей к созданным файлам.
+    def generate_all_operation_cards(
+        self, tech_process_id: int, output_format: str = "xlsx"
+    ) -> List[Path]:
+        """Generate OK (ГОСТ 3.1118-82) for every operation in the TP."""
+        tp = self.session.query(TechProcess).get(tech_process_id)
+        if not tp:
+            raise ValueError(f"ТП с ID {tech_process_id} не найден")
+        out_dir = product_export_dir(tp)
+        files: List[Path] = []
+        ops = [o for o in tp.operations
+               if not getattr(o, 'is_deleted', False)]
+        for op in ops:
+            if output_format == "xlsx":
+                files.append(self._generate_ok_excel(op, tp, out_dir))
+            elif output_format == "pdf":
+                files.append(self._generate_ok_pdf(op, tp, out_dir))
+        return files
+
+    # ──────────────────────────────────────────────────────────────
+    # Sketch card (Карта эскизов — КЭ)
+    # ──────────────────────────────────────────────────────────────
+
+    def generate_sketch_card(
+        self, tech_process_id: int, output_format: str = "xlsx"
+    ) -> Path:
+        """Generate sketch card listing all sketches per operation."""
+        tp = self.session.query(TechProcess).get(tech_process_id)
+        if not tp:
+            raise ValueError(f"ТП с ID {tech_process_id} не найден")
+        out_dir = product_export_dir(tp)
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Карта эскизов"
+        for col, w in zip('ABCDEF', [8, 30, 12, 30, 20]):
+            ws.column_dimensions[col].width = w
+
+        ws['A1'] = "КАРТА ЭСКИЗОВ (КЭ)"
+        ws['A1'].font = Font(size=14, bold=True)
+        ws['A1'].alignment = Alignment(horizontal='center')
+        ws.merge_cells('A1:F1')
+
+        row = 3
+        ws[f'A{row}'] = "Обозначение:"; ws[f'B{row}'] = tp.product.designation
+        ws[f'D{row}'] = "ТП №:"; ws[f'E{row}'] = tp.number; row += 1
+        ws[f'A{row}'] = "Наименование:"; ws[f'B{row}'] = tp.product.name
+        row += 2
+
+        headers = ["Оп.", "Эскиз (файл)", "Тип", "Подпись", "Дата"]
+        for col, h in enumerate(headers, start=1):
+            cell = ws.cell(row=row, column=col, value=h)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin'))
+        row += 1
+
+        ops = sorted(
+            [o for o in tp.operations
+             if not getattr(o, 'is_deleted', False)],
+            key=lambda o: (o.sort_order or 0),
+        )
+        for op in ops:
+            sketches = [sk for sk in (op.sketches or [])
+                        if not getattr(sk, 'is_deleted', False)]
+            if sketches:
+                for sk in sketches:
+                    ws.cell(row=row, column=1, value=op.number or '').alignment = \
+                        Alignment(horizontal='center')
+                    ws.cell(row=row, column=2,
+                            value=sk.original_filename or sk.stored_path or '')
+                    ws.cell(row=row, column=3,
+                            value=sk.file_type or '')
+                    ws.cell(row=row, column=4,
+                            value=sk.title or '')
+                    ws.cell(row=row, column=5,
+                            value=sk.created_at.strftime('%Y-%m-%d')
+                            if sk.created_at else '')
+                    for c in range(1, 6):
+                        ws.cell(row=row, column=c).border = Border(
+                            left=Side(style='thin'), right=Side(style='thin'),
+                            top=Side(style='thin'), bottom=Side(style='thin'))
+                    row += 1
+            else:
+                ws.cell(row=row, column=1, value=op.number or '').alignment = \
+                    Alignment(horizontal='center')
+                ws.cell(row=row, column=2, value="— эскизов нет —")
+                for c in range(1, 6):
+                    ws.cell(row=row, column=c).border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin'))
+                row += 1
+
+        fname = self._mk_basename(tp) + '_sketch_card.xlsx'
+        out_path = out_dir / fname
+        wb.save(str(out_path))
+        return out_path
+
+    # ──────────────────────────────────────────────────────────────
+    # Tooling list (Ведомость оснастки — ВО)
+    # ──────────────────────────────────────────────────────────────
+
+    def generate_tooling_list(
+        self, tech_process_id: int, output_format: str = "xlsx"
+    ) -> Path:
+        """Generate tooling list (ВО) for a TP — tools + tooling items per operation."""
+        tp = self.session.query(TechProcess).get(tech_process_id)
+        if not tp:
+            raise ValueError(f"ТП с ID {tech_process_id} не найден")
+        out_dir = product_export_dir(tp)
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Ведомость оснастки"
+        for col, w in zip('ABCDEFG', [6, 8, 30, 30, 12, 15, 25]):
+            ws.column_dimensions[col].width = w
+
+        ws['A1'] = "ВЕДОМОСТЬ ОСНАСТКИ (ВО)"
+        ws['A1'].font = Font(size=14, bold=True)
+        ws['A1'].alignment = Alignment(horizontal='center')
+        ws.merge_cells('A1:G1')
+
+        row = 3
+        ws[f'A{row}'] = "Обозначение:"; ws[f'B{row}'] = tp.product.designation
+        ws[f'D{row}'] = "ТП №:"; ws[f'E{row}'] = tp.number; row += 1
+        ws[f'A{row}'] = "Наименование:"; ws[f'B{row}'] = tp.product.name
+        row += 2
+
+        headers = ["Оп.", "Поз.", "Наименование", "Обозначение",
+                   "Кол.", "Тип", "Примечание"]
+        for col, h in enumerate(headers, start=1):
+            cell = ws.cell(row=row, column=col, value=h)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal='center', wrap_text=True)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin'))
+        row += 1
+
+        ops = sorted(
+            [o for o in tp.operations
+             if not getattr(o, 'is_deleted', False)],
+            key=lambda o: (o.sort_order or 0),
+        )
+        pos = 0
+        for op in ops:
+            # Tools (OperationTool)
+            for ot in (op.tools or []):
+                pos += 1
+                tool = ot.tool
+                ws.cell(row=row, column=1, value=op.number or '')
+                ws.cell(row=row, column=2, value=pos)
+                ws.cell(row=row, column=3, value=tool.name if tool else '')
+                ws.cell(row=row, column=4,
+                        value=tool.designation if tool else '')
+                ws.cell(row=row, column=5, value=ot.quantity or 1)
+                ws.cell(row=row, column=6, value=tool.tool_type if tool else '')
+                ws.cell(row=row, column=7, value='')
+                for c in range(1, 8):
+                    ws.cell(row=row, column=c).border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin'))
+                row += 1
+
+            # Tooling items (OperationTooling) — query directly (no relationship on Operation)
+            from database.models import OperationTooling, ToolingItem
+            op_toolings = (self.session.query(OperationTooling, ToolingItem)
+                           .join(ToolingItem,
+                                 OperationTooling.tooling_item_id == ToolingItem.id)
+                           .filter(OperationTooling.operation_id == op.id)
+                           .all())
+            for ot_item, ti in op_toolings:
+                pos += 1
+                ws.cell(row=row, column=1, value=op.number or '')
+                ws.cell(row=row, column=2, value=pos)
+                ws.cell(row=row, column=3, value=ti.name)
+                ws.cell(row=row, column=4, value=ti.inventory_no)
+                ws.cell(row=row, column=5, value=1)
+                ws.cell(row=row, column=6, value='Оснастка')
+                ws.cell(row=row, column=7, value=ot_item.notes or '')
+                for c in range(1, 8):
+                    ws.cell(row=row, column=c).border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin'))
+                row += 1
+
+        if pos == 0:
+            ws.cell(row=row, column=1, value='')
+            ws.cell(row=row, column=2, value='')
+            ws.cell(row=row, column=3, value="— оснастки нет —")
+            ws.merge_cells(f'C{row}:G{row}')
+
+        fname = self._mk_basename(tp) + '_tooling_list.xlsx'
+        out_path = out_dir / fname
+        wb.save(str(out_path))
+        return out_path
+
+    # ──────────────────────────────────────────────────────────────
+    # Material list (Ведомость материалов — ВМ) — delegates
+    # ──────────────────────────────────────────────────────────────
+
+    def generate_material_list(
+        self, tech_process_id: int, output_format: str = "xlsx"
+    ) -> Path:
+        """Alias for generate_material_specification (ВМ = material list)."""
+        return self.generate_material_specification(tech_process_id, output_format)
+
+    # ──────────────────────────────────────────────────────────────
+    # Full document pack — MK + OK + КЭ + ВО + ВМ + ZIP
+    # ──────────────────────────────────────────────────────────────
+
+    def generate_document_pack(self, tech_process_id: int) -> List[Path]:
+        """Generate complete document pack: MK, OK (all ops), sketch card,
+        tooling list, material list.  Returns list of file paths.
         """
+        import zipfile
         tp = self.session.query(TechProcess).get(tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
 
+        out_dir = product_export_dir(tp)
         files: List[Path] = []
 
-        # Маршрутная карта
+        # 1. Route card (MK)
         files.append(self._generate_route_card_excel(tp))
 
-        # Операционные карты
+        # 2. Operation cards (OK) — all non-deleted operations
         for op in tp.operations:
             if not getattr(op, 'is_deleted', False):
-                files.append(self._generate_ok_excel(op, tp,
-                              product_export_dir(tp)))
+                files.append(self._generate_ok_excel(op, tp, out_dir))
 
-        # Материальная спецификация
+        # 3. Sketch card (KЭ)
+        try:
+            files.append(self.generate_sketch_card(tech_process_id))
+        except Exception:
+            pass
+
+        # 4. Tooling list (ВО)
+        try:
+            files.append(self.generate_tooling_list(tech_process_id))
+        except Exception:
+            pass
+
+        # 5. Material list (ВМ)
         if tp.material_norms:
-            files.append(self.generate_material_specification(
-                tech_process_id))
+            try:
+                files.append(self.generate_material_specification(
+                    tech_process_id))
+            except Exception:
+                pass
+
+        # 6. ZIP archive
+        zip_name = self._mk_basename(tp) + '_pack.zip'
+        zip_path = out_dir / zip_name
+        with zipfile.ZipFile(str(zip_path), 'w',
+                             compression=zipfile.ZIP_DEFLATED) as zf:
+            for f in files:
+                zf.write(str(f), f.name)
+        files.append(zip_path)
 
         return files
