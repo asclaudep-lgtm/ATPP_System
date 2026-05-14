@@ -75,6 +75,9 @@ class MainMenu(QMenuBar):
         self.act_open_references = QAction(
             "Материалы, оборудование, инструмент, профессии", self)
         m.addAction(self.act_open_references)
+        self.act_open_reference_editors = QAction(
+            "Редакторы справочников (табличный вид)...", self)
+        m.addAction(self.act_open_reference_editors)
 
     # ── Documents menu ────────────────────────────────────────────
 
