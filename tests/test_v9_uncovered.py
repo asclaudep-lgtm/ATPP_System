@@ -89,34 +89,36 @@ class TestScrapJournal:
     def test_create_scrap_creates_entry(self, db_manager):
         from modules.scrap_journal import create_scrap
         from database.models import (ScrapReason, WorkOrder,
-                                      WorkOrderStatus, TechProcess)
+                                      WorkOrderStatus, TechProcess,
+                                      Product, Material, TPStatus)
 
         with db_manager.get_session() as s:
-            wo = s.query(WorkOrder).filter(
-                WorkOrder.is_deleted == False,
-                WorkOrder.tech_process_id.isnot(None)).first()
-            if wo is None:
-                tp = s.query(TechProcess).first()
-                if tp is None:
-                    pytest.skip("No TechProcess in test DB")
-                wo = WorkOrder(
-                    number="WO-TEST",
-                    tech_process_id=tp.id,
-                    status=WorkOrderStatus.IN_PROGRESS)
-                s.add(wo)
-                s.flush()
-            try:
-                rec = create_scrap(
-                    s, work_order_id=wo.id,
-                    reason=ScrapReason.OTHER,
-                    qty_scrap=3,
-                    description="Test scrap entry",
-                    reported_by=1,
-                )
-                assert rec.id is not None
-                assert rec.qty_scrap == 3
-            except Exception:
-                pytest.skip("Scrap creation failed — likely DB constraint")
+            # Create fresh TP + WO in this session to avoid test ordering issues
+            m = Material(name="ScrapTest", grade="ST")
+            s.add(m)
+            s.flush()
+            p = Product(designation="SCRAP.TEST.001", name="Scrap Part",
+                        material_id=m.id)
+            s.add(p)
+            s.flush()
+            tp = TechProcess(number="TP-SCRAP-TEST", product_id=p.id,
+                             status=TPStatus.DRAFT)
+            s.add(tp)
+            s.flush()
+            wo = WorkOrder(number="WO-SCRAP-TEST", tech_process_id=tp.id,
+                           status=WorkOrderStatus.RELEASED)
+            s.add(wo)
+            s.flush()
+
+            rec = create_scrap(
+                s, work_order_id=wo.id,
+                reason=ScrapReason.OTHER,
+                qty_scrap=3,
+                description="Test scrap entry",
+                reported_by=1,
+            )
+            assert rec.id is not None
+            assert rec.qty_scrap == 3
 
     def test_scrap_by_reason_returns_list(self, db_manager):
         from modules.scrap_journal import scrap_by_reason
