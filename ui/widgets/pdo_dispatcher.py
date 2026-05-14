@@ -14,6 +14,12 @@ from database.models import PDOStatus
 
 STATUS_COLORS = {
     PDOStatus.NEW:                '#6c757d',
+    PDOStatus.OMTS_REVIEW:        '#16a085',
+    PDOStatus.TECH_DEPT:          '#2980b9',
+    PDOStatus.FEASIBLE:           '#27ae60',
+    PDOStatus.NOT_FEASIBLE:       '#c0392b',
+    PDOStatus.DEPUTY_APPROVAL:    '#8e44ad',
+    PDOStatus.APPROVED:           '#27ae60',
     PDOStatus.WITH_TECHNOLOGIST:  '#e67e22',
     PDOStatus.MTP_SIGNED:         '#2980b9',
     PDOStatus.READY_FOR_SHOP:     '#27ae60',
@@ -22,6 +28,16 @@ STATUS_COLORS = {
     PDOStatus.CLOSED:             '#2c3e50',
     PDOStatus.CANCELLED:          '#c0392b',
 }
+
+KANBAN_COLUMNS = [
+    PDOStatus.NEW,
+    PDOStatus.OMTS_REVIEW,
+    PDOStatus.TECH_DEPT,
+    PDOStatus.DEPUTY_APPROVAL,
+    PDOStatus.APPROVED,
+    PDOStatus.IN_SHOP,
+    PDOStatus.QC,
+]
 
 PRIORITY_STARS = {1: '🔴🔴🔴', 2: '🟠🟠', 3: '🟡', 4: '⚪', 5: '—'}
 
@@ -65,11 +81,36 @@ class PDOOrderCard(QFrame):
             top.addWidget(prio_lbl)
         layout.addLayout(top)
 
-        # Product
+        # Product + aircraft
         prod = QLabel(order_data.get('product', '—'))
         prod.setWordWrap(True)
         prod.setFont(QFont('Arial', 9))
         layout.addWidget(prod)
+
+        ac = order_data.get('aircraft_type', '')
+        if ac:
+            ac_lbl = QLabel(f'✈ {ac[:20]}')
+            ac_lbl.setStyleSheet('color: #1976d2; font-size: 9px;')
+            layout.addWidget(ac_lbl)
+
+        # Nomenclature summary
+        items_total = order_data.get('items_total', 0)
+        if items_total:
+            items_row = QHBoxLayout()
+            items_row.addWidget(QLabel(
+                f'📋 {items_total} поз.'))
+            n_feas = order_data.get('items_feasible', 0)
+            n_not = order_data.get('items_not_feasible', 0)
+            if n_feas:
+                lbl = QLabel(f' +{n_feas}')
+                lbl.setStyleSheet('color: #27ae60; font-size: 10px;')
+                items_row.addWidget(lbl)
+            if n_not:
+                lbl = QLabel(f' -{n_not}')
+                lbl.setStyleSheet('color: #c0392b; font-weight: bold; font-size: 10px;')
+                items_row.addWidget(lbl)
+            items_row.addStretch()
+            layout.addLayout(items_row)
 
         # Bottom: qty + due date
         bot = QHBoxLayout()
@@ -96,21 +137,22 @@ class PDOOrderCard(QFrame):
         bot.addWidget(due_lbl)
         layout.addLayout(bot)
 
-        # Tech + MTP
-        tech_row = QHBoxLayout()
-        tech = QLabel(
-            f"👤 {order_data.get('technologist', '—')[:15]}")
-        tech.setStyleSheet('font-size: 10px; color: #666;')
-        tech_row.addWidget(tech)
-        tech_row.addStretch()
-        mtp = QLabel(
-            '✓ МТП' if order_data.get('mtp_signed') else '✗ МТП')
-        mtp.setStyleSheet(
-            'font-size: 10px; color: #27ae60; font-weight: bold;'
-            if order_data.get('mtp_signed')
-            else 'font-size: 10px; color: #c0392b;')
-        tech_row.addWidget(mtp)
-        layout.addLayout(tech_row)
+        # Memos line
+        memo_count = order_data.get('memo_count', 0)
+        omts = order_data.get('omts_memo', '')
+        deputy = order_data.get('deputy_memo', '')
+        if omts or deputy:
+            memo_row = QHBoxLayout()
+            if omts:
+                lbl = QLabel(f'📄 У:{omts[:12]}')
+                lbl.setStyleSheet('font-size: 9px; color: #16a085;')
+                memo_row.addWidget(lbl)
+            if deputy:
+                lbl = QLabel(f'П:{deputy[:12]}')
+                lbl.setStyleSheet('font-size: 9px; color: #8e44ad;')
+                memo_row.addWidget(lbl)
+            memo_row.addStretch()
+            layout.addLayout(memo_row)
 
         # Color indicator on left side
         self.setStyleSheet(
@@ -224,12 +266,7 @@ class PDODispatcherWidget(QWidget):
         self._kanban_layout.setContentsMargins(0, 0, 0, 0)
 
         self._columns = {}
-        active_statuses = [
-            PDOStatus.NEW, PDOStatus.WITH_TECHNOLOGIST,
-            PDOStatus.MTP_SIGNED, PDOStatus.READY_FOR_SHOP,
-            PDOStatus.IN_SHOP, PDOStatus.QC,
-        ]
-        for st in active_statuses:
+        for st in KANBAN_COLUMNS:
             col = PDOKanbanColumn(st)
             self._kanban_layout.addWidget(col)
             self._columns[st] = col
@@ -334,6 +371,14 @@ class PDODispatcherWidget(QWidget):
                 orders = pdo_module.list_orders_by_status(s, st, limit=50)
                 col.clear_cards()
                 for o in orders:
+                    detail = pdo_module.get_order_detail(s, o.id)
+                    # Count feasible/not items
+                    items = detail.get('nomenclature', [])
+                    feasible_count = sum(
+                        1 for i in items if i.get('tech_feasible') is True)
+                    not_feasible_count = sum(
+                        1 for i in items if i.get('tech_feasible') is False)
+                    memos = detail.get('memos', [])
                     card = col.add_card({
                         'id': o.id, 'number': o.number,
                         'product': o.product.designation if o.product else '—',
@@ -341,10 +386,15 @@ class PDODispatcherWidget(QWidget):
                         'due_date': str(o.due_date) if o.due_date else '',
                         'priority': o.priority or 3,
                         'status': o.status.value,
-                        'technologist': (
-                            o.technologist.full_name
-                            if o.technologist else 'Не назначен'),
-                        'mtp_signed': o.mtp_signed_at is not None,
+                        'aircraft_type': detail.get('aircraft_type', ''),
+                        'technologist': detail.get('technologist', ''),
+                        'mtp_signed': detail.get('mtp_signed', False),
+                        'omts_memo': detail.get('omts_memo_no', ''),
+                        'deputy_memo': detail.get('deputy_memo_no', ''),
+                        'items_total': len(items),
+                        'items_feasible': feasible_count,
+                        'items_not_feasible': not_feasible_count,
+                        'memo_count': len(memos),
                     })
                     card.clicked.connect(self._show_detail)
                     total += 1
@@ -365,8 +415,10 @@ class PDODispatcherWidget(QWidget):
             self._detail_title.setText(
                 f'{detail["number"]} — {detail["product"]}')
             self._info_labels['status'].setText(detail['status'])
+            ac = detail.get('aircraft_type', '')
             self._info_labels['product'].setText(
-                f'{detail.get("product_name", "")}')
+                f'{detail.get("product_name", "")}'
+                + (f'  ✈ {ac}' if ac else ''))
             self._info_labels['qty'].setText(
                 f'{detail["qty"]} шт')
             self._info_labels['due_date'].setText(
@@ -377,8 +429,8 @@ class PDODispatcherWidget(QWidget):
                 detail.get('customer', '—') or '—')
             self._info_labels['technologist'].setText(
                 detail.get('technologist', '—'))
-            self._info_labels['mtp_signed'].setText(
-                '✅ Подписан' if detail.get('mtp_signed') else '❌ Не подписан')
+            mtp_status = '✅ Подписан' if detail.get('mtp_signed') else '❌ Не подписан'
+            self._info_labels['mtp_signed'].setText(mtp_status)
             self._info_labels['shop'].setText(
                 detail.get('released_to_shop', '—') or '—')
             self._info_labels['qty_done'].setText(
@@ -386,20 +438,38 @@ class PDODispatcherWidget(QWidget):
             self._info_labels['qty_scrap'].setText(
                 f'{detail.get("qty_scrap", 0)} шт')
 
-            # Timeline
-            lines = []
+            # Nomenclature table
+            items = detail.get('nomenclature', [])
+            nomen_lines = ['=== НОМЕНКЛАТУРА ===']
+            for item in items:
+                feas = {True: '✅', False: '❌', None: '⬜'}.get(
+                    item.get('tech_feasible'), '?')
+                kd = '📄' if item.get('kd_ready') else '  '
+                mat = item.get('material_name', '')[:30]
+                nomen_lines.append(
+                    f'{feas} {kd} {item["designation"][:25]} — '
+                    f'{item.get("name","")[:20]} ×{item["qty"]}шт'
+                    + (f'  [{mat}]' if mat else ''))
+
+            # Memos
+            memos = detail.get('memos', [])
+            if memos:
+                nomen_lines.append('')
+                nomen_lines.append('=== СЛУЖЕБНЫЕ ЗАПИСКИ ===')
+                for m in memos:
+                    t = 'УКАЗАНИЕ' if m['memo_type'] == 'У' else 'ПРИКАЗ'
+                    nomen_lines.append(
+                        f'📄 {t} {m["memo_number"]} — {m["from_dept"]}'
+                        + (f': {m["content"][:50]}' if m.get('content') else ''))
+
+            # Handoffs
+            nomen_lines.append('')
+            nomen_lines.append('=== ПЕРЕДАЧИ ===')
             for h in detail.get('handoffs', []):
-                icon = '📤' if h['status'] == 'Передан' else '📥'
-                lines.append(
-                    f'{icon} {h["from"]} → {h["to"]}  [{h["status"]}]  '
-                    f'{h.get("created_at", "")}')
+                nomen_lines.append(
+                    f'{h["from"]} → {h["to"]}  [{h["status"]}]')
 
-            for s in detail.get('signoffs', []):
-                lines.append(
-                    f'✍ МТП подписан: {s["signed_by"]}  '
-                    f'{s.get("signed_at", "")}')
-
-            self._timeline.setPlainText('\n'.join(lines))
+            self._timeline.setPlainText('\n'.join(nomen_lines))
 
             # Show/hide action buttons
             st = detail['status']
