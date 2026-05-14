@@ -120,6 +120,26 @@ def prometheus_metrics():
     return "\n".join(lines) + "\n"
 
 
+# ——— Push notification helper ———————————————————
+
+def send_push_alert(alert_type: str, title: str, message: str):
+    """Broadcast a push alert to all connected WebSocket clients."""
+    import asyncio
+    data = {
+        'type': 'alert',
+        'alert_type': alert_type,
+        'title': title,
+        'message': message,
+        'ts': datetime.now().isoformat(),
+    }
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(ws_manager.broadcast(data))
+    except Exception:
+        pass
+
+
 # ——— WebSocket: IoT live updates ———
 
 

@@ -42,6 +42,9 @@ class DatabaseManager:
         # Всегда создаём таблицы, которых ещё нет (работает на свежей БД).
         Base.metadata.create_all(self.engine)
 
+        # v13: проверить и исправить INTEGER PRIMARY KEY у всех таблиц
+        self._ensure_primary_keys()
+
         # Применяем миграции Alembic (новые колонки / индексы после v10).
         from pathlib import Path
         alembic_ini = Path(__file__).resolve().parent.parent / 'alembic.ini'
@@ -58,6 +61,71 @@ class DatabaseManager:
 
         self._create_initial_data()
     
+    def _ensure_primary_keys(self):
+        """v13: гарантирует INTEGER PRIMARY KEY AUTOINCREMENT для всех id.
+
+        SQLite требует INTEGER PRIMARY KEY (не INT) для автоинкремента rowid.
+        Если таблица создана с id INT вместо INTEGER, INSERT даёт NULL в id.
+        Метод проверяет и пересоздаёт таблицы с неправильной схемой.
+        """
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(self.engine)
+        for table_name in inspector.get_table_names():
+            if table_name.endswith('_new'):
+                continue
+            try:
+                cols = inspector.get_columns(table_name)
+                id_col = next((c for c in cols if c['name'] == 'id'), None)
+                if id_col is None:
+                    continue
+                # SQLite reports type as 'INTEGER' if properly created
+                col_type = str(id_col['type']).upper() if id_col.get('type') else ''
+                if col_type == 'INTEGER' and id_col.get('primary_key'):
+                    continue  # OK
+
+                # Check actual SQLite schema
+                pk_cols = inspector.get_pk_constraint(table_name)
+                if pk_cols and 'id' in pk_cols.get('constrained_columns', []):
+                    continue  # Already a PK
+
+                # Fix: rebuild table
+                self._rebuild_table_with_pk(table_name, cols)
+            except Exception:
+                pass  # Non-critical — don't block startup
+
+    def _rebuild_table_with_pk(self, table_name: str, columns: list):
+        """Rebuild a table with INTEGER PRIMARY KEY AUTOINCREMENT."""
+        from sqlalchemy import text
+        col_defs = []
+        col_names = []
+        for c in columns:
+            name = c['name']
+            col_names.append(name)
+            ctype = 'INTEGER' if name == 'id' else str(c['type'] or 'TEXT')
+            if name == 'id':
+                col_defs.append(f'"{name}" INTEGER PRIMARY KEY AUTOINCREMENT')
+                continue
+            nullable = ''
+            if c.get('nullable', True) is False:
+                nullable = ' NOT NULL'
+            default = ''
+            cdefault = c.get('default')
+            if cdefault:
+                default = f' DEFAULT {cdefault}'
+            col_defs.append(f'"{name}" {ctype}{nullable}{default}')
+
+        with self.engine.begin() as conn:
+            conn.execute(text(
+                f'CREATE TABLE "{table_name}_new" ({", ".join(col_defs)})'))
+            cols_str = ', '.join(f'"{n}"' for n in col_names)
+            conn.execute(text(
+                f'INSERT INTO "{table_name}_new" ({cols_str}) '
+                f'SELECT {cols_str} FROM "{table_name}"'))
+            conn.execute(text(f'DROP TABLE "{table_name}"'))
+            conn.execute(text(
+                f'ALTER TABLE "{table_name}_new" RENAME TO "{table_name}"'))
+
     def _run_lightweight_migrations(self):
         """Добавляет отсутствующие колонки в существующие таблицы (без Alembic).
 

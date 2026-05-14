@@ -170,6 +170,8 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             menu.act_report_builder.triggered.connect(self._open_report_builder)
         if hasattr(menu, 'act_formula_editor'):
             menu.act_formula_editor.triggered.connect(self._open_formula_editor)
+        if hasattr(menu, 'act_shift_dashboard'):
+            menu.act_shift_dashboard.triggered.connect(self._open_shift_dashboard)
         menu.act_op_templates.triggered.connect(self._open_op_templates)
         menu.act_transition_templates.triggered.connect(self._open_transition_templates)
         menu.act_excel_import.triggered.connect(self._open_excel_import)
@@ -184,6 +186,8 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         menu.act_cutting_calc.triggered.connect(self._open_cutting_calc)
         menu.act_unv_tables.triggered.connect(self._open_unv_tables)
         menu.act_doc_pack.triggered.connect(self._generate_doc_pack)
+        if hasattr(menu, 'act_batch_print'):
+            menu.act_batch_print.triggered.connect(self._open_batch_print)
         menu.act_appearance.triggered.connect(self._open_appearance_settings)
         menu.act_notifications.triggered.connect(self._open_notifications)
         menu.act_change_password.triggered.connect(self._open_change_password_self)

@@ -48,3 +48,24 @@ jobs:
 
       - name: Run pytest
         run: pytest -q tests/
+
+  health-check:
+    runs-on: ubuntu-latest
+    needs: pytest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t atpp-test .
+
+      - name: Start container and check health
+        run: |
+          docker run -d -p 8000:8000 --name atpp-test atpp-test
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8000/api/health && break
+            sleep 2
+          done
+          HEALTH=$(curl -s http://localhost:8000/api/health)
+          echo "Health: $HEALTH"
+          echo "$HEALTH" | grep -q '"status":"ok"'
+          docker stop atpp-test

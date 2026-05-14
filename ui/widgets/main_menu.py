@@ -180,6 +180,8 @@ class MainMenu(QMenuBar):
         m.addAction(self.act_report_builder)
         self.act_formula_editor = QAction("🔧 Редактор формул...", self)
         m.addAction(self.act_formula_editor)
+        self.act_shift_dashboard = QAction("🏭 Дашборд смены...", self)
+        m.addAction(self.act_shift_dashboard)
         self.act_op_templates = QAction("📚 Библиотека типовых операций...", self)
         m.addAction(self.act_op_templates)
         self.act_transition_templates = QAction("📋 Шаблоны переходов...", self)
@@ -226,6 +228,9 @@ class MainMenu(QMenuBar):
         self.act_doc_pack = QAction(
             "📋 Комплект документов (МК+ОК+ВМ)...", self)
         m.addAction(self.act_doc_pack)
+        self.act_batch_print = QAction(
+            "🖨 Пакетная печать МК...", self)
+        m.addAction(self.act_batch_print)
         self.act_appearance = QAction("Настройки внешнего вида...", self)
         m.addAction(self.act_appearance)
 

@@ -448,6 +448,11 @@ class DialogLaunchersMixin:
         w = FormulaEditorWidget(self.db_manager, self)
         self._add_or_focus_tab(w, 'Редактор формул')
 
+    def _open_shift_dashboard(self):
+        from ui.widgets.shift_dashboard import ShiftDashboard
+        w = ShiftDashboard(self.db_manager, self)
+        self._add_or_focus_tab(w, 'Дашборд смены')
+
     def _open_registration_journal(self):
         from ui.widgets.journal_widget import JournalWidget
         w = JournalWidget(self.db_manager, self.user, self)
@@ -493,6 +498,11 @@ class DialogLaunchersMixin:
             f'Файл сохранён:\n{path}\n\n'
             f'Откройте его в 1С через "Загрузка из табличного документа".'
         )
+
+    def _open_batch_print(self):
+        from ui.dialogs.batch_print_dialog import BatchPrintDialog
+        dlg = BatchPrintDialog(self.db_manager, parent=self)
+        dlg.exec()
 
     def _open_notifications(self):
         from ui.dialogs.notifications_dialog import NotificationsDialog
