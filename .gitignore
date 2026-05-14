@@ -58,3 +58,6 @@ temp/
 .venv/
 .env
 .env.docker
+
+# Claude Code (progress journal, not committed)
+.claude/
