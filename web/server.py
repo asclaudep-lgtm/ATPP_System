@@ -24,7 +24,7 @@ from web.config import CORS_ORIGINS, STATIC_DIR
 from web.deps import _get_db_manager
 from web.schemas import LoginRequest
 from web.routers import (products, tech_processes, work_orders,
-                          approval, bom, dashboard)
+                          approval, bom, dashboard, production, tooling)
 
 app = FastAPI(title="ATPP Web API", version="10.0.0")
 
@@ -43,6 +43,8 @@ app.include_router(work_orders.router, prefix="/api")
 app.include_router(approval.router, prefix="/api")
 app.include_router(bom.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
+app.include_router(production.router, prefix="/api")
+app.include_router(tooling.router, prefix="/api")
 
 
 @app.post("/api/auth/login")
@@ -66,7 +68,7 @@ def login(body: LoginRequest):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "10.0.0"}
+    return {"status": "ok", "version": "11.0.0"}
 
 
 # ——— WebSocket: IoT live updates ———

@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ATPP Web v10</title>
+<title>ATPP Web v11</title>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#333}
@@ -13,23 +14,21 @@ body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#333}
   background:#fff;padding:12px 20px;border-radius:8px;margin-bottom:16px;
   box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .header h1{font-size:20px;color:#1976d2}
-.nav{display:flex;gap:8px;margin-bottom:16px}
-.nav button{padding:8px 20px;border:none;border-radius:6px;cursor:pointer;
-  background:#e3e8ef;font-size:14px}
+.nav{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.nav button{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;
+  background:#e3e8ef;font-size:13px;white-space:nowrap}
 .nav button.active{background:#1976d2;color:#fff}
 .card{background:#fff;border-radius:8px;padding:20px;margin-bottom:12px;
   box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:12px}
-.stat{padding:16px;text-align:center;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.stat{padding:16px;text-align:center;border-radius:8px;
+  background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
 .stat .num{font-size:28px;font-weight:bold}
 .stat .lbl{font-size:12px;opacity:.85;margin-top:4px}
 table{width:100%;border-collapse:collapse;margin-top:12px}
-th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #eee;
-  font-size:13px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
 th{background:#f8f9fa;font-weight:600;color:#666}
-.status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;
-  font-weight:600}
+.status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
 .status-draft{background:#fff3cd;color:#856404}
 .status-approved{background:#d4edda;color:#155724}
 .status-in-progress{background:#d1ecf1;color:#0c5460}
@@ -40,8 +39,16 @@ th{background:#f8f9fa;font-weight:600;color:#666}
 .login-form button{width:100%;padding:10px;background:#1976d2;color:#fff;
   border:none;border-radius:4px;font-size:16px;cursor:pointer;margin-top:12px}
 .error{color:#d32f2f;font-size:12px;margin-top:4px}
-.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;
-  margin-left:4px}
+.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;margin-left:4px}
+.chart-box{width:100%;height:280px;margin-top:12px}
+.barcode-input{font-size:24px;padding:12px;width:100%;border:2px solid #1976d2;
+  border-radius:8px;text-align:center;letter-spacing:2px;margin-bottom:16px}
+.scanner-area{border:2px dashed #bdc3c7;border-radius:8px;padding:24px;text-align:center;
+  color:#999;margin-bottom:16px}
+.route-step{padding:8px 12px;margin:4px 0;background:#f8f9fa;border-radius:4px;
+  display:flex;justify-content:space-between;align-items:center}
+.route-step.active{background:#d4edda;border-left:4px solid #27ae60}
+.route-step.done{background:#e8f5e9;color:#666}
 </style>
 </head>
 <body>
@@ -50,7 +57,7 @@ th{background:#f8f9fa;font-weight:600;color:#666}
 <!-- Login -->
 <div v-if="!token">
   <div class="login-form">
-    <h2 style="margin-bottom:16px;color:#1976d2">ATPP System v10</h2>
+    <h2 style="margin-bottom:16px;color:#1976d2">ATPP System v11</h2>
     <input v-model="login.username" placeholder="Логин" @keyup.enter="doLogin">
     <input v-model="login.password" type="password" placeholder="Пароль" @keyup.enter="doLogin">
     <div class="error" v-if="loginError">{{ loginError }}</div>
@@ -61,7 +68,7 @@ th{background:#f8f9fa;font-weight:600;color:#666}
 <!-- Main app -->
 <div v-else>
   <div class="header">
-    <h1>ATPP Web v10</h1>
+    <h1>ATPP Web v11</h1>
     <div>
       <span style="margin-right:12px">{{ user.full_name || user.username }}</span>
       <button @click="logout" style="padding:4px 12px;cursor:pointer">Выход</button>
@@ -75,10 +82,13 @@ th{background:#f8f9fa;font-weight:600;color:#666}
   </div>
 
   <div class="nav">
-    <button :class="{active:page==='dashboard'}" @click="page='dashboard'">📊 Дашборд</button>
+    <button :class="{active:page==='dashboard'}" @click="page='dashboard';loadDashboard()">📊 Дашборд</button>
     <button :class="{active:page==='products'}" @click="page='products';loadProducts()">📦 Изделия</button>
     <button :class="{active:page==='tps'}" @click="page='tps';loadTPs()">📋 Техпроцессы</button>
-    <button :class="{active:page==='orders'}" @click="page='orders';loadOrders()">🏭 Наряды</button>
+    <button :class="{active:page==='production'}" @click="page='production'">🏭 Производство</button>
+    <button :class="{active:page==='qa'}" @click="page='qa';loadQAPending()">🔍 ОТК</button>
+    <button :class="{active:page==='tooling'}" @click="page='tooling';loadToolingItems()">🧰 Оснастка</button>
+    <button :class="{active:page==='orders'}" @click="page='orders';loadOrders()">📋 Наряды</button>
   </div>
 
   <!-- Dashboard -->
@@ -90,6 +100,10 @@ th{background:#f8f9fa;font-weight:600;color:#666}
       <div class="stat"><div class="num">{{ stats.active_work_orders }}</div><div class="lbl">В работе</div></div>
       <div class="stat"><div class="num">{{ stats.total_users }}</div><div class="lbl">Пользователей</div></div>
     </div>
+    <div class="card" v-if="equipLoad.length">
+      <h3>Загрузка оборудования</h3>
+      <div class="chart-box" id="equip-chart"></div>
+    </div>
   </div>
 
   <!-- Products list -->
@@ -100,11 +114,9 @@ th{background:#f8f9fa;font-weight:600;color:#666}
       <table>
         <thead><tr><th>Обозначение</th><th>Наименование</th><th>Масса</th><th>Габариты</th><th>Класс точн.</th></tr></thead>
         <tbody>
-          <tr v-for="p in products" :key="p.id" @click="loadBOM(p.id)"
-              style="cursor:pointer" :title="'Нажмите для BOM'">
+          <tr v-for="p in products" :key="p.id" @click="loadBOM(p.id)" style="cursor:pointer" :title="'Нажмите для BOM'">
             <td><b>{{ p.designation }}</b></td><td>{{ p.name }}</td>
-            <td>{{ p.mass || '—' }}</td><td>{{ p.dimensions || '—' }}</td>
-            <td>{{ p.accuracy_class || '—' }}</td>
+            <td>{{ p.mass || '—' }}</td><td>{{ p.dimensions || '—' }}</td><td>{{ p.accuracy_class || '—' }}</td>
           </tr>
         </tbody>
       </table>
@@ -114,7 +126,6 @@ th{background:#f8f9fa;font-weight:600;color:#666}
         <button @click="page_num++;loadProducts()" :disabled="page_num*50>=productsTotal">→</button>
       </div>
     </div>
-    <!-- BOM display -->
     <div class="card" v-if="bomTree.length">
       <h3>Состав изделия (BOM):</h3>
       <div v-for="node in bomTree" :key="node.id" style="margin-left:0">
@@ -132,16 +143,13 @@ th{background:#f8f9fa;font-weight:600;color:#666}
         <thead><tr><th>Номер ТП</th><th>Изделие</th><th>Статус</th><th>Версия</th><th>Вариант</th></tr></thead>
         <tbody>
           <tr v-for="tp in tps" :key="tp.id" @click="loadTPDetail(tp.id)" style="cursor:pointer">
-            <td><b>{{ tp.number }}</b></td>
-            <td>{{ tp.product_designation || '—' }}</td>
+            <td><b>{{ tp.number }}</b></td><td>{{ tp.product_designation || '—' }}</td>
             <td><span :class="'status status-'+tp.status.toLowerCase()">{{ tp.status }}</span></td>
-            <td>{{ tp.version || '—' }}</td>
-            <td>{{ tp.execution_variant || '—' }}</td>
+            <td>{{ tp.version || '—' }}</td><td>{{ tp.execution_variant || '—' }}</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <!-- TP detail -->
     <div class="card" v-if="tpDetail">
       <h3>{{ tpDetail.number }} — {{ tpDetail.product_designation }} {{ tpDetail.product_name }}</h3>
       <p>Статус: {{ tpDetail.status }} | Технология: {{ tpDetail.technology_type }}</p>
@@ -164,11 +172,91 @@ th{background:#f8f9fa;font-weight:600;color:#666}
         <thead><tr><th>Наряд</th><th>Изделие</th><th>Статус</th><th>Кол-во</th><th>Выполнено</th><th>Срок</th></tr></thead>
         <tbody>
           <tr v-for="wo in orders" :key="wo.id">
-            <td><b>{{ wo.number }}</b></td>
-            <td>{{ wo.product_designation || '—' }}</td>
+            <td><b>{{ wo.number }}</b></td><td>{{ wo.product_designation || '—' }}</td>
             <td><span :class="'status status-in-progress'">{{ wo.status }}</span></td>
-            <td>{{ wo.qty_total }}</td><td>{{ wo.qty_done }}</td>
-            <td>{{ wo.due_date || '—' }}</td>
+            <td>{{ wo.qty_total }}</td><td>{{ wo.qty_done }}</td><td>{{ wo.due_date || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Production module (v11) -->
+  <div v-if="page==='production'">
+    <div class="card">
+      <h3>🔎 Сканер штрих-кода / поиск наряда</h3>
+      <div class="scanner-area">
+        <input class="barcode-input" v-model="barcode" placeholder="Отсканируйте штрих-код или введите номер наряда..."
+               @keyup.enter="lookupBarcode" autofocus>
+        <button @click="lookupBarcode" style="padding:8px 24px;cursor:pointer;background:#1976d2;color:#fff;border:none;border-radius:4px">Найти</button>
+      </div>
+    </div>
+    <div class="card" v-if="routeSlip">
+      <h3>Маршрутный лист: {{ routeSlip.work_order.number }}</h3>
+      <p>{{ routeSlip.work_order.product_designation }} — {{ routeSlip.work_order.product_name }} |
+         Статус: {{ routeSlip.work_order.status }} |
+         Выполнено: {{ routeSlip.work_order.qty_done }}/{{ routeSlip.work_order.qty_total }}</p>
+      <div v-for="s in routeSlip.steps" :key="s.id" :class="'route-step ' + (s.status==='Выполнен'?'done':(s.status==='В работе'?'active':''))">
+        <span><b>{{ s.operation }}</b> — {{ s.workshop }}</span>
+        <span style="font-size:12px;color:#666">{{ s.status }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- QA Terminal (v11) -->
+  <div v-if="page==='qa'">
+    <div class="card">
+      <h3>🔍 Ожидают контроля ОТК</h3>
+      <table v-if="qaPending.length">
+        <thead><tr><th>Операция</th><th>Участок</th><th>Завершена</th></tr></thead>
+        <tbody>
+          <tr v-for="s in qaPending" :key="s.id">
+            <td>{{ s.operation }}</td><td>{{ s.workshop }}</td>
+            <td>{{ s.actual_end || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else style="color:#999;padding:20px;text-align:center">Нет операций, ожидающих ОТК.</p>
+    </div>
+    <div class="card">
+      <h3>Последние проблемы производства</h3>
+      <table v-if="issues.length">
+        <thead><tr><th>Наряд</th><th>Проблема</th><th>Категория</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr v-for="i in issues" :key="i.id">
+            <td>{{ i.work_order_id }}</td><td>{{ i.title }}</td>
+            <td>{{ i.category }}</td><td>{{ i.status }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else style="color:#999;padding:20px;text-align:center">Проблем не зарегистрировано.</p>
+    </div>
+  </div>
+
+  <!-- Tooling module (v11) -->
+  <div v-if="page==='tooling'">
+    <div class="card">
+      <h3>🧰 Оснастка</h3>
+      <input v-model="toolingSearch" placeholder="Поиск по названию или инв. номеру..." @input="loadToolingItems"
+             style="padding:8px;width:300px;border:1px solid #ddd;border-radius:4px;margin-bottom:12px">
+      <table>
+        <thead><tr><th>Инв. №</th><th>Наименование</th><th>Статус</th><th>Износ</th><th>Место</th></tr></thead>
+        <tbody>
+          <tr v-for="ti in toolingItems" :key="ti.id" @click="selectTooling(ti)" style="cursor:pointer">
+            <td><b>{{ ti.inventory_no }}</b></td><td>{{ ti.name }}</td>
+            <td>{{ ti.status }}</td><td>{{ ti.wear_percent }}%</td><td>{{ ti.location }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" v-if="selectedTooling">
+      <h3>История: {{ selectedTooling.item.inventory_no }} — {{ selectedTooling.item.name }}</h3>
+      <table>
+        <thead><tr><th>Выдана</th><th>Возвращена</th><th>Кому</th><th>Наряд</th></tr></thead>
+        <tbody>
+          <tr v-for="iss in selectedTooling.issues" :key="iss.id">
+            <td>{{ iss.issued_at || '—' }}</td><td>{{ iss.returned_at || '— (на руках)' }}</td>
+            <td>{{ iss.issued_to }}</td><td>{{ iss.work_order_id }}</td>
           </tr>
         </tbody>
       </table>
@@ -186,17 +274,17 @@ createApp({
     return {
       token: localStorage.getItem('atpp_token'),
       user: JSON.parse(localStorage.getItem('atpp_user') || '{}'),
-      login: { username: '', password: '' },
-      loginError: '',
-      page: 'dashboard',
-      stats: {},
-      search: '', tpSearch: '',
+      login: { username: '', password: '' }, loginError: '',
+      page: 'dashboard', stats: {}, equipLoad: [],
+      search: '', tpSearch: '', barcode: '', toolingSearch: '',
       products: [], productsTotal: 0, page_num: 1,
       tps: [], tpDetail: null,
       orders: [],
       bomTree: [],
-      error: '',
-      Math: Math,
+      routeSlip: null,
+      qaPending: [], issues: [],
+      toolingItems: [], selectedTooling: null,
+      error: '', Math: Math,
     }
   },
   methods: {
@@ -209,50 +297,81 @@ createApp({
     async doLogin() {
       this.loginError = ''
       try {
-        const d = await this.api('/api/auth/login', {
-          method: 'POST', body: JSON.stringify(this.login) })
+        const d = await this.api('/api/auth/login', { method: 'POST', body: JSON.stringify(this.login) })
         if (!d || !d.access_token) { this.loginError = 'Неверный логин/пароль'; return }
-        this.token = d.access_token
-        this.user = d.user
+        this.token = d.access_token; this.user = d.user
         localStorage.setItem('atpp_token', this.token)
         localStorage.setItem('atpp_user', JSON.stringify(this.user))
-        this.loadStats()
+        this.loadDashboard()
       } catch(e) { this.loginError = 'Ошибка подключения' }
     },
-    logout() {
-      localStorage.removeItem('atpp_token')
-      localStorage.removeItem('atpp_user')
-      this.token = ''; this.user = {}
-    },
+    logout() { localStorage.removeItem('atpp_token'); localStorage.removeItem('atpp_user'); this.token = ''; this.user = {} },
     showError(msg) { this.error = msg; setTimeout(() => this.error = '', 8000) },
-    async loadStats() {
-      try { this.stats = await this.api('/api/dashboard/stats') } catch(e) { this.showError('Не удалось загрузить статистику') }
+    async loadDashboard() {
+      try {
+        this.stats = await this.api('/api/dashboard/stats')
+        this.equipLoad = await this.api('/api/production/equipment-load')
+        this.$nextTick(() => this.renderEquipChart())
+      } catch(e) { /* silently ignore */ }
+    },
+    renderEquipChart() {
+      const el = document.getElementById('equip-chart')
+      if (!el || !this.equipLoad.length) return
+      const chart = echarts.init(el)
+      chart.setOption({
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: this.equipLoad.map(e => e.name) },
+        yAxis: { type: 'value', name: 'Загрузка %' },
+        series: [{ data: this.equipLoad.map(e => e.capacity_pct), type: 'bar',
+                   itemStyle: { color: '#1976d2' } }]
+      })
     },
     async loadProducts() {
       const p = this.page_num; const s = this.search
-      try {
-        const d = await this.api(`/api/products?page=${p}&page_size=50&search=${encodeURIComponent(s)}`)
-        this.products = d.items; this.productsTotal = d.total
-      } catch(e) { this.showError('Не удалось загрузить список изделий') }
+      try { const d = await this.api(`/api/products?page=${p}&page_size=50&search=${encodeURIComponent(s)}`)
+        this.products = d.items; this.productsTotal = d.total } catch(e) { this.showError('Не удалось загрузить изделия') }
     },
     async loadTPs() {
-      try {
-        const d = await this.api(`/api/tech-processes?search=${encodeURIComponent(this.tpSearch)}&page_size=100`)
-        if (d) this.tps = d.items
-      } catch(e) { this.showError('Не удалось загрузить техпроцессы') }
+      try { const d = await this.api(`/api/tech-processes?search=${encodeURIComponent(this.tpSearch)}&page_size=100`)
+        if (d) this.tps = d.items } catch(e) { this.showError('Не удалось загрузить техпроцессы') }
     },
     async loadTPDetail(tpId) {
-      try { this.tpDetail = await this.api('/api/tech-processes/' + tpId) } catch(e) { this.showError('Не удалось загрузить детали ТП') }
+      try { this.tpDetail = await this.api('/api/tech-processes/' + tpId) } catch(e) { this.showError('Не удалось загрузить ТП') }
     },
     async loadOrders() {
-      try { const d = await this.api('/api/work-orders?page_size=100'); if (d) this.orders = d.items } catch(e) { this.showError('Не удалось загрузить наряды') }
+      try { const d = await this.api('/api/work-orders?page_size=100'); if (d) this.orders = d.items } catch(e) {}
     },
     async loadBOM(productId) {
-      try { const d = await this.api('/api/bom/' + productId); this.bomTree = d?.tree || [] } catch(e) { this.showError('Не удалось загрузить состав изделия') }
+      try { const d = await this.api('/api/bom/' + productId); this.bomTree = d?.tree || [] } catch(e) {}
+    },
+    // v11: Production
+    async lookupBarcode() {
+      const code = this.barcode.trim()
+      if (!code) return
+      try {
+        const result = await this.api('/api/production/barcode/' + encodeURIComponent(code))
+        if (result.type === 'work_order') {
+          this.routeSlip = await this.api('/api/production/route/' + result.id)
+        }
+      } catch(e) { this.showError('Наряд/партия не найден: ' + code) }
+    },
+    // v11: QA
+    async loadQAPending() {
+      try {
+        this.qaPending = await this.api('/api/production/qa/pending') || []
+        this.issues = await this.api('/api/production/issues') || []
+      } catch(e) {}
+    },
+    // v11: Tooling
+    async loadToolingItems() {
+      try { this.toolingItems = await this.api('/api/tooling/items?search=' + encodeURIComponent(this.toolingSearch)) || [] } catch(e) {}
+    },
+    async selectTooling(ti) {
+      try { this.selectedTooling = await this.api('/api/tooling/history/' + ti.id) } catch(e) { this.showError('Не удалось загрузить историю') }
     },
   },
   mounted() {
-    if (this.token) this.loadStats()
+    if (this.token) this.loadDashboard()
   },
 }).component('bom-node', {
   props: ['node'],
