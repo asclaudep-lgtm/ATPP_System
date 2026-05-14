@@ -68,7 +68,14 @@ def login(body: LoginRequest):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "11.0.0"}
+    db_status = "ok"
+    try:
+        db = _get_db_manager()
+        with db.get_session() as s:
+            s.execute("SELECT 1")
+    except Exception:
+        db_status = "error"
+    return {"status": "ok", "db": db_status, "version": "11.0.0"}
 
 
 # ——— WebSocket: IoT live updates ———
