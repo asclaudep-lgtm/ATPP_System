@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ATPP Web v11</title>
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#1976d2">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
@@ -388,6 +390,11 @@ createApp({
       <bom-node v-for="c in node.children" :key="c.id" :node="c"></bom-node>
     </div>`
 }).mount('#app')
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js')
+}
 </script>
 </body>
 </html>

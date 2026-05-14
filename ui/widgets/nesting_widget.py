@@ -1,12 +1,14 @@
 """Виджет визуализации раскроя листового металла (нестинг).
 
-Greedy shelf-алгоритм: размещает прямоугольные заготовки на листе,
-минимизируя отходы. Поддерживает деловые отходы (остатки листа).
+Greedy shelf-алгоритм + гильотинный раскрой: размещает прямоугольные
+заготовки на листе, минимизируя отходы. Поддерживает деловые отходы
+(остатки листа), импорт из BOM изделия, экспорт карты раскроя в PDF.
 """
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                               QLabel, QSpinBox, QDoubleSpinBox, QTableWidget,
-                              QTableWidgetItem, QGroupBox, QMessageBox)
-from PyQt6.QtCore import Qt, QRectF, QTimer
+                              QTableWidgetItem, QGroupBox, QMessageBox,
+                              QComboBox, QFileDialog)
+from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import (QPainter, QColor, QPen, QBrush, QFont,
                           QPaintEvent)
 
@@ -80,12 +82,15 @@ class NestingCanvas(QWidget):
 
 
 class NestingWidget(QWidget):
-    """Виджет раскроя листового металла."""
+    """Виджет раскроя листового металла — shelf + guillotine + BOM import."""
 
-    def __init__(self, db_manager, parent=None):
+    def __init__(self, db_manager, parent=None, product_id=None):
         super().__init__(parent)
         self.db_manager = db_manager
+        self._product_id = product_id
         self._init_ui()
+        if product_id:
+            self._load_from_bom(product_id)
 
     def _init_ui(self):
         layout = QHBoxLayout(self)
@@ -144,12 +149,91 @@ class NestingWidget(QWidget):
         calc_btn = QPushButton('▶ Рассчитать раскрой')
         calc_btn.clicked.connect(self._calculate)
         ctrl.addWidget(calc_btn)
+
+        bom_btn = QPushButton('📦 Загрузить из BOM')
+        bom_btn.clicked.connect(self._import_from_bom_dialog)
+        ctrl.addWidget(bom_btn)
+
+        export_btn = QPushButton('📄 Экспорт PDF')
+        export_btn.clicked.connect(self._export_pdf)
+        ctrl.addWidget(export_btn)
+
         ctrl.addStretch()
         layout.addLayout(ctrl)
 
         # Right: canvas
         self.canvas = NestingCanvas()
         layout.addWidget(self.canvas, stretch=1)
+
+    def _load_from_bom(self, product_id):
+        """Load parts from a product's BOM into the table."""
+        from database.models import Product, BOMItem
+        with self.db_manager.get_session() as s:
+            p = s.query(Product).get(product_id)
+            if p is None:
+                return
+            bom_items = s.query(BOMItem).filter(
+                BOMItem.parent_id == product_id).all()
+            self.table.setRowCount(len(bom_items))
+            for i, item in enumerate(bom_items):
+                child = item.child
+                w = getattr(child, 'width', None) or 100
+                h = getattr(child, 'length', None) or 100
+                self.table.setItem(i, 0, QTableWidgetItem(
+                    child.designation if child else f'Item{i}'))
+                self.table.setItem(i, 1, QTableWidgetItem(str(w)))
+                self.table.setItem(i, 2, QTableWidgetItem(str(h)))
+                self.table.setItem(i, 3, QTableWidgetItem(
+                    str(item.quantity or 1)))
+
+    def _export_pdf(self):
+        """Export the current layout as a PDF sketch."""
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas as rl_canvas
+        path, _ = QFileDialog.getSaveFileName(
+            self, 'Экспорт карты раскроя', '', 'PDF (*.pdf)')
+        if not path:
+            return
+        w_mm, h_mm = A4
+        c = rl_canvas.Canvas(path, pagesize=A4)
+        c.setFont('Helvetica-Bold', 14)
+        c.drawString(20, h_mm - 20,
+                     f'Карта раскроя: {self.sheet_w.value()}×'
+                     f'{self.sheet_h.value()} мм')
+        c.setFont('Helvetica', 10)
+        c.drawString(20, h_mm - 35,
+                     f'Использование: {self.canvas.utilization:.1f}% | '
+                     f'Деталей: {len(self.canvas.parts)}')
+        scale = min((w_mm - 30) / self.canvas.sheet_w,
+                    (h_mm - 50) / self.canvas.sheet_h)
+        for x, y, pw, ph, label in self.canvas.parts:
+            px = 15 + x * scale
+            py = h_mm - 50 - (y + ph) * scale
+            pw_s = pw * scale
+            ph_s = ph * scale
+            c.rect(px, py, pw_s, ph_s)
+            if pw_s > 15 and ph_s > 10:
+                c.setFont('Helvetica', 6)
+                c.drawString(px + 1, py + ph_s / 2, label[:12])
+        c.save()
+        QMessageBox.information(self, 'PDF', f'Сохранено:\n{path}')
+
+    def _import_from_bom_dialog(self):
+        """Prompt for product designation and load its BOM parts."""
+        from PyQt6.QtWidgets import QInputDialog
+        from database.models import Product
+        des, ok = QInputDialog.getText(
+            self, 'BOM → Раскрой', 'Обозначение изделия:')
+        if not ok or not des.strip():
+            return
+        with self.db_manager.get_session() as s:
+            p = s.query(Product).filter(
+                Product.designation == des.strip()).first()
+            if p is None:
+                QMessageBox.warning(self, 'BOM',
+                                    f'Изделие "{des}" не найдено.')
+                return
+            self._load_from_bom(p.id)
 
     def _calculate(self):
         sheet_w = self.sheet_w.value()

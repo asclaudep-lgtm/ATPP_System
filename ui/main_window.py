@@ -166,6 +166,10 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         menu.act_global_search.triggered.connect(self._open_global_search)
         menu.act_journal.triggered.connect(self._open_registration_journal)
         menu.act_analytics.triggered.connect(self._open_analytics)
+        if hasattr(menu, 'act_report_builder'):
+            menu.act_report_builder.triggered.connect(self._open_report_builder)
+        if hasattr(menu, 'act_formula_editor'):
+            menu.act_formula_editor.triggered.connect(self._open_formula_editor)
         menu.act_op_templates.triggered.connect(self._open_op_templates)
         menu.act_transition_templates.triggered.connect(self._open_transition_templates)
         menu.act_excel_import.triggered.connect(self._open_excel_import)

@@ -78,6 +78,46 @@ def health():
     return {"status": "ok", "db": db_status, "version": "11.0.0"}
 
 
+# ——— Prometheus metrics —————————————————————
+
+_request_count = 0
+_request_errors = 0
+_request_latency_sum = 0.0
+
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    import time
+    global _request_count, _request_errors, _request_latency_sum
+    _request_count += 1
+    t0 = time.time()
+    try:
+        response = await call_next(request)
+    except Exception:
+        _request_errors += 1
+        raise
+    finally:
+        _request_latency_sum += time.time() - t0
+    return response
+
+
+@app.get("/metrics")
+def prometheus_metrics():
+    """Prometheus text format endpoint for scraping."""
+    lines = [
+        "# HELP atpp_requests_total Total HTTP requests.",
+        "# TYPE atpp_requests_total counter",
+        f"atpp_requests_total {_request_count}",
+        "# HELP atpp_requests_errors_total Total HTTP errors.",
+        "# TYPE atpp_requests_errors_total counter",
+        f"atpp_requests_errors_total {_request_errors}",
+        "# HELP atpp_request_latency_seconds_sum Total latency.",
+        "# TYPE atpp_request_latency_seconds_sum counter",
+        f"atpp_request_latency_seconds_sum {_request_latency_sum:.6f}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 # ——— WebSocket: IoT live updates ———
 
 

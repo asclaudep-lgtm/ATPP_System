@@ -438,6 +438,16 @@ class DialogLaunchersMixin:
         w = AnalyticsWidget(self.db_manager, self)
         self._add_or_focus_tab(w, 'Аналитика')
 
+    def _open_report_builder(self):
+        from ui.widgets.report_builder import ReportBuilderWidget
+        w = ReportBuilderWidget(self.db_manager, self)
+        self._add_or_focus_tab(w, 'Конструктор отчётов')
+
+    def _open_formula_editor(self):
+        from ui.widgets.formula_editor import FormulaEditorWidget
+        w = FormulaEditorWidget(self.db_manager, self)
+        self._add_or_focus_tab(w, 'Редактор формул')
+
     def _open_registration_journal(self):
         from ui.widgets.journal_widget import JournalWidget
         w = JournalWidget(self.db_manager, self.user, self)

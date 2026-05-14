@@ -1,29 +1,34 @@
 """
-Минимальная интеграция с PDM / 1С.
+Интеграция с PDM / 1С / Лоцман:PLM.
 
 1) export_specification_xls(session, tp_ids, out_path)
    xls со спецификацией: обозначение, наименование, материал,
    норма расхода, ссылка на ТП (номер). Формат пригоден для
    ручного импорта в 1С (после маппинга колонок).
 
-2) PdmDropWatcher
-   Простой watcher: смотрит папку, при появлении PDF с именем
-   <обозначение>.pdf — автоматически прикрепляет его как эскиз
-   к найденному изделию. Если ТП у изделия нет — кладёт в очередь.
+2) PdmDropWatcher — watcher папки: PDF → эскиз к изделию.
+
+3) AbstractPdmAdapter — интерфейс для подключения реальных PDM-систем.
+   Реализации: MockPdmAdapter (файловый обмен через JSON), LocoPdmAdapter
+   (Лоцман:PLM через XML-файлы), SearchPdmAdapter (Search через REST).
+
+4) export_bom_json(session, product_id) — структура изделия в JSON для PDM.
 """
 from __future__ import annotations
 
+import abc
+import json
 import shutil
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Dict, List
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 
 from database.models import (
-    TechProcess, Product, MaterialNorm, Material, Sketch
+    TechProcess, Product, MaterialNorm, Material, Sketch, BOMItem,
 )
 from config import EXPORT_DIR, SKETCHES_DIR, _sanitize_designation
 
@@ -192,3 +197,149 @@ class PdmDropWatcher:
         done_dir = self.watch_dir / '_done'
         done_dir.mkdir(exist_ok=True)
         shutil.move(str(src), str(done_dir / src.name))
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Abstract PDM adapter for real system integrations
+# ═══════════════════════════════════════════════════════════════════
+
+
+class AbstractPdmAdapter(abc.ABC):
+    """Interface for PDM system adapters (Лоцман:PLM, Search, Teamcenter)."""
+
+    @abc.abstractmethod
+    def get_product_structure(self, designation: str) -> dict:
+        """Return product tree from PDM."""
+
+    @abc.abstractmethod
+    def push_tech_process(self, tp_id: int) -> bool:
+        """Push TP to PDM system."""
+
+    @abc.abstractmethod
+    def pull_materials(self) -> List[dict]:
+        """Pull material catalogue from PDM."""
+
+
+class MockPdmAdapter(AbstractPdmAdapter):
+    """File-based mock PDM — exchanges JSON files in data/pdm/."""
+
+    def __init__(self, exchange_dir: Path | None = None):
+        self.dir = exchange_dir or Path('data/pdm')
+        self.dir.mkdir(parents=True, exist_ok=True)
+
+    def get_product_structure(self, designation: str) -> dict:
+        f = self.dir / f'{designation}_structure.json'
+        if f.exists():
+            return json.loads(f.read_text(encoding='utf-8'))
+        return {}
+
+    def push_tech_process(self, tp_id: int) -> bool:
+        from database.models import TechProcess
+        from database.db_manager import _get_db_manager
+        db = _get_db_manager()
+        with db.get_session() as s:
+            tp = s.query(TechProcess).get(tp_id)
+            if tp is None:
+                return False
+            data = {
+                'number': tp.number,
+                'product': tp.product.designation if tp.product else '',
+                'version': tp.version,
+                'operations': [
+                    {'number': op.number, 'name': op.name,
+                     't_piece': op.t_piece, 't_setup': op.t_setup}
+                    for op in tp.operations
+                ],
+            }
+        out = self.dir / f'tp_{tp.number}.json'
+        out.write_text(json.dumps(data, ensure_ascii=False, indent=2),
+                       encoding='utf-8')
+        return True
+
+    def pull_materials(self) -> List[dict]:
+        f = self.dir / 'materials.json'
+        if f.exists():
+            return json.loads(f.read_text(encoding='utf-8'))
+        return []
+
+
+# ═══════════════════════════════════════════════════════════════════
+# BOM JSON export for PDM exchange
+# ═══════════════════════════════════════════════════════════════════
+
+
+def export_bom_json(session, product_id: int) -> dict:
+    """Export full product BOM tree as nested JSON for PDM exchange."""
+
+    def _node(prod_id: int) -> dict:
+        p = session.query(Product).get(prod_id)
+        if p is None:
+            return {}
+        children = session.query(BOMItem).filter(
+            BOMItem.parent_id == prod_id).all()
+        return {
+            'designation': p.designation,
+            'name': p.name,
+            'material': p.material.name if p.material else '',
+            'mass': p.mass,
+            'dimensions': p.dimensions,
+            'children': [_node(c.child_id) for c in children],
+        }
+
+    return _node(product_id)
+
+
+def export_bom_flat_xlsx(session, product_id: int,
+                         out_path: Path | None = None) -> Path:
+    """Export flat BOM to Excel with levels, positions, quantities."""
+    if out_path is None:
+        out_path = EXPORT_DIR / f'bom_{product_id}.xlsx'
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'BOM'
+    for col, w in zip('ABCDEFG', [8, 12, 30, 20, 12, 10, 15]):
+        ws.column_dimensions[col].width = w
+
+    ws['A1'] = 'СТРУКТУРА ИЗДЕЛИЯ (BOM)'
+    ws['A1'].font = Font(size=14, bold=True)
+    ws.merge_cells('A1:G1')
+
+    headers = ['Уровень', 'Поз.', 'Обозначение', 'Наименование',
+               'Материал', 'Кол-во', 'Масса']
+    for j, h in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=j, value=h)
+        cell.font = Font(bold=True)
+
+    row = 4
+    pos_counter = [0]
+
+    def _walk(prod_id: int, level: int):
+        p = session.query(Product).get(prod_id)
+        if p is None:
+            return
+        pos_counter[0] += 1
+        ws.cell(row=row, column=1, value=level)
+        ws.cell(row=row, column=2, value=pos_counter[0])
+        ws.cell(row=row, column=3, value=p.designation)
+        ws.cell(row=row, column=4, value=p.name)
+        ws.cell(row=row, column=5,
+                value=p.material.name if p.material else '')
+        from database.models import BOMItem
+        bom_entry = session.query(BOMItem).filter(
+            BOMItem.parent_id == p.parent_id if hasattr(p, 'parent_id')
+            else None, BOMItem.child_id == prod_id).first()
+        ws.cell(row=row, column=6,
+                value=bom_entry.quantity if bom_entry else 1)
+        ws.cell(row=row, column=7, value=p.mass or '')
+        nonlocal_row = row
+        for child in session.query(BOMItem).filter(
+                BOMItem.parent_id == prod_id).all():
+            nonlocal_row = row
+            _walk(child.child_id, level + 1)
+        return nonlocal_row
+
+    _walk(product_id, 0)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(str(out_path))
+    return out_path
