@@ -138,16 +138,26 @@ class TestECN:
 
     def test_create_ecn_and_submit(self, db_manager):
         from modules.ecn import create_ecn, submit_for_review
-        from database.models import TechProcess
+        from database.models import (TechProcess, Product, Material,
+                                      TPStatus)
 
         with db_manager.get_session() as s:
             tp = s.query(TechProcess).first()
             if tp is None:
-                pytest.skip("No TPs in test DB")
+                m = Material(name="ECNTest", grade="ET")
+                s.add(m); s.flush()
+                p = Product(designation="ECN.TEST.001", name="ECN Part",
+                            material_id=m.id)
+                s.add(p); s.flush()
+                tp = TechProcess(number="TP-ECN-TEST", product_id=p.id,
+                                 status=TPStatus.DRAFT)
+                s.add(tp); s.flush()
             ecn = create_ecn(
-                s, tech_process_id=tp.id,
-                description="Change material to 40X",
-                author_id=1,
+                s, title="Change material",
+                reason="Material upgrade",
+                proposed_change="Change material to 40X",
+                tech_process_id=tp.id,
+                created_by=1,
             )
             assert ecn is not None
             assert ecn.id is not None

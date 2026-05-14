@@ -10,6 +10,33 @@ def qapp():
     yield app
 
 
+@pytest.fixture
+def seeded_product_with_tp(db_manager):
+    """Create a Product + TP + Operation for editor tests."""
+    from database.models import (Product, TechProcess, Operation,
+                                  Material, TPStatus)
+    with db_manager.get_session() as s:
+        tp = s.query(TechProcess).first()
+        if tp is not None:
+            return tp.product_id, tp.id
+
+        m = Material(name="EditorTestSteel", grade="E1")
+        s.add(m)
+        s.flush()
+        p = Product(designation="EDITOR.TEST.001", name="Editor Test Part",
+                    material_id=m.id, mass=2.0)
+        s.add(p)
+        s.flush()
+        tp = TechProcess(number="TP-EDITOR-TEST", product_id=p.id,
+                         status=TPStatus.DRAFT)
+        s.add(tp)
+        s.flush()
+        op = Operation(number="005", name="Editor Test Op",
+                       tech_process_id=tp.id, t_piece=3.0, t_setup=8.0)
+        s.add(op)
+        return p.id, tp.id
+
+
 class TestProductEditor:
     def test_create_widget_loads_without_crash(self, db_manager, qapp):
         from database.models import Product
@@ -39,13 +66,8 @@ class TestProductEditor:
         assert w._des_edit.text() == ''
         assert w._name_edit.text() == ''
 
-    def test_tp_table_populated(self, db_manager, qapp):
-        from database.models import Product, TechProcess
-        with db_manager.get_session() as s:
-            tp = s.query(TechProcess).first()
-            if tp is None:
-                pytest.skip("No TPs in test DB")
-            pid = tp.product_id
+    def test_tp_table_populated(self, db_manager, qapp, seeded_product_with_tp):
+        pid, tpid = seeded_product_with_tp
         from ui.editors.product_editor import ProductEditorWidget
         user = {'id': 1, 'username': 'admin', 'role': 'admin'}
         w = ProductEditorWidget(db_manager, pid, user)
@@ -53,39 +75,27 @@ class TestProductEditor:
 
 
 class TestTPEditor:
-    def test_create_widget_loads_tp_data(self, db_manager, qapp):
-        from database.models import TechProcess
-        with db_manager.get_session() as s:
-            tp = s.query(TechProcess).first()
-            if tp is None:
-                pytest.skip("No TPs in test DB")
-            tpid = tp.id
+    def test_create_widget_loads_tp_data(self, db_manager, qapp,
+                                          seeded_product_with_tp):
+        _, tpid = seeded_product_with_tp
         from ui.editors.tp_editor import TPEditorWidget
         user = {'id': 1, 'username': 'admin', 'role': 'admin'}
         w = TPEditorWidget(db_manager, tpid, user)
         assert w._tp_data is not None
         assert w._tp_data['number']
 
-    def test_validation_rejects_empty_number(self, db_manager, qapp):
-        from database.models import TechProcess
-        with db_manager.get_session() as s:
-            tp = s.query(TechProcess).first()
-            if tp is None:
-                pytest.skip("No TPs in test DB")
-            tpid = tp.id
+    def test_validation_rejects_empty_number(self, db_manager, qapp,
+                                              seeded_product_with_tp):
+        _, tpid = seeded_product_with_tp
         from ui.editors.tp_editor import TPEditorWidget
         user = {'id': 1, 'username': 'admin', 'role': 'admin'}
         w = TPEditorWidget(db_manager, tpid, user)
         w._num_edit.clear()
         assert w._num_edit.text() == ''
 
-    def test_operations_table_populated(self, db_manager, qapp):
-        from database.models import TechProcess
-        with db_manager.get_session() as s:
-            tp = s.query(TechProcess).first()
-            if tp is None:
-                pytest.skip("No TPs in test DB")
-            tpid = tp.id
+    def test_operations_table_populated(self, db_manager, qapp,
+                                         seeded_product_with_tp):
+        _, tpid = seeded_product_with_tp
         from ui.editors.tp_editor import TPEditorWidget
         user = {'id': 1, 'username': 'admin', 'role': 'admin'}
         w = TPEditorWidget(db_manager, tpid, user)
