@@ -106,9 +106,9 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         nav = self.nav_panel
 
         # Navigation → MainWindow
-        nav.product_double_clicked.connect(self._open_product_ktp)
+        nav.product_double_clicked.connect(self._open_product_editor)
         nav.tp_double_clicked.connect(self._open_tp_editor)
-        nav.product_edit_requested.connect(self._edit_product)
+        nav.product_edit_requested.connect(self._open_product_editor)
         nav.product_delete_requested.connect(self._delete_product)
         nav.new_product_requested.connect(self._new_product)
         nav.new_tp_requested.connect(
@@ -130,6 +130,9 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         menu.favorites_menu_about_to_show.connect(self._refresh_favorites_menu)
 
         menu.act_open_references.triggered.connect(self._open_references)
+        if hasattr(menu, 'act_open_reference_editors'):
+            menu.act_open_reference_editors.triggered.connect(
+                self._open_reference_editors)
         menu.act_generate_docs.triggered.connect(self._open_doc_dialog)
         menu.act_ktd_browser.triggered.connect(self._open_ktd_browser)
 
@@ -241,6 +244,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
     # ═══════════════════════════════════════════════════════════════
 
     def _open_product_ktp(self, product_id: int):
+        """Legacy KTP widget — kept for backward compatibility."""
         if product_id in self._open_ktp_tabs:
             idx = self._open_ktp_tabs[product_id]
             if idx < self.work_area.count():
@@ -257,6 +261,41 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         self.work_area.setCurrentIndex(idx)
         self._open_ktp_tabs[product_id] = idx
         self._log_message(f"Открыт КТП: {title}")
+
+    def _open_product_editor(self, product_id: int):
+        """v11: Open the new ProductEditorWidget for a product."""
+        for i in range(self.work_area.count()):
+            w = self.work_area.widget(i)
+            if (hasattr(w, 'product_id') and w.product_id == product_id
+                    and type(w).__name__ == 'ProductEditorWidget'):
+                self.work_area.setCurrentIndex(i)
+                return
+
+        from ui.editors.product_editor import ProductEditorWidget
+        editor = ProductEditorWidget(
+            self.db_manager, product_id, self.user, self)
+        editor.product_saved.connect(lambda pid: self.load_navigation_data())
+        editor.tp_open_requested.connect(self._open_tp_editor)
+
+        title = editor.get_tab_title()
+        idx = self.work_area.addTab(editor, title)
+        self.work_area.setCurrentIndex(idx)
+        self._log_message(f"Открыт редактор: {title}")
+
+    def _open_reference_editors(self):
+        """v11: Open tabbed reference editors (materials, equipment, etc.)."""
+        from ui.editors.reference_editor import ReferenceEditorWidget
+
+        tabs = QTabWidget()
+        for ref_type, cfg in [
+            ('material', 'Материалы'),
+            ('equipment', 'Оборудование'),
+            ('tool', 'Инструмент'),
+            ('profession', 'Профессии'),
+        ]:
+            editor = ReferenceEditorWidget(self.db_manager, ref_type)
+            tabs.addTab(editor, cfg[1])
+        self._add_or_focus_tab(tabs, 'Справочники')
 
     def _open_tp_editor(self, tp_id):
         if tp_id in self._open_tp_tabs:
