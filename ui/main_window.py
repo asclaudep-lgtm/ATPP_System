@@ -11,6 +11,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QSize, pyqtSignal, QSettings
 from PyQt6.QtGui import QAction, QKeySequence, QFont, QColor, QIcon, QPixmap
 
+from utils.logger import get_logger
+
+_log = get_logger(__name__)
+
 from config import APP_NAME, APP_VERSION, WINDOW_WIDTH, WINDOW_HEIGHT
 from database.models import (
     Product, ProductGroup, TechProcess, TPStatus, TPType
@@ -30,13 +34,13 @@ class MainWindow(QMainWindow):
     """Главное окно системы АТПП"""
 
     def __init__(self, db_manager, user):
-        print("[DEBUG] Loading MainWindow from:", __file__)
+        _log.debug("Loading MainWindow from: %s", __file__)
         super().__init__()
         self.db_manager = db_manager
         self.user = user
 
         self.setWindowTitle("УЗГА-Инжиниринг АТПП- Система автоматизации технологической подготовки производства")
-        print("DEBUG_TITLE:", self.windowTitle())
+        _log.debug("Window title: %s", self.windowTitle())
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self._open_tp_tabs = {}  # tp_id -> tab index
@@ -570,7 +574,7 @@ class MainWindow(QMainWindow):
                     title=title,
                 )
         except Exception as e:
-            print(f'[bookmarks] track_open skipped: {e}')
+            _log.debug('track_open skipped: %s', e)
 
     def _on_tp_changed(self, tp_id):
         # Обновляем заголовок вкладки
@@ -964,36 +968,35 @@ class MainWindow(QMainWindow):
 
     def _copy_tp(self, tp_id):
         from modules.tp_designer import TPDesigner
-        session = self.db_manager.Session()
-        try:
-            tp = session.query(TechProcess).get(tp_id)
+        from PyQt6.QtWidgets import QInputDialog
+
+        # Collect user input FIRST, before opening DB session
+        with self.db_manager.get_session() as s:
+            tp = s.query(TechProcess).get(tp_id)
             if not tp:
                 return
             original_number = tp.number
-            new_number = f"{original_number}-копия"
-
-            from PyQt6.QtWidgets import QInputDialog
-            new_number, ok = QInputDialog.getText(
-                self, "Копирование ТП",
-                f"Номер для копии ТП «{original_number}»:",
-                text=new_number
-            )
-            if not ok or not new_number.strip():
-                return
-
-            # Запрашиваем вариант исполнения для копии — это и есть способ
-            # создать «вариант ТП» под одну деталь.
             variant_default = getattr(tp, 'execution_variant', '') or ''
-            new_variant, ok2 = QInputDialog.getText(
-                self, "Вариант исполнения",
-                "Вариант исполнения для копии (можно оставить пустым):",
-                text=variant_default
-            )
-            if not ok2:
-                return
-            new_variant = new_variant.strip() or None
 
-            designer = TPDesigner(session)
+        new_number, ok = QInputDialog.getText(
+            self, "Копирование ТП",
+            f"Номер для копии ТП «{original_number}»:",
+            text=f"{original_number}-копия"
+        )
+        if not ok or not new_number.strip():
+            return
+
+        new_variant, ok2 = QInputDialog.getText(
+            self, "Вариант исполнения",
+            "Вариант исполнения для копии (можно оставить пустым):",
+            text=variant_default
+        )
+        if not ok2:
+            return
+        new_variant = new_variant.strip() or None
+
+        with self.db_manager.get_session() as s:
+            designer = TPDesigner(s)
             new_tp = designer.copy_tech_process(
                 source_tp_id=tp_id,
                 new_number=new_number.strip(),
@@ -1001,8 +1004,6 @@ class MainWindow(QMainWindow):
                 new_execution_variant=new_variant
             )
             new_tp_id = new_tp.id
-        finally:
-            session.close()
 
         self.load_navigation_data()
         self._log_message(f"ТП скопирован как «{new_number}»")
@@ -1165,6 +1166,18 @@ class MainWindow(QMainWindow):
         act.triggered.connect(self._open_bom_graph)
         prod_menu.addAction(act)
 
+        self._create_service_menu(menubar)
+        # Справка
+        help_menu = menubar.addMenu("Справка")
+        act = QAction("О программе", self)
+        act.triggered.connect(self._show_about)
+        help_menu.addAction(act)
+
+    # ──────────────────────────────────────────────────────────────
+    # Панель инструментов
+    # ──────────────────────────────────────────────────────────────
+
+    def _create_service_menu(self, menubar):
         # Сервис
         srv_menu = menubar.addMenu("Сервис")
         if self.user.get('role') == 'admin':
@@ -1285,15 +1298,7 @@ class MainWindow(QMainWindow):
         act.triggered.connect(lambda c: self._messages_dock.show() if c else self._messages_dock.hide())
         srv_menu.addAction(act)
 
-        # Справка
-        help_menu = menubar.addMenu("Справка")
-        act = QAction("О программе", self)
-        act.triggered.connect(self._show_about)
-        help_menu.addAction(act)
 
-    # ──────────────────────────────────────────────────────────────
-    # Панель инструментов
-    # ──────────────────────────────────────────────────────────────
     def _create_toolbar(self):
         tb = QToolBar("Основная")
         tb.setIconSize(QSize(18, 18))
@@ -1408,7 +1413,8 @@ class MainWindow(QMainWindow):
             dlg = WhereIsPartDialog(self.db_manager, self.user, self)
             dlg.exec()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"{e}")
+            QMessageBox.critical(self, "Ошибка",
+                f"Не удалось открыть окно поиска детали.\n\n{e}")
 
     def _open_route_for_wo(self, work_order_id: int):
         """v7.2/7.3: открыть окно операционного маршрута для наряда."""
@@ -1417,7 +1423,8 @@ class MainWindow(QMainWindow):
             dlg = RouteWindow(self.db_manager, work_order_id, self.user, self)
             dlg.exec()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"{e}")
+            QMessageBox.critical(self, "Ошибка",
+                f"Не удалось открыть маршрутный лист.\n\n{e}")
 
     def _open_route_by_barcode(self, code: str):
         """v7.3: открыть маршрут по сканированному штрих-коду."""
@@ -2501,7 +2508,7 @@ class MainWindow(QMainWindow):
                 + ('добавлен в избранное' if new_state
                    else 'убран из избранного'))
         except Exception as e:
-            print(f'[bookmarks] toggle failed: {e}')
+            _log.debug('bookmarks toggle failed: %s', e)
 
     def _show_about(self):
         QMessageBox.about(

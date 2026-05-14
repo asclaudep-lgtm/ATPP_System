@@ -4,9 +4,9 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Float, Text, DateTime, Date,
-    ForeignKey, Boolean, Enum as SQLEnum, UniqueConstraint, Index,
+    ForeignKey, Boolean, Enum as SQLEnum, UniqueConstraint, Index, JSON,
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 import enum
 
@@ -145,7 +145,7 @@ class Profession(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     typical_grade = Column(Integer)  # Типовой разряд
-    hourly_rates = Column(Text)  # JSON: {1: 200, 2: 220, ...}
+    hourly_rates = Column(JSON)  # {1: 200, 2: 220, ...}
     
     # Связи
     operations = relationship("Operation", back_populates="profession")
@@ -535,7 +535,7 @@ class TPVersion(Base):
     id = Column(Integer, primary_key=True)
     tech_process_id = Column(Integer, ForeignKey('tech_processes.id'))
     version_number = Column(String(20))
-    data_snapshot = Column(Text)  # JSON snapshot
+    data_snapshot = Column(JSON)  # JSON snapshot
     created_by = Column(Integer, ForeignKey('users.id'))
     created_at = Column(DateTime, default=datetime.now)
     comment = Column(Text)
@@ -838,7 +838,7 @@ class ProductionEvent(Base):
     operation_id = Column(Integer, ForeignKey('operations.id'), nullable=True)
 
     event_type = Column(String(40), nullable=False, index=True)
-    payload = Column(Text)  # произвольный JSON
+    payload = Column(JSON)  # произвольный JSON
 
     user = relationship('User', foreign_keys=[user_id])
     work_order = relationship('WorkOrder', foreign_keys=[work_order_id])
@@ -1165,7 +1165,7 @@ class MaterialBatch(Base):
     material_id = Column(Integer, ForeignKey('materials.id'),
                          nullable=False, index=True)
     lot_no = Column(String(80), nullable=False, index=True)
-    received_date = Column(Date, default=datetime.utcnow)
+    received_date = Column(Date, default=lambda: datetime.now(datetime.UTC))
     supplier = Column(String(200))
     cert_path = Column(String(500))  # путь к pdf-сертификату
 

@@ -18,6 +18,10 @@
 """
 from __future__ import annotations
 
+from utils.logger import get_logger
+
+_log = get_logger(__name__)
+
 import gzip
 import os
 import shutil
@@ -174,7 +178,7 @@ def _mirror_to(path: Path) -> Optional[Path]:
         shutil.copy2(path, dest)
         return dest
     except Exception as e:
-        print(f'[backup] mirror WARN: {e}', file=sys.stderr)
+        _log.warning('mirror error: %s', e)
         return None
 
 
@@ -192,7 +196,7 @@ def _make_backup_sqlite() -> Optional[Path]:
             with gzip.open(dst, 'wb', compresslevel=6) as fout:
                 shutil.copyfileobj(fin, fout)
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Backup operation failed')
         return None
     return dst
 
@@ -212,7 +216,7 @@ def _restore_backup_sqlite(backup_path: Path) -> bool:
                 shutil.copyfileobj(fin, fout)
         return True
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Backup operation failed')
         return False
 
 
@@ -259,12 +263,11 @@ def _pg_env(creds: dict) -> dict:
 def _make_backup_postgresql() -> Optional[Path]:
     creds = _parse_pg_url(DATABASE_URL)
     if not creds.get('dbname'):
-        print('[backup] PG: пустое имя БД в DATABASE_URL', file=sys.stderr)
+        _log.warning('PG: пустое имя БД в DATABASE_URL')
         return None
     pg_dump = _pg_tool('pg_dump')
     if pg_dump is None:
-        print('[backup] PG: не найден pg_dump (проверьте PATH или установку PostgreSQL)',
-              file=sys.stderr)
+        _log.warning('PG: не найден pg_dump (проверьте PATH или установку PostgreSQL)')
         return None
     dst = _backup_filename(ext=PG_EXT)
     cmd = [
@@ -283,8 +286,7 @@ def _make_backup_postgresql() -> Optional[Path]:
             cmd, env=_pg_env(creds), capture_output=True, text=True, timeout=3600,
         )
         if proc.returncode != 0:
-            print(f'[backup] pg_dump RC={proc.returncode}: {proc.stderr.strip()}',
-                  file=sys.stderr)
+            _log.warning('pg_dump RC=%s: %s', proc.returncode, proc.stderr.strip())
             try:
                 dst.unlink(missing_ok=True)
             except Exception:
@@ -292,7 +294,7 @@ def _make_backup_postgresql() -> Optional[Path]:
             return None
         return dst
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Backup operation failed')
         try:
             dst.unlink(missing_ok=True)
         except Exception:
@@ -308,7 +310,7 @@ def _restore_backup_postgresql(backup_path: Path) -> bool:
         return False
     pg_restore = _pg_tool('pg_restore')
     if pg_restore is None:
-        print('[backup] PG: не найден pg_restore', file=sys.stderr)
+        _log.warning('PG: не найден pg_restore')
         return False
     cmd = [
         pg_restore,
@@ -329,12 +331,11 @@ def _restore_backup_postgresql(backup_path: Path) -> bool:
         # pg_restore нередко возвращает 1 при предупреждениях (unknown objects);
         # считаем успехом 0 и 1 (warnings). Падаем только на >=2.
         if proc.returncode >= 2:
-            print(f'[backup] pg_restore RC={proc.returncode}: {proc.stderr.strip()}',
-                  file=sys.stderr)
+            _log.warning('pg_restore RC=%s: %s', proc.returncode, proc.stderr.strip())
             return False
         return True
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Backup operation failed')
         return False
 
 
@@ -366,7 +367,7 @@ def make_backup(*, force: bool = False) -> Optional[Path]:
     elif kind == 'postgresql':
         path = _make_backup_postgresql()
     else:
-        print(f'[backup] неподдерживаемый движок: {kind}', file=sys.stderr)
+        _log.warning('неподдерживаемый движок: %s', kind)
         return None
 
     if path is not None:
@@ -536,7 +537,7 @@ def daily_backup_if_needed() -> Optional[Path]:
         rotate()
         return path
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Backup operation failed')
         return None
 
 

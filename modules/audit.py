@@ -8,10 +8,12 @@ stderr, но никогда не пробрасываются — основно
 from __future__ import annotations
 
 import json
-import sys
-import traceback
 from datetime import datetime
 from typing import Any, Optional
+
+from utils.logger import get_logger
+
+_log = get_logger(__name__)
 
 from database.models import ChangeLog, TPVersion, TechProcess, Operation, Transition
 
@@ -37,7 +39,7 @@ def log_change(
                 timestamp=datetime.now(),
             ))
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Audit operation failed')
 
 
 def log_change_session(
@@ -60,7 +62,7 @@ def log_change_session(
             timestamp=datetime.now(),
         ))
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Audit operation failed')
 
 
 def snapshot_tp(db_manager, *, tp_id: int, user_id: Optional[int],
@@ -128,7 +130,7 @@ def snapshot_tp(db_manager, *, tp_id: int, user_id: Optional[int],
             s.flush()
             return ver.id
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Audit operation failed')
         return None
 
 
@@ -158,7 +160,7 @@ def list_audit(db_manager, *, limit: int = 500,
                 })
             return out
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Audit operation failed')
         return []
 
 
@@ -177,5 +179,5 @@ def list_versions(db_manager, *, tp_id: int) -> list[dict]:
                 'data_snapshot': r.data_snapshot,
             } for r in rows]
     except Exception:
-        traceback.print_exc(file=sys.stderr)
+        _log.exception('Audit operation failed')
         return []

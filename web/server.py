@@ -1,14 +1,16 @@
 """FastAPI web server for ATPP.
 
-Запуск:  python -m web.server  или  python web/server.py
+Запуск:  python -m web.server  (из корня проекта)
 Не зависит от desktop-режима — использует ту же БД.
 """
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+# Ensure project root is importable when running as ``python web/server.py``.
+# Running as ``python -m web.server`` from the project root needs no adjustment.
+_ROOT = Path(__file__).resolve().parent.parent
+if _ROOT not in map(Path, sys.path):
+    sys.path.insert(0, str(_ROOT))
 
 import asyncio
 import json
@@ -87,7 +89,7 @@ class ConnectionManager:
             try:
                 await ws.send_text(msg)
             except Exception:
-                pass
+                self.disconnect(ws)
 
 
 ws_manager = ConnectionManager()

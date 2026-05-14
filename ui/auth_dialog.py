@@ -23,7 +23,7 @@ class AuthDialog(QDialog):
         self.max_attempts = 5
         
         self.setWindowTitle("Авторизация")
-        self.setFixedSize(420, 380)
+        self.setFixedSize(420, 500)
         self.setModal(True)
         
         self.init_ui()
@@ -44,7 +44,7 @@ class AuthDialog(QDialog):
                 logo_pix = QPixmap(logo_path)
                 if not logo_pix.isNull():
                     logo_pix = logo_pix.scaled(
-                        260, 160,
+                        200, 120,
                         Qt.AspectRatioMode.KeepAspectRatio,
                         Qt.TransformationMode.SmoothTransformation,
                     )
@@ -124,7 +124,7 @@ class AuthDialog(QDialog):
         layout.addLayout(buttons_layout)
         
         # Подсказка
-        hint_label = QLabel("По умолчанию: admin / admin")
+        hint_label = QLabel("Обратитесь к администратору для получения учётных данных")
         hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint_label.setStyleSheet("color: #95a5a6; font-size: 10px;")
         layout.addWidget(hint_label)

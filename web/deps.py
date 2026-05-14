@@ -11,19 +11,24 @@ if str(ROOT) not in sys.path:
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+import threading
+
 from database.db_manager import DatabaseManager
 from web.auth import verify_token
 
 security = HTTPBearer()
 
 _db_manager = None
+_db_lock = threading.Lock()
 
 
 def _get_db_manager():
     global _db_manager
     if _db_manager is None:
-        from config import DATABASE_URL
-        _db_manager = DatabaseManager(database_url=DATABASE_URL)
+        with _db_lock:
+            if _db_manager is None:
+                from config import DATABASE_URL
+                _db_manager = DatabaseManager(database_url=DATABASE_URL)
     return _db_manager
 
 

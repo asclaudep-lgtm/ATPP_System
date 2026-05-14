@@ -18,6 +18,8 @@ optimistic-lock на ``WorkOrderItem.version``.
 """
 from __future__ import annotations
 
+from modules import audit as _audit
+
 import json
 import secrets
 from datetime import datetime, date
@@ -199,6 +201,9 @@ def release_to_production(
         payload={'qty_total': qty_total, 'tp_number': tp.number,
                  'customer_order': customer_order},
     )
+    _audit.log_change_session(session, user_id=user.get('id'), entity_type='WorkOrder',
+                              entity_id=wo.id, action='release',
+                              description=f'Наряд {wo.number} передан в производство')
     return wo
 
 
@@ -563,7 +568,11 @@ def open_issue(
                 related_work_order_id=wo.id,
             )
         except Exception as e:  # noqa: BLE001
-            print(f'[notify] skip ISSUE_ASSIGNED: {e}')
+            from utils.logger import get_logger
+            get_logger(__name__).debug('skip ISSUE_ASSIGNED: %s', e)
+    _audit.log_change_session(session, user_id=user.get('id'), entity_type='ProductionIssue',
+                              entity_id=issue.id, action='create',
+                              description=f'Проблема: {title.strip()}')
     return issue
 
 
@@ -649,7 +658,8 @@ def resolve_issue(
                 related_work_order_id=wo.id,
             )
         except Exception as e:  # noqa: BLE001
-            print(f'[notify] skip ISSUE_RESOLVED: {e}')
+            from utils.logger import get_logger
+            get_logger(__name__).debug('skip ISSUE_RESOLVED: %s', e)
     return issue
 
 

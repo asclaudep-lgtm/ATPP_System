@@ -56,3 +56,5 @@ Thumbs.db
 temp/
 
 .venv/
+.env
+.env.docker

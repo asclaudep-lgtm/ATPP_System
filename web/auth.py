@@ -1,5 +1,5 @@
 """JWT-аутентификация для веб-клиента."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import jwt, JWTError
@@ -12,7 +12,7 @@ def create_access_token(user: dict) -> str:
         "sub": str(user["id"]),
         "username": user["username"],
         "role": user.get("role", "user"),
-        "exp": datetime.utcnow() + JWT_EXPIRE,
+        "exp": datetime.now(timezone.utc) + JWT_EXPIRE,
     }
     return jwt.encode(payload, WEB_SECRET_KEY, algorithm=JWT_ALGORITHM)
 

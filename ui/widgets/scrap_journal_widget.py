@@ -25,17 +25,17 @@ class ScrapEditDialog(QDialog):
     """Создание / редактирование записи о браке."""
 
     def __init__(self, db_manager, *, current_user_id: int,
-                 record: Optional[ScrapRecord] = None, parent=None):
+                 record_id: Optional[int] = None, parent=None):
         super().__init__(parent)
         self.db = db_manager
         self.current_user_id = current_user_id
-        self.record_id = record.id if record else None
+        self.record_id = record_id
         self.setWindowTitle(
-            'Редактирование брака' if record else 'Регистрация брака')
+            'Редактирование брака' if record_id else 'Регистрация брака')
         self.setMinimumWidth(600)
-        self._build(record)
+        self._build()
 
-    def _build(self, record):
+    def _build(self):
         lay = QFormLayout(self)
 
         self.wo_cb = QComboBox()
@@ -45,13 +45,17 @@ class ScrapEditDialog(QDialog):
             self.reason_cb.addItem(r.value, r)
         self.qty_sp = QSpinBox()
         self.qty_sp.setRange(1, 99999)
-        self.qty_sp.setValue(record.qty_scrap if record else 1)
+        self.qty_sp.setValue(1)
         self.descr = QTextEdit()
-        if record and record.description:
-            self.descr.setPlainText(record.description)
         self.fault_cb = QComboBox()
 
+        # Load everything in one session
         with self.db.get_session() as s:
+            record = s.get(ScrapRecord, self.record_id) if self.record_id else None
+            if record is not None:
+                self.qty_sp.setValue(record.qty_scrap)
+                self.descr.setPlainText(record.description or '')
+
             wos = (s.query(WorkOrder)
                    .order_by(WorkOrder.created_at.desc())
                    .limit(200).all())
@@ -75,11 +79,11 @@ class ScrapEditDialog(QDialog):
                 if record and record.fault_operator_id == u.id:
                     self.fault_cb.setCurrentIndex(self.fault_cb.count() - 1)
 
-        if record and record.reason:
-            for i in range(self.reason_cb.count()):
-                if self.reason_cb.itemData(i) == record.reason:
-                    self.reason_cb.setCurrentIndex(i)
-                    break
+            if record and record.reason:
+                for i in range(self.reason_cb.count()):
+                    if self.reason_cb.itemData(i) == record.reason:
+                        self.reason_cb.setCurrentIndex(i)
+                        break
 
         lay.addRow('Наряд:', self.wo_cb)
         lay.addRow('Операция:', self.op_cb)
@@ -258,12 +262,8 @@ class ScrapJournalWidget(QWidget):
         rid = self._selected_id()
         if rid is None:
             return
-        with self.db.get_session() as s:
-            rec = s.get(ScrapRecord, rid)
-            if rec is None:
-                return
         dlg = ScrapEditDialog(self.db, current_user_id=self.user_id,
-                              record=rec, parent=self)
+                              record_id=rid, parent=self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self.refresh()
 

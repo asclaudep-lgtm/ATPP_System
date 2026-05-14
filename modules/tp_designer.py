@@ -4,7 +4,7 @@
 from typing import List, Dict, Optional
 from database.models import (
     TechProcess, Operation, Transition, Product,
-    TPType, TPStatus, TechnologyType
+    TPType, TPStatus, TechnologyType, Equipment, Profession,
 )
 
 
@@ -136,7 +136,74 @@ class TPDesigner:
         self.session.flush()
         
         return transition
-    
+
+    def _add_typical_transitions(self, operation: Operation, op_name: str):
+        """Добавляет типовые переходы к операции на основе её названия."""
+        op_lower = op_name.lower()
+        transitions = []
+        if 'заготовительн' in op_lower:
+            transitions = [
+                'Установить заготовку и закрепить.',
+                'Отрезать заготовку в размер.',
+                'Проверить размеры заготовки.',
+            ]
+        elif 'токарн' in op_lower and 'чернов' in op_lower:
+            transitions = [
+                'Установить деталь в патрон, выставить.',
+                'Точить поверхность предварительно.',
+                'Точить торцы предварительно.',
+            ]
+        elif 'токарн' in op_lower and 'чистов' in op_lower:
+            transitions = [
+                'Установить деталь в патрон, выставить.',
+                'Точить поверхность окончательно.',
+                'Точить торцы окончательно.',
+                'Точить фаски.',
+            ]
+        elif 'фрезерн' in op_lower:
+            transitions = [
+                'Установить деталь в приспособление.',
+                'Фрезеровать поверхность в размер.',
+                'Проверить размеры после фрезерования.',
+            ]
+        elif 'сверлильн' in op_lower:
+            transitions = [
+                'Установить деталь на стол, закрепить.',
+                'Сверлить отверстия по разметке.',
+                'Зенковать отверстия.',
+            ]
+        elif 'шлифовальн' in op_lower:
+            transitions = [
+                'Установить деталь в центрах.',
+                'Шлифовать поверхность в размер.',
+                'Проверить шероховатость.',
+            ]
+        elif 'термообраб' in op_lower:
+            transitions = [
+                'Загрузить деталь в печь.',
+                'Выдержать при заданной температуре.',
+                'Извлечь и охладить.',
+            ]
+        elif 'слесарн' in op_lower:
+            transitions = [
+                'Установить деталь в тиски.',
+                'Зачистить заусенцы.',
+                'Проверить визуально.',
+            ]
+        elif 'контрольн' in op_lower:
+            transitions = [
+                'Проверить размеры согласно чертежу.',
+                'Проверить шероховатость.',
+                'Оформить заключение.',
+            ]
+
+        for i, text in enumerate(transitions, start=1):
+            self.add_transition(
+                operation_id=operation.id,
+                number=str(i),
+                text=text,
+            )
+
     def suggest_route(self, product: Product) -> List[Dict]:
         """
         Предложить маршрут обработки на основе параметров детали
@@ -149,30 +216,44 @@ class TPDesigner:
             Список предложенных операций
         """
         suggestions = []
-        
-        # Базовая логика подбора операций
-        # TODO: Расширить логику на основе материала, габаритов, точности
-        
+
+        # Определяем класс точности и группу материала
+        accuracy = None
+        if product.accuracy_class:
+            try:
+                accuracy = int(product.accuracy_class.replace('IT', ''))
+            except ValueError:
+                pass
+
+        material_name = product.material.name.lower() if product.material and product.material.name else ''
+        detail_name = product.name.lower() if product.name else ''
+        is_steel = any(t in material_name for t in ['сталь', 'steel'])
+        is_aluminum = any(t in material_name for t in ['д16', 'амг', 'алюмин', 'alum'])
+        is_bronze = any(t in material_name for t in ['бронз', 'bronze'])
+        is_high_accuracy = accuracy is not None and accuracy <= 7
+        is_rotational = any(w in detail_name for w in ['вал', 'втулка', 'ось', 'фланец', 'шестерн', 'колесо'])
+        is_flat = any(w in detail_name for w in ['пластина', 'крышка', 'кронштейн', 'плита'])
+
         # Заготовительная операция
         if product.blank_type:
             suggestions.append({
                 'number': '005',
                 'name': f'Заготовительная ({product.blank_type})',
-                'equipment': None,
-                'profession': 'Заготовщик'
+                'equipment': 'Станок отрезной',
+                'profession': 'Заготовщик',
+                'grade': 2
             })
-        
-        # Механическая обработка
-        if product.material and product.material.name.startswith('Сталь'):
-            # Токарная обработка для валов, втулок
-            if any(word in product.name.lower() for word in ['вал', 'втулка', 'ось']):
-                suggestions.append({
-                    'number': '010',
-                    'name': 'Токарная (черновая)',
-                    'equipment': 'Станок токарный',
-                    'profession': 'Токарь',
-                    'grade': 3
-                })
+
+        # Токарная обработка для тел вращения из любых материалов
+        if is_rotational:
+            suggestions.append({
+                'number': '010',
+                'name': 'Токарная (черновая)',
+                'equipment': 'Станок токарный',
+                'profession': 'Токарь',
+                'grade': 3
+            })
+            if is_high_accuracy or is_aluminum or is_bronze:
                 suggestions.append({
                     'number': '015',
                     'name': 'Токарная (чистовая)',
@@ -180,9 +261,9 @@ class TPDesigner:
                     'profession': 'Токарь',
                     'grade': 4
                 })
-        
-        # Фрезерная обработка для плоских деталей
-        if any(word in product.name.lower() for word in ['пластина', 'фланец', 'кронштейн']):
+
+        # Фрезерная обработка для плоских деталей и стали
+        if is_flat or (is_steel and not is_rotational):
             suggestions.append({
                 'number': '020',
                 'name': 'Фрезерная',
@@ -190,20 +271,48 @@ class TPDesigner:
                 'profession': 'Фрезеровщик',
                 'grade': 3
             })
-        
+
+        # Сверлильная для большинства деталей
+        suggestions.append({
+            'number': '025',
+            'name': 'Сверлильная',
+            'equipment': 'Станок сверлильный',
+            'profession': 'Сверловщик',
+            'grade': 3
+        })
+
         # Шлифовальная для высокой точности
-        if product.accuracy_class and int(product.accuracy_class.replace('IT', '')) <= 7:
+        if is_high_accuracy:
             suggestions.append({
-                'number': '025',
+                'number': '030',
                 'name': 'Шлифовальная',
                 'equipment': 'Станок шлифовальный',
                 'profession': 'Шлифовщик',
                 'grade': 4
             })
-        
+
+        # Термообработка для стали с высокой точностью
+        if is_steel and is_high_accuracy:
+            suggestions.append({
+                'number': '035',
+                'name': 'Термообработка',
+                'equipment': 'Печь закалочная',
+                'profession': 'Термист',
+                'grade': 4
+            })
+
+        # Слесарная операция
+        suggestions.append({
+            'number': '040',
+            'name': 'Слесарная',
+            'equipment': 'Верстак слесарный',
+            'profession': 'Слесарь',
+            'grade': 3
+        })
+
         # Контрольная операция
         suggestions.append({
-            'number': '030',
+            'number': '045',
             'name': 'Контрольная',
             'equipment': 'Стол ОТК',
             'profession': 'Контролёр',
@@ -240,12 +349,26 @@ class TPDesigner:
         
         # Создаём операции
         for op_data in route:
-            # Находим оборудование и профессию
+            # Находим оборудование и профессию в справочниках
             equipment_id = None
             profession_id = None
-            
-            # TODO: Поиск в справочниках
-            
+
+            eq_name = op_data.get('equipment')
+            if eq_name:
+                eq = (self.session.query(Equipment)
+                      .filter(Equipment.name.ilike(f'%{eq_name}%'))
+                      .first())
+                if eq:
+                    equipment_id = eq.id
+
+            prof_name = op_data.get('profession')
+            if prof_name:
+                prof = (self.session.query(Profession)
+                        .filter(Profession.name.ilike(f'%{prof_name}%'))
+                        .first())
+                if prof:
+                    profession_id = prof.id
+
             operation = self.add_operation(
                 tech_process_id=tp.id,
                 number=op_data['number'],
@@ -254,9 +377,9 @@ class TPDesigner:
                 profession_id=profession_id,
                 grade=op_data.get('grade')
             )
-            
-            # Добавляем типовые переходы
-            # TODO: Генерация переходов на основе геометрии детали
+
+            # Добавляем типовые переходы на основе типа операции
+            self._add_typical_transitions(operation, op_data['name'])
         
         self.session.commit()
         
@@ -301,9 +424,33 @@ class TPDesigner:
             if operation.t_piece == 0:
                 warnings.append(f"Операция {operation.number}: не рассчитаны нормы времени")
         
-        # Проверка логичности последовательности
-        # TODO: Добавить проверку последовательности операций
-        
+        # Проверка логичности последовательности операций
+        op_sequence = [op.name.lower() for op in sorted(
+            tp.operations, key=lambda o: int(o.number or 0)
+        )]
+        has_blanks = any('заготовительн' in n for n in op_sequence)
+        has_finishing = any(
+            any(w in n for w in ['контрольн', 'моечн', 'упаков'])
+            for n in op_sequence
+        )
+        if has_blanks and op_sequence and 'заготовительн' not in op_sequence[0]:
+            recommendations.append(
+                'Рекомендуется начинать ТП с заготовительной операции.'
+            )
+        if has_finishing and op_sequence and not any(
+            w in op_sequence[-1] for w in ['контрольн', 'моечн', 'упаков']
+        ):
+            recommendations.append(
+                'Рекомендуется завершать ТП контрольной операцией.'
+            )
+        if any('термообраб' in n for n in op_sequence) and has_blanks:
+            heat_idx = next(i for i, n in enumerate(op_sequence) if 'термообраб' in n)
+            blank_idx = next(i for i, n in enumerate(op_sequence) if 'заготовительн' in n)
+            if heat_idx < blank_idx:
+                errors.append(
+                    'Термообработка должна выполняться после заготовительной операции.'
+                )
+
         return {
             'valid': len(errors) == 0,
             'errors': errors,

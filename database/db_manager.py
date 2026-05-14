@@ -12,6 +12,9 @@ from .models import (Base, User, Material, Equipment, Tool, Profession,
                      Product, ProductGroup, TechProcess, Workshop,
                      BOMItem, AssemblyLevel)
 from config import DATABASE_URL
+from utils.logger import get_logger
+
+log = get_logger(__name__)
 
 
 class DatabaseManager:
@@ -35,14 +38,24 @@ class DatabaseManager:
         self.Session = scoped_session(session_factory)
     
     def init_database(self):
-        """Инициализация базы данных"""
-        # Создаём все таблицы
+        """Инициализация БД: create_all для свежих, Alembic для миграций."""
+        # Всегда создаём таблицы, которых ещё нет (работает на свежей БД).
         Base.metadata.create_all(self.engine)
 
-        # Лёгкие миграции (ALTER TABLE для новых полей)
-        self._run_lightweight_migrations()
+        # Применяем миграции Alembic (новые колонки / индексы после v10).
+        from pathlib import Path
+        alembic_ini = Path(__file__).resolve().parent.parent / 'alembic.ini'
+        try:
+            if alembic_ini.exists():
+                from alembic import command
+                from alembic.config import Config as AlembicConfig
+                cfg = AlembicConfig(str(alembic_ini))
+                cfg.set_main_option('sqlalchemy.url', self.database_url)
+                # Только дополняем существующую схему
+                command.upgrade(cfg, 'head')
+        except Exception:
+            log.debug('Alembic upgrade skipped (no new migrations or DB unavailable)')
 
-        # Создаём начальные данные
         self._create_initial_data()
     
     def _run_lightweight_migrations(self):
@@ -151,7 +164,7 @@ class DatabaseManager:
                         with self.engine.begin() as conn:
                             conn.execute(text(ddl))
             except Exception as e:
-                print(f'[migrate] products soft-delete skipped: {e}')
+                log.warning('products soft-delete skipped: %s', e)
 
             # v8: Soft delete для нарядов (WorkOrder). Корзина.
             try:
@@ -174,7 +187,7 @@ class DatabaseManager:
                         with self.engine.begin() as conn:
                             conn.execute(text(ddl))
             except Exception as e:
-                print(f'[migrate] work_orders soft-delete skipped: {e}')
+                log.warning('work_orders soft-delete skipped: %s', e)
 
             # v7: WorkOrder.barcode — один штрих-код на МТП
             try:
@@ -194,7 +207,7 @@ class DatabaseManager:
                                    'ix_work_orders_barcode',
                                    ['barcode'])
             except Exception as e:
-                print(f'[migrate] work_orders.barcode skipped: {e}')
+                log.warning('work_orders.barcode skipped: %s', e)
 
             # v6: индексы для производственных таблиц (C14)
             self._ensure_index('production_events',
@@ -216,7 +229,7 @@ class DatabaseManager:
                                'ix_route_steps_status_seq',
                                ['status', 'seq'])
         except Exception as e:
-            print(f'[migrate] WARN: {e}')
+            log.warning('migration error: %s', e)
 
     def _fill_work_order_barcodes(self):
         """Дозаполняет WorkOrder.barcode уникальным значением для существующих
@@ -234,7 +247,7 @@ class DatabaseManager:
                     # Code128 принимает любой ASCII-текст.
                     wo.barcode = wo.number or f'WO-{wo.id}'
         except Exception as e:
-            print(f'[migrate] fill barcodes skipped: {e}')
+            log.warning('fill barcodes skipped: %s', e)
 
     def _ensure_index(self, table: str, name: str, columns: list[str]):
         """Создаёт индекс, если он отсутствует. Безопасно для SQLite/PG."""
@@ -251,12 +264,13 @@ class DatabaseManager:
             with self.engine.begin() as conn:
                 conn.execute(text(ddl))
         except Exception as e:
-            print(f'[migrate] index {name} on {table} skipped: {e}')
+            log.warning('index %s on %s skipped: %s', name, table, e)
 
     def _create_initial_data(self):
         """Создание начальных данных"""
         session = self.Session()
         try:
+            admin = None
             # Проверяем есть ли пользователи
             if session.query(User).count() == 0:
                 # Создаём администратора. Принудительно требуем сменить
@@ -271,6 +285,7 @@ class DatabaseManager:
                     must_change_password=True,
                 )
                 session.add(admin)
+                session.flush()
             
             # Добавляем базовые материалы
             if session.query(Material).count() == 0:
@@ -331,7 +346,7 @@ class DatabaseManager:
                     roughness='Ra1.6',
                     quantity_in_assembly=1,
                     description='Пример детали для демонстрации',
-                    author_id=admin.id if 'admin' in locals() else None,
+                    author_id=admin.id if admin is not None else None,
                 )
                 session.add(prod1)
             
@@ -441,7 +456,7 @@ class DatabaseManager:
                 try:
                     self._log_login(user_id)
                 except Exception as e:
-                    print(f'[auth] log_login skipped: {e}')
+                    log.warning('log_login skipped: %s', e)
 
                 # Возвращаем словарь с сохранёнными данными
                 return {
@@ -517,7 +532,7 @@ class DatabaseManager:
                 for row in rows:
                     row.ended_at = datetime.now()
         except Exception as e:
-            print(f'[auth] end_user_session skipped: {e}')
+            log.warning('end_user_session skipped: %s', e)
 
     def change_user_password(self, user_id: int, new_password: str,
                               clear_must_change: bool = True):

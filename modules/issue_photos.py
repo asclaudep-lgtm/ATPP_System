@@ -89,5 +89,6 @@ def remove_photo(session: Session, photo_id: int, *,
         try:
             Path(path).unlink(missing_ok=True)
         except Exception as e:  # noqa: BLE001
-            print(f'[photo] cannot delete file {path}: {e}')
+            from utils.logger import get_logger
+            get_logger(__name__).warning('cannot delete file %s: %s', path, e)
     return True

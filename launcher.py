@@ -11,6 +11,10 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
+from utils.logger import setup_logging, get_logger
+
+log = get_logger(__name__)
+
 try:
     from ATPP_System.ui import MainWindow, AuthDialog
 except Exception:
@@ -25,7 +29,7 @@ from config import APP_NAME
 
 
 def _fallback_ui(app: QApplication) -> int:
-    print("[DEBUG] Fallback UI start (no UI modules loaded)")
+    log.warning("Fallback UI start (no UI modules loaded)")
     from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
     fb = QWidget()
     fb.setWindowTitle("ATPP System (fallback)")
@@ -39,12 +43,13 @@ def _fallback_ui(app: QApplication) -> int:
 
 
 def launch() -> int:
-    print("[DEBUG] App start (launcher)")
+    setup_logging()
+    log.info("App start (launcher)")
     # Create QApplication
     try:
         app = QApplication(sys.argv)
     except Exception as e:
-        print("[ERROR] QApplication init failed:", e)
+        log.error("QApplication init failed: %s", e)
         return 1
     app.setApplicationName(APP_NAME)
 
@@ -58,7 +63,7 @@ def launch() -> int:
             font_size=int(user_settings.get('font_size', 9) or 9),
         )
     except Exception as e:
-        print("[WARN] apply_theme failed:", e)
+        log.warning("apply_theme failed: %s", e)
 
     # Локализация: загружаем .qm если есть и язык не русский
     try:
@@ -72,9 +77,9 @@ def launch() -> int:
                 tr = QTranslator(app)
                 if tr.load(str(qm_path)):
                     app.installTranslator(tr)
-                    print(f"[DEBUG] Translator loaded: {qm_path.name}")
+                    log.debug("Translator loaded: %s", qm_path.name)
     except Exception as e:
-        print("[WARN] translator init failed:", e)
+        log.warning("translator init failed: %s", e)
 
     # Initialize DB
     try:
@@ -82,7 +87,7 @@ def launch() -> int:
         db_manager.init_database()
         try:
             summary = db_manager.summarize_data()
-            print("[DEBUG] DB seed summary:", summary)
+            log.debug("DB seed summary: %s", summary)
         except Exception:
             pass
     except Exception as e:
@@ -94,9 +99,9 @@ def launch() -> int:
         from modules import backup as _backup
         _bp = _backup.daily_backup_if_needed()
         if _bp is not None:
-            print(f"[backup] daily snapshot: {_bp}")
+            log.info("Daily backup snapshot: %s", _bp)
     except Exception as e:
-        print("[WARN] auto-backup failed:", e)
+        log.warning("auto-backup failed: %s", e)
 
     # UI availability
     if MainWindow is None or AuthDialog is None:
@@ -146,14 +151,14 @@ def launch() -> int:
                 db_manager.close()
                 return 0
     except Exception as e:
-        print(f'[auth] forced password change skipped: {e}')
+        log.warning('forced password change skipped: %s', e)
 
     try:
         # MainWindow expects a dict-like user (uses .get('role'), .get('id'), ...)
         main_window = MainWindow(db_manager, user)
         main_window.show()
-        print("[DEBUG] MainWindow shown with user:",
-              user.get('username') if isinstance(user, dict) else user)
+        log.info("MainWindow shown with user: %s",
+                 user.get('username') if isinstance(user, dict) else user)
     except Exception as e:
         QMessageBox.critical(None, "Ошибка запуска", f"Не удалось открыть главное окно: {e}")
         db_manager.close()
@@ -165,7 +170,7 @@ def launch() -> int:
         if user and user.get('id'):
             db_manager.end_user_session(user.get('id'))
     except Exception as e:
-        print(f'[auth] end_user_session at shutdown skipped: {e}')
+        log.warning('end_user_session at shutdown skipped: %s', e)
     db_manager.close()
     return result
 

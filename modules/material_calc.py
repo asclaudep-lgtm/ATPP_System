@@ -4,6 +4,7 @@
 import math
 from typing import Dict, Optional
 from database.models import MaterialNorm, Product, Material, TechProcess
+from modules.settings import get as _get_setting
 
 
 class MaterialCalculator:
@@ -185,21 +186,23 @@ class MaterialCalculator:
             Словарь с расходом вспомогательных материалов
         """
         auxiliary = {}
-        
-        # Базовые нормы расхода вспомогательных материалов
-        # TODO: Сделать настраиваемым через справочник
-        
+
+        # Нормы расхода вспомогательных материалов через настройки
+        coolant_rate = float(_get_setting('aux_coolant_l_per_op', 0.15))
+        paste_rate = float(_get_setting('aux_paste_g_per_op', 0.02))
+        cloth_rate = float(_get_setting('aux_cloth_kg_per_op', 0.05))
+
         for operation in tech_process.operations:
-            # СОЖ для механической обработки
             if any(word in operation.name.lower() for word in ['токарн', 'фрезерн', 'сверл']):
-                auxiliary['СОЖ Эмульсол'] = auxiliary.get('СОЖ Эмульсол', 0) + 0.15  # л/деталь
-            
-            # Паста для шлифования
+                aux_key = 'СОЖ Эмульсол'
+                auxiliary[aux_key] = auxiliary.get(aux_key, 0) + coolant_rate
+
             if 'шлифов' in operation.name.lower():
-                auxiliary['Паста алмазная'] = auxiliary.get('Паста алмазная', 0) + 0.02  # г/деталь
-            
-            # Ветошь
-            auxiliary['Ветошь'] = auxiliary.get('Ветошь', 0) + 0.05  # кг/деталь
+                aux_key = 'Паста алмазная'
+                auxiliary[aux_key] = auxiliary.get(aux_key, 0) + paste_rate
+
+            aux_key = 'Ветошь'
+            auxiliary[aux_key] = auxiliary.get(aux_key, 0) + cloth_rate
         
         return auxiliary
     

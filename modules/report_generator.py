@@ -5,6 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from datetime import datetime
 
+from utils.logger import get_logger
+
+log = get_logger(__name__)
+
 import openpyxl
 from openpyxl.styles import (
     Font, Alignment, Border, Side, PatternFill, GradientFill
@@ -88,8 +92,8 @@ def _add_status_watermark(ws, status_value: str):
         )
         ws.oddFooter.center.size = 10
         ws.oddFooter.center.color = 'AA0000'
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning('Page setup skipped: %s', e)
 
 
 def _ensure_print_settings(ws):
@@ -106,8 +110,8 @@ def _ensure_print_settings(ws):
         ws.page_margins.bottom = 0.7
         ws.page_margins.header = 0.3
         ws.page_margins.footer = 0.3
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning('Page setup skipped: %s', e)
 
 
 class ReportGenerator:
@@ -230,8 +234,8 @@ class ReportGenerator:
             for _ws in wb.worksheets:
                 _ensure_print_settings(_ws)
                 _add_status_watermark(_ws, getattr(tp.status, "name", str(tp.status)))
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning('Chart/image render skipped: %s', e)
         wb.save(path)
         return path
 
@@ -385,8 +389,8 @@ class ReportGenerator:
             for _ws in wb.worksheets:
                 _ensure_print_settings(_ws)
                 _add_status_watermark(_ws, getattr(tp.status, "name", str(tp.status)))
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning('Chart/image render skipped: %s', e)
         wb.save(path)
         return path
 
@@ -483,8 +487,8 @@ class ReportGenerator:
             for _ws in wb.worksheets:
                 _ensure_print_settings(_ws)
                 _add_status_watermark(_ws, getattr(tp.status, "name", str(tp.status)))
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning('Chart/image render skipped: %s', e)
         wb.save(path)
         return path
 
@@ -576,8 +580,8 @@ class ReportGenerator:
             for _ws in wb.worksheets:
                 _ensure_print_settings(_ws)
                 _add_status_watermark(_ws, getattr(tp.status, "name", str(tp.status)))
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning('Chart/image render skipped: %s', e)
         wb.save(path)
         return path
 
@@ -674,8 +678,8 @@ class ReportGenerator:
             for _ws in wb.worksheets:
                 _ensure_print_settings(_ws)
                 _add_status_watermark(_ws, getattr(tp.status, "name", str(tp.status)))
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning('Chart/image render skipped: %s', e)
         wb.save(path)
         return path
 
@@ -753,7 +757,8 @@ class ReportGenerator:
                 with PILImage.open(img_path) as pil:
                     pil = pil.convert('RGB')
                     w, h = pil.size
-            except Exception:
+            except Exception as e:
+                log.warning('Image size detection failed: %s', e)
                 return 18
             scale = min(max_w_px / w, max_h_px / h, 1.0)
             new_w = max(1, int(w * scale))
@@ -840,8 +845,8 @@ class ReportGenerator:
             for _ws in wb.worksheets:
                 _ensure_print_settings(_ws)
                 _add_status_watermark(_ws, getattr(tp.status, "name", str(tp.status)))
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning('Chart/image render skipped: %s', e)
         wb.save(path)
         return path
 
@@ -894,7 +899,8 @@ class ReportGenerator:
                         ws.row_dimensions[row].height = max(h, 80)
                     else:
                         raise RuntimeError('Пустой PDF')
-            except Exception:
+            except Exception as e:
+                log.warning('PDF embed skipped: %s', e)
                 img_cell.value = f'PDF — см. файл-вложение: {full.name}'
                 img_cell.font = Font(name='Arial', size=10, italic=True, color='2980b9')
                 ws.row_dimensions[row].height = 30

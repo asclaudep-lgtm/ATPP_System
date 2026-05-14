@@ -10,7 +10,7 @@ Python 3.11+ / PyQt6 / SQLAlchemy 2.x / SQLite & PostgreSQL.
 - Modules: `modules/*.py` (25+ модулей бизнес-логики)
 - UI: `ui/main_window.py`, `ui/widgets/*.py`, `ui/dialogs/*.py`
 - Web: `web/server.py` (FastAPI), `web/static/index.html` (Vue.js 3 SPA)
-- Tests: `tests/` (154 теста, pytest)
+- Tests: `tests/` (156 тестов, pytest)
 - Config: `config.py`
 
 ## Architecture patterns
@@ -29,6 +29,6 @@ Python 3.11+ / PyQt6 / SQLAlchemy 2.x / SQLite & PostgreSQL.
 - Default login: `admin / admin`
 
 ## Current state (v10, May 2026)
-- 152/154 tests pass (2 pre-existing test isolation issues)
+- 156/156 tests pass
 - 21 features implemented across v10 strategic + 14 enhancements
 - See `RELEASE_v9.md` for previous release notes

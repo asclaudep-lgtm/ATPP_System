@@ -65,7 +65,8 @@ def list_recent(session: Session, *, user_id: int,
          .filter(UserBookmark.user_id == user_id))
     if target_type:
         q = q.filter(UserBookmark.target_type == target_type)
-    return q.order_by(UserBookmark.last_opened_at.desc()).limit(int(limit)).all()
+    return q.order_by(UserBookmark.last_opened_at.desc(),
+                     UserBookmark.id.desc()).limit(int(limit)).all()
 
 
 def list_favorites(session: Session, *, user_id: int,
@@ -73,7 +74,8 @@ def list_favorites(session: Session, *, user_id: int,
     return (session.query(UserBookmark)
             .filter(UserBookmark.user_id == user_id,
                     UserBookmark.is_favorite.is_(True))
-            .order_by(UserBookmark.last_opened_at.desc())
+            .order_by(UserBookmark.last_opened_at.desc(),
+                      UserBookmark.id.desc())
             .limit(int(limit)).all())
 
 

@@ -62,15 +62,14 @@ def collect_chrono_data(session: Session, *,
         planned = float(op.t_piece or 0) + float(op.t_setup or 0)
         dev = ((actual_min - planned) / planned * 100) if planned > 0 else None
 
+        item = step.item
         records.append(ChronoRecord(
             operation_id=op.id,
             operation_name=op.name or '',
             tech_process_id=op.tech_process_id,
-            work_order_id=step.work_order_item.work_order_id
-            if step.work_order_item else 0,
-            work_order_number=step.work_order_item.work_order.number
-            if step.work_order_item and step.work_order_item.work_order
-            else '',
+            work_order_id=item.work_order_id if item else 0,
+            work_order_number=item.work_order.number
+            if item and item.work_order else '',
             planned_t_piece=float(op.t_piece or 0),
             planned_t_setup=float(op.t_setup or 0),
             actual_minutes=round(actual_min, 2),

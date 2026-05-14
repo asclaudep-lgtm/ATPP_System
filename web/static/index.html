@@ -68,6 +68,12 @@ th{background:#f8f9fa;font-weight:600;color:#666}
     </div>
   </div>
 
+  <div v-if="error" style="background:#ffebee;color:#c62828;padding:10px 16px;
+    margin-bottom:12px;border-radius:4px;display:flex;justify-content:space-between;align-items:center">
+    <span>{{ error }}</span>
+    <button @click="error=''" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:18px">&times;</button>
+  </div>
+
   <div class="nav">
     <button :class="{active:page==='dashboard'}" @click="page='dashboard'">📊 Дашборд</button>
     <button :class="{active:page==='products'}" @click="page='products';loadProducts()">📦 Изделия</button>
@@ -180,7 +186,7 @@ createApp({
     return {
       token: localStorage.getItem('atpp_token'),
       user: JSON.parse(localStorage.getItem('atpp_user') || '{}'),
-      login: { username: 'admin', password: 'admin' },
+      login: { username: '', password: '' },
       loginError: '',
       page: 'dashboard',
       stats: {},
@@ -189,6 +195,7 @@ createApp({
       tps: [], tpDetail: null,
       orders: [],
       bomTree: [],
+      error: '',
       Math: Math,
     }
   },
@@ -217,30 +224,31 @@ createApp({
       localStorage.removeItem('atpp_user')
       this.token = ''; this.user = {}
     },
+    showError(msg) { this.error = msg; setTimeout(() => this.error = '', 8000) },
     async loadStats() {
-      try { this.stats = await this.api('/api/dashboard/stats') } catch(e) {}
+      try { this.stats = await this.api('/api/dashboard/stats') } catch(e) { this.showError('Не удалось загрузить статистику') }
     },
     async loadProducts() {
       const p = this.page_num; const s = this.search
       try {
         const d = await this.api(`/api/products?page=${p}&page_size=50&search=${encodeURIComponent(s)}`)
         this.products = d.items; this.productsTotal = d.total
-      } catch(e) {}
+      } catch(e) { this.showError('Не удалось загрузить список изделий') }
     },
     async loadTPs() {
       try {
         const d = await this.api(`/api/tech-processes?search=${encodeURIComponent(this.tpSearch)}&page_size=100`)
         if (d) this.tps = d.items
-      } catch(e) {}
+      } catch(e) { this.showError('Не удалось загрузить техпроцессы') }
     },
     async loadTPDetail(tpId) {
-      try { this.tpDetail = await this.api('/api/tech-processes/' + tpId) } catch(e) {}
+      try { this.tpDetail = await this.api('/api/tech-processes/' + tpId) } catch(e) { this.showError('Не удалось загрузить детали ТП') }
     },
     async loadOrders() {
-      try { const d = await this.api('/api/work-orders?page_size=100'); if (d) this.orders = d.items } catch(e) {}
+      try { const d = await this.api('/api/work-orders?page_size=100'); if (d) this.orders = d.items } catch(e) { this.showError('Не удалось загрузить наряды') }
     },
     async loadBOM(productId) {
-      try { const d = await this.api('/api/bom/' + productId); this.bomTree = d?.tree || [] } catch(e) {}
+      try { const d = await this.api('/api/bom/' + productId); this.bomTree = d?.tree || [] } catch(e) { this.showError('Не удалось загрузить состав изделия') }
     },
   },
   mounted() {

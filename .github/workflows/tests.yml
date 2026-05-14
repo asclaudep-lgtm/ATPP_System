@@ -7,11 +7,20 @@ on:
     branches: [main, master]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: check --select E,F,I,N,W
+
   pytest:
     runs-on: ubuntu-latest
+    needs: lint
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.11', '3.12']
 
     steps:
       - uses: actions/checkout@v4
@@ -32,8 +41,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
+          pip install pytest mypy
+
+      - name: Run mypy
+        run: mypy --ignore-missing-imports --follow-imports=skip database/ modules/ web/
 
       - name: Run pytest
-        run: |
-          pytest -q tests/
+        run: pytest -q tests/

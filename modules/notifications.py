@@ -54,7 +54,8 @@ def notify_user(
                          related_issue_id=related_issue_id,
                          related_work_order_id=related_work_order_id)
     except Exception as e:  # noqa: BLE001
-        print(f'[notify] alerts dispatch skipped: {e}')
+        from utils.logger import get_logger
+        get_logger(__name__).warning('alerts dispatch skipped: %s', e)
 
     return note
 

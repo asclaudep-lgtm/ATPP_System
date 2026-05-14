@@ -405,7 +405,7 @@ class GroupTreeWidget(QTreeWidget):
             self.reload()
             self.group_changed.emit()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"{e}")
+            QMessageBox.critical(self, "Ошибка", f"Операция не выполнена.\n\n{e}")
 
     def _rename_group(self, group_id: int):
         s = self.db_manager.Session()
@@ -427,7 +427,7 @@ class GroupTreeWidget(QTreeWidget):
             self.reload()
             self.group_changed.emit()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"{e}")
+            QMessageBox.critical(self, "Ошибка", f"Операция не выполнена.\n\n{e}")
 
     def _delete_empty_group(self, group_id: int):
         try:
@@ -446,7 +446,7 @@ class GroupTreeWidget(QTreeWidget):
             self.reload()
             self.group_changed.emit()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"{e}")
+            QMessageBox.critical(self, "Ошибка", f"Операция не выполнена.\n\n{e}")
 
     # ───────── DRAG-AND-DROP ────────────────────────────────
     def dropEvent(self, e: QDropEvent):

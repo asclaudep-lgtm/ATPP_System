@@ -1,6 +1,10 @@
 """
 Главный редактор технологического процесса
 """
+from utils.logger import get_logger
+
+_log = get_logger(__name__)
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
@@ -54,8 +58,8 @@ class TPEditorWidget(QWidget):
                 entity_id=entity_id,
                 description=description,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            _log.debug('Non-critical operation skipped: %s', e)
 
     # ──────────────────────────────────────────────────────────────
     # Загрузка данных
@@ -550,15 +554,16 @@ class TPEditorWidget(QWidget):
         for idx in self.op_table.selectionModel().selectedRows():
             try:
                 ids.append(int(self.op_table.item(idx.row(), 0).text()))
-            except Exception:
+            except Exception as e:
+                _log.debug('Item skipped: %s', e)
                 continue
         if not ids:
             cur = self.op_table.currentRow()
             if cur >= 0:
                 try:
                     ids.append(int(self.op_table.item(cur, 0).text()))
-                except Exception:
-                    pass
+                except Exception as e:
+                    _log.debug('Non-critical op skipped: %s', e)
         return ids
 
     def _bulk_edit_operations(self):
@@ -839,8 +844,8 @@ class TPEditorWidget(QWidget):
             for op in self._operations:
                 try:
                     calc.calculate_operation_time(op['id'])
-                except Exception:
-                    pass
+                except Exception as e:
+                    _log.debug('Non-critical op skipped: %s', e)
             session.commit()
         finally:
             session.close()
@@ -852,8 +857,8 @@ class TPEditorWidget(QWidget):
             from modules import settings as _s
             existing = [op.get('number') for op in (self._operations or [])]
             return _s.next_op_number(existing)
-        except Exception:
-            # Фолбэк — старая логика
+        except Exception as e:
+            _log.debug('Tab order fallback used: %s', e)
             if not self._operations:
                 return '005'
             last = self._operations[-1]['number']
@@ -1060,8 +1065,8 @@ class TPEditorWidget(QWidget):
                 self._mtp_project.setText(_saved.get('project_name', ''))
                 self._mtp_kit.setText(_saved.get('kit_number', ''))
                 self._mtp_order.setText(_saved.get('order_number', ''))
-        except Exception:
-            pass
+        except Exception as e:
+            _log.debug('Non-critical operation skipped: %s', e)
         left.addWidget(mtp_group)
 
         # Документы
@@ -1250,8 +1255,8 @@ class TPEditorWidget(QWidget):
                             kit_number=_kit,
                             order_number=_order,
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        _log.warning('MTP generation failed for %s: %s', path.name, e)
                     self._doc_log.append(f"   OK  {path.name}")
                     last_path = path
                 except Exception as e:
@@ -1422,8 +1427,8 @@ class TPEditorWidget(QWidget):
                 subprocess.Popen(['open', path])
             else:
                 subprocess.Popen(['xdg-open', path])
-        except Exception:
-            pass
+        except Exception as e:
+            _log.debug('Non-critical operation skipped: %s', e)
 
     def _open_export_folder(self):
         folder = self._product_export_dir()

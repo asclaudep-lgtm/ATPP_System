@@ -7,6 +7,10 @@ HTTP-эндпойнт (``data/alerts.cfg`` → ``webhook=...``).
 Для Telegram-бота URL имеет вид ``https://api.telegram.org/bot<TOKEN>/
 sendMessage`` + ``chat_id``. Можно настроить любой webhook-получатель.
 
+from utils.logger import get_logger
+
+_log = get_logger(__name__)
+
 ВАЖНО: модуль не падает, если интернета нет или вебхук не настроен —
 просто пишет в ``alerts.json``. Это безопасно вызывать прямо в
 бизнес-логике.
@@ -56,7 +60,7 @@ def _read_cfg() -> dict[str, str]:
                 k, v = line.split('=', 1)
                 out[k.strip().lower()] = v.strip()
     except Exception as e:
-        print(f'[alerts] cfg read failed: {e}')
+        _log.warning('cfg read failed: {e}')
     return out
 
 
@@ -77,7 +81,7 @@ def _append_log(record: dict[str, Any]) -> None:
         log.write_text(json.dumps(data, ensure_ascii=False, indent=2),
                        encoding='utf-8')
     except Exception as e:
-        print(f'[alerts] cannot write log: {e}')
+        _log.warning('cannot write log: {e}')
 
 
 def _post_webhook(url: str, payload: dict[str, Any]) -> None:
@@ -93,7 +97,7 @@ def _post_webhook(url: str, payload: dict[str, Any]) -> None:
         with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
             resp.read(64)
     except Exception as e:
-        print(f'[alerts] webhook failed ({url}): {e}')
+        _log.warning('webhook failed ({url}): {e}')
 
 
 def dispatch(

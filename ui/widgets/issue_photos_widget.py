@@ -125,15 +125,17 @@ class IssuePhotosWidget(QWidget):
         # Открываем в системе
         try:
             import os as _os
+            import subprocess
             import sys as _sys
             if _sys.platform.startswith('win'):
                 _os.startfile(path)  # type: ignore[attr-defined]
             elif _sys.platform == 'darwin':
-                _os.system(f'open "{path}"')
+                subprocess.Popen(['open', path])
             else:
-                _os.system(f'xdg-open "{path}"')
-        except Exception:
-            pass
+                subprocess.Popen(['xdg-open', path])
+        except Exception as e:
+            from utils.logger import get_logger
+            get_logger(__name__).warning('Cannot open file: %s', e)
 
     def refresh(self):
         if self.issue_id is None:
