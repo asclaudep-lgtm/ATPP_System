@@ -172,6 +172,8 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             menu.act_formula_editor.triggered.connect(self._open_formula_editor)
         if hasattr(menu, 'act_shift_dashboard'):
             menu.act_shift_dashboard.triggered.connect(self._open_shift_dashboard)
+        if hasattr(menu, 'act_pdo_dispatcher'):
+            menu.act_pdo_dispatcher.triggered.connect(self._open_pdo_dispatcher)
         menu.act_op_templates.triggered.connect(self._open_op_templates)
         menu.act_transition_templates.triggered.connect(self._open_transition_templates)
         menu.act_excel_import.triggered.connect(self._open_excel_import)

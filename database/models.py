@@ -1393,3 +1393,106 @@ class RefreshToken(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     user = relationship('User', foreign_keys=[user_id])
+
+
+# ==================== v14: PDO — ПРОИЗВОДСТВЕННЫЕ ЗАКАЗЫ ====================
+
+
+class PDOStatus(enum.Enum):
+    """Статусы заказа ПДО."""
+    NEW = "Новый"
+    WITH_TECHNOLOGIST = "У технолога"
+    MTP_SIGNED = "МТП подписан"
+    READY_FOR_SHOP = "Готов к передаче в цех"
+    IN_SHOP = "В цехе"
+    QC = "ОТК"
+    CLOSED = "Закрыт"
+    CANCELLED = "Отменён"
+
+
+class ProductionOrder(Base):
+    """Заказ на производство — единица планирования ПДО."""
+    __tablename__ = 'production_orders'
+
+    id = Column(Integer, primary_key=True)
+    number = Column(String(40), unique=True, nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    tech_process_id = Column(Integer, ForeignKey('tech_processes.id'),
+                              nullable=True)
+
+    qty = Column(Integer, nullable=False, default=1)
+    due_date = Column(Date, nullable=True)
+    priority = Column(Integer, default=3)
+
+    customer = Column(String(200))
+    customer_order_no = Column(String(80))
+
+    status = Column(SQLEnum(PDOStatus), default=PDOStatus.NEW,
+                     nullable=False, index=True)
+
+    created_by = Column(Integer, ForeignKey('users.id'))
+    created_at = Column(DateTime, default=datetime.now)
+
+    technologist_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    tp_required = Column(Boolean, default=False)
+    mtp_signed_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    mtp_signed_at = Column(DateTime, nullable=True)
+
+    released_to_shop = Column(String(100))
+    released_at = Column(DateTime, nullable=True)
+    released_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    qty_done = Column(Integer, default=0)
+    qty_scrap = Column(Integer, default=0)
+    closed_at = Column(DateTime, nullable=True)
+
+    notes = Column(Text)
+
+    product = relationship("Product", foreign_keys=[product_id])
+    tech_process = relationship("TechProcess",
+                                 foreign_keys=[tech_process_id])
+    creator = relationship("User", foreign_keys=[created_by])
+    technologist = relationship("User", foreign_keys=[technologist_id])
+    mtp_signer = relationship("User", foreign_keys=[mtp_signed_by])
+    releaser = relationship("User", foreign_keys=[released_by])
+
+
+class PDOHandoff(Base):
+    """Акт приёма-передачи между отделами."""
+    __tablename__ = 'pdo_handoffs'
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey('production_orders.id'),
+                       nullable=False, index=True)
+    from_dept = Column(String(60), nullable=False)
+    to_dept = Column(String(60), nullable=False)
+    doc_package = Column(Text)
+
+    transferred_by = Column(Integer, ForeignKey('users.id'))
+    accepted_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    status = Column(String(30), default='Передан')
+    comment = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+    accepted_at = Column(DateTime, nullable=True)
+
+    order = relationship("ProductionOrder", foreign_keys=[order_id])
+
+
+class MTPSignoff(Base):
+    """Подпись технолога под МТП."""
+    __tablename__ = 'mtp_signoffs'
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey('production_orders.id'),
+                       nullable=False, index=True)
+    tech_process_id = Column(Integer, ForeignKey('tech_processes.id'),
+                              nullable=False)
+    signed_by = Column(Integer, ForeignKey('users.id'), nullable=False)
+    signed_at = Column(DateTime, default=datetime.now)
+    comment = Column(String(500))
+
+    order = relationship("ProductionOrder", foreign_keys=[order_id])
+    tech_process = relationship("TechProcess",
+                                 foreign_keys=[tech_process_id])
+    signer = relationship("User", foreign_keys=[signed_by])

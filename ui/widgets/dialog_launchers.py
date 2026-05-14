@@ -453,6 +453,11 @@ class DialogLaunchersMixin:
         w = ShiftDashboard(self.db_manager, self)
         self._add_or_focus_tab(w, 'Дашборд смены')
 
+    def _open_pdo_dispatcher(self):
+        from ui.widgets.pdo_dispatcher import PDODispatcherWidget
+        w = PDODispatcherWidget(self.db_manager, self.user, self)
+        self._add_or_focus_tab(w, 'Диспетчер ПДО')
+
     def _open_registration_journal(self):
         from ui.widgets.journal_widget import JournalWidget
         w = JournalWidget(self.db_manager, self.user, self)

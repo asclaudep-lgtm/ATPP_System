@@ -91,6 +91,7 @@ th{background:#f8f9fa;font-weight:600;color:#666}
     <button :class="{active:page==='qa'}" @click="page='qa';loadQAPending()">🔍 ОТК</button>
     <button :class="{active:page==='tooling'}" @click="page='tooling';loadToolingItems()">🧰 Оснастка</button>
     <button :class="{active:page==='orders'}" @click="page='orders';loadOrders()">📋 Наряды</button>
+    <button :class="{active:page==='pdo'}" @click="page='pdo';loadPDOOrders()">📋 ПДО</button>
   </div>
 
   <!-- Dashboard -->
@@ -261,6 +262,48 @@ th{background:#f8f9fa;font-weight:600;color:#666}
         </tbody>
       </table>
     </div>
+  <!-- PDO Dispatcher (v14) -->
+  <div v-if="page==='pdo'">
+    <div class="card">
+      <h3>📋 Заказы ПДО</h3>
+      <select v-model="pdoFilter" @change="loadPDOOrders" style="padding:6px;margin-bottom:8px">
+        <option value="">Все</option>
+        <option value="NEW">Новый</option>
+        <option value="WITH_TECHNOLOGIST">У технолога</option>
+        <option value="MTP_SIGNED">МТП подписан</option>
+        <option value="IN_SHOP">В цехе</option>
+        <option value="QC">ОТК</option>
+        <option value="CLOSED">Закрыт</option>
+      </select>
+      <table>
+        <thead><tr><th>Заказ</th><th>Изделие</th><th>Статус</th><th>Технолог</th><th>МТП</th><th>Срок</th></tr></thead>
+        <tbody>
+          <tr v-for="o in pdoOrders" :key="o.id" @click="selectPDOOrder(o)" style="cursor:pointer"
+              :style="{borderLeft:'4px solid '+pdoStatusColor(o.status)}">
+            <td><b>{{ o.number }}</b></td><td>{{ o.product }}</td>
+            <td>{{ o.status }}</td><td>{{ o.technologist }}</td>
+            <td>{{ o.mtp_signed ? '✓' : '✗' }}</td>
+            <td>{{ o.due_date || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- PDO detail -->
+    <div class="card" v-if="pdoDetail">
+      <h3>{{ pdoDetail.number }} — {{ pdoDetail.product }}</h3>
+      <p>{{ pdoDetail.product_name }} | Статус: {{ pdoDetail.status }} | Кол-во: {{ pdoDetail.qty }} | Выполнено: {{ pdoDetail.qty_done }}</p>
+      <h4 style="margin-top:8px">История передач:</h4>
+      <table>
+        <thead><tr><th>От</th><th>Кому</th><th>Статус</th><th>Дата</th></tr></thead>
+        <tbody>
+          <tr v-for="h in pdoDetail.handoffs" :key="h.created_at">
+            <td>{{ h.from }}</td><td>{{ h.to }}</td><td>{{ h.status }}</td><td>{{ h.created_at }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
     <div class="card" v-if="selectedTooling">
       <h3>История: {{ selectedTooling.item.inventory_no }} — {{ selectedTooling.item.name }}</h3>
       <table>
@@ -296,6 +339,7 @@ createApp({
       routeSlip: null,
       qaPending: [], issues: [],
       toolingItems: [], selectedTooling: null,
+      pdoOrders: [], pdoDetail: null, pdoFilter: '',
       error: '', Math: Math,
     }
   },
@@ -392,6 +436,20 @@ createApp({
     },
     async selectTooling(ti) {
       try { this.selectedTooling = await this.api('/api/tooling/history/' + ti.id) } catch(e) { this.showError('Не удалось загрузить историю') }
+    },
+    // v14: PDO
+    async loadPDOOrders() {
+      const qs = this.pdoFilter ? '?status=' + this.pdoFilter : ''
+      try { this.pdoOrders = await this.api('/api/pdo/orders' + qs) || [] } catch(e) {}
+    },
+    async selectPDOOrder(o) {
+      try { this.pdoDetail = await this.api('/api/pdo/orders/' + o.id) } catch(e) {}
+    },
+    pdoStatusColor(st) {
+      const m = { 'Новый':'#95a5a6', 'У технолога':'#f39c12',
+                  'МТП подписан':'#2980b9', 'Готов к передаче в цех':'#27ae60',
+                  'В цехе':'#8e44ad', 'ОТК':'#e67e22', 'Закрыт':'#2c3e50' }
+      return m[st] || '#999'
     },
   },
   mounted() {

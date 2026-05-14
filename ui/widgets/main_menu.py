@@ -182,6 +182,8 @@ class MainMenu(QMenuBar):
         m.addAction(self.act_formula_editor)
         self.act_shift_dashboard = QAction("🏭 Дашборд смены...", self)
         m.addAction(self.act_shift_dashboard)
+        self.act_pdo_dispatcher = QAction("📋 Диспетчер ПДО...", self)
+        m.addAction(self.act_pdo_dispatcher)
         self.act_op_templates = QAction("📚 Библиотека типовых операций...", self)
         m.addAction(self.act_op_templates)
         self.act_transition_templates = QAction("📋 Шаблоны переходов...", self)
