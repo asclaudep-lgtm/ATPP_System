@@ -523,6 +523,7 @@ class ChangeLog(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     action = Column(String(50))  # create, update, delete, approve, etc.
     description = Column(Text)
+    changes = Column(JSON)  # {field: {before: ..., after: ...}}
     timestamp = Column(DateTime, default=datetime.now)
 
     user = relationship("User")

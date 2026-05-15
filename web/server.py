@@ -25,7 +25,7 @@ from web.deps import _get_db_manager
 from web.schemas import LoginRequest
 from web.routers import (products, tech_processes, work_orders,
                           approval, bom, dashboard, production, tooling,
-                          mobile, pdo)
+                          mobile, pdo, audit, batch)
 
 app = FastAPI(title="ATPP Web API", version="10.0.0")
 
@@ -48,8 +48,8 @@ app.include_router(production.router, prefix="/api")
 app.include_router(tooling.router, prefix="/api")
 app.include_router(mobile.router, prefix="/api")
 app.include_router(pdo.router, prefix="/api")
-
-
+app.include_router(audit.router, prefix="/api")
+app.include_router(batch.router, prefix="/api")
 @app.post("/api/auth/login")
 def login(body: LoginRequest):
     from web.auth import login_user

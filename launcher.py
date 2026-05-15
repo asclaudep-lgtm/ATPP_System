@@ -100,6 +100,8 @@ def launch() -> int:
         _bp = _backup.daily_backup_if_needed()
         if _bp is not None:
             log.info("Daily backup snapshot: %s", _bp)
+        # Start background scheduler for periodic backups
+        _backup.start_auto_backup()
     except Exception as e:
         log.warning("auto-backup failed: %s", e)
 

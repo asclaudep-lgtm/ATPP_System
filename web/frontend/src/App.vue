@@ -38,6 +38,8 @@
       <QAPage v-if="page==='qa'" :key="'qa-'+token" :api="api" :showError="showError" />
       <ToolingPage v-if="page==='tooling'" :key="'tool-'+token" :api="api" :showError="showError" />
       <OrdersPage v-if="page==='orders'" :key="'ord-'+token" :api="api" :showError="showError" />
+      <AuditPage v-if="page==='audit'" :key="'audit-'+token" :api="api" :showError="showError" />
+      <BatchOpsPage v-if="page==='batch'" :key="'batch-'+token" :api="api" :showError="showError" />
     </div>
   </div>
 </template>
@@ -51,10 +53,12 @@ import ProductionPage from './components/ProductionPage.vue'
 import QAPage from './components/QAPage.vue'
 import ToolingPage from './components/ToolingPage.vue'
 import OrdersPage from './components/OrdersPage.vue'
+import AuditPage from './components/AuditPage.vue'
+import BatchOpsPage from './components/BatchOpsPage.vue'
 
 export default {
   name: 'App',
-  components: { DashboardPage, ProductsPage, TPsPage, PDOPage, ProductionPage, QAPage, ToolingPage, OrdersPage },
+  components: { DashboardPage, ProductsPage, TPsPage, PDOPage, ProductionPage, QAPage, ToolingPage, OrdersPage, AuditPage, BatchOpsPage },
   data() {
     return {
       token: localStorage.getItem('atpp_token'),
@@ -70,6 +74,8 @@ export default {
         { id: 'qa', label: '🔍 ОТК' },
         { id: 'tooling', label: '🧰 Оснастка' },
         { id: 'orders', label: '📋 Наряды' },
+        { id: 'audit', label: '📋 Аудит' },
+        { id: 'batch', label: '⚡ Batch-операции' },
       ],
     }
   },

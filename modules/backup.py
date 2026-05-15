@@ -544,3 +544,83 @@ def daily_backup_if_needed() -> Optional[Path]:
 def backup_summary() -> Tuple[List[Path], Optional[Path]]:
     """Возвращает (список локальных бэкапов, путь зеркала-папки или None)."""
     return list_backups(), _mirror_target()
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Авто-бекап по расписанию (BackupScheduler)
+# ──────────────────────────────────────────────────────────────────────────
+
+import threading
+
+class BackupScheduler:
+    """Фоновый планировщик авто-бекапов с настраиваемым интервалом.
+
+    Интервал задаётся в data/backup.cfg ключом BACKUP_INTERVAL_MINUTES=<N>.
+    По умолчанию: 1440 (раз в сутки).
+    """
+
+    def __init__(self, interval_minutes: int = 1440):
+        self._interval = interval_minutes
+        self._thread: Optional[threading.Thread] = None
+        self._stop = threading.Event()
+
+    @classmethod
+    def from_config(cls) -> 'BackupScheduler':
+        interval = 1440
+        cfg = DATA_DIR / 'backup.cfg'
+        if cfg.exists():
+            try:
+                for line in cfg.read_text(encoding='utf-8').splitlines():
+                    line = line.strip()
+                    if line.startswith('BACKUP_INTERVAL_MINUTES='):
+                        interval = int(line.split('=', 1)[1])
+                        break
+            except Exception:
+                pass
+        return cls(interval_minutes=interval)
+
+    @property
+    def interval_minutes(self) -> int:
+        return self._interval
+
+    def start(self):
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        _log.info('Backup scheduler started (interval %d min)', self._interval)
+
+    def stop(self):
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=5)
+
+    def _run(self):
+        while not self._stop.wait(self._interval * 60):
+            try:
+                path = make_backup()
+                if path:
+                    rotate()
+                    _log.info('Scheduled backup created: %s', path)
+            except Exception:
+                _log.exception('Backup operation failed')
+
+
+_backup_scheduler: Optional[BackupScheduler] = None
+
+
+def get_backup_scheduler() -> BackupScheduler:
+    global _backup_scheduler
+    if _backup_scheduler is None:
+        _backup_scheduler = BackupScheduler.from_config()
+    return _backup_scheduler
+
+
+def start_auto_backup():
+    get_backup_scheduler().start()
+
+
+def stop_auto_backup():
+    if _backup_scheduler:
+        _backup_scheduler.stop()

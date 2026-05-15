@@ -26,8 +26,12 @@ def log_change(
     entity_type: str,
     entity_id: Optional[int],
     description: str = '',
+    changes: Optional[dict] = None,
 ):
-    """Записать одну запись в журнал изменений (открывает свою сессию)."""
+    """Записать одну запись в журнал изменений (открывает свою сессию).
+
+    changes: {field: {before: ..., after: ...}} — дифф полей.
+    """
     try:
         with db_manager.get_session() as s:
             s.add(ChangeLog(
@@ -36,6 +40,7 @@ def log_change(
                 user_id=user_id,
                 action=action,
                 description=description,
+                changes=changes,
                 timestamp=datetime.now(),
             ))
     except Exception:
@@ -50,6 +55,7 @@ def log_change_session(
     entity_type: str,
     entity_id: Optional[int],
     description: str = '',
+    changes: Optional[dict] = None,
 ):
     """Записать в журнал в рамках уже открытой сессии (без commit)."""
     try:
@@ -59,6 +65,7 @@ def log_change_session(
             user_id=user_id,
             action=action,
             description=description,
+            changes=changes,
             timestamp=datetime.now(),
         ))
     except Exception:
@@ -177,6 +184,45 @@ def list_versions(db_manager, *, tp_id: int) -> list[dict]:
                 'created_by': r.created_by,
                 'comment': r.comment,
                 'data_snapshot': r.data_snapshot,
+            } for r in rows]
+    except Exception:
+        _log.exception('Audit operation failed')
+        return []
+
+
+def diff_entity(old: dict, new: dict, fields: list[str]) -> dict:
+    """Сравнить два словаря и вернуть only changes: {field: {before: X, after: Y}}."""
+    result = {}
+    for f in fields:
+        ov = old.get(f)
+        nv = new.get(f)
+        if ov != nv:
+            result[f] = {'before': ov, 'after': nv}
+    return result
+
+
+def list_audit_enriched(db_manager, *, limit: int = 500,
+                        entity_type: Optional[str] = None,
+                        action: Optional[str] = None) -> list[dict]:
+    """Прочитать журнал изменений с именем пользователя + диффами."""
+    try:
+        with db_manager.get_session() as s:
+            q = s.query(ChangeLog).order_by(ChangeLog.timestamp.desc())
+            if entity_type:
+                q = q.filter(ChangeLog.entity_type == entity_type)
+            if action:
+                q = q.filter(ChangeLog.action == action)
+            rows = q.limit(limit).all()
+            return [{
+                'id': r.id,
+                'timestamp': r.timestamp.isoformat() if r.timestamp else None,
+                'entity_type': r.entity_type,
+                'entity_id': r.entity_id,
+                'user_id': r.user_id,
+                'user_name': (r.user.full_name or r.user.username) if getattr(r, 'user', None) else '',
+                'action': r.action,
+                'description': r.description,
+                'changes': r.changes,
             } for r in rows]
     except Exception:
         _log.exception('Audit operation failed')
