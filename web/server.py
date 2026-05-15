@@ -259,10 +259,11 @@ async def ws_kpi(websocket: WebSocket):
         ws_manager.disconnect(websocket)
 
 
-# Serve static SPA if built, otherwise redirect to API docs
-if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
-    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True),
-              name="static")
+# Serve SPA from dist/ if built, otherwise redirect to API docs
+DIST_DIR = STATIC_DIR / "dist"
+if (DIST_DIR / "index.html").exists():
+    app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="spa")
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 else:
     @app.get("/")
     def root():
