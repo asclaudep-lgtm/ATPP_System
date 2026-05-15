@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import QApplication
 
 LIGHT_QSS = """
 /* ── Global ── */
-QWidget { color: #334155; font-size: 13px; }
+QWidget { color: #334155; }
 QMainWindow { background: #f1f5f9; }
 QDialog { background: #ffffff; }
 
@@ -152,7 +152,7 @@ QWidget#nav_panel, QTreeWidget#nav_panel, QListWidget#nav_panel {
 # ═══════════════════════════════════════════════════════════════════════════
 
 DARK_QSS = """
-QWidget { color: #e2e8f0; font-size: 13px; }
+QWidget { color: #e2e8f0; }
 QMainWindow { background: #0f172a; }
 QDialog { background: #1e293b; }
 
