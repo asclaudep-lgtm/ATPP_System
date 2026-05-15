@@ -159,6 +159,10 @@ def launch() -> int:
         # MainWindow expects a dict-like user (uses .get('role'), .get('id'), ...)
         main_window = MainWindow(db_manager, user)
         main_window.show()
+        # Force style refresh after all widgets are created
+        from ui.theme import apply_theme as _reapply
+        _reapply(app, theme=user_settings.get('theme', 'light'),
+                 font_size=int(user_settings.get('font_size', 9) or 9))
         log.info("MainWindow shown with user: %s",
                  user.get('username') if isinstance(user, dict) else user)
     except Exception as e:
