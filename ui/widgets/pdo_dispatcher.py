@@ -51,6 +51,7 @@ class PDOOrderCard(QFrame):
     def __init__(self, order_data, parent=None):
         super().__init__(parent)
         self.order_id = order_data['id']
+        self._data = order_data
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setToolTip(
@@ -246,9 +247,20 @@ class PDODispatcherWidget(QWidget):
         new_btn.clicked.connect(self._create_order)
         hdr.addWidget(new_btn)
 
+        export_btn = QPushButton('📄 Экспорт Excel')
+        export_btn.clicked.connect(self._export_orders)
+        hdr.addWidget(export_btn)
+
         refresh_btn = QPushButton('↻ Обновить')
         refresh_btn.clicked.connect(self.refresh)
         hdr.addWidget(refresh_btn)
+
+        self._search_edit = QLineEdit()
+        self._search_edit.setPlaceholderText(
+            'Поиск по номеру, изделию, ВС...')
+        self._search_edit.setMaximumWidth(280)
+        self._search_edit.textChanged.connect(self._apply_search_filter)
+        hdr.addWidget(self._search_edit)
 
         self._stats_label = QLabel('')
         self._stats_label.setStyleSheet('color: #666; margin-left: 12px;')
@@ -365,7 +377,21 @@ class PDODispatcherWidget(QWidget):
 
     # ── Refresh ───────────────────────────────────────────────────
 
+    def _apply_search_filter(self):
+        text = self._search_edit.text().strip().lower()
+        for st, col in self._columns.items():
+            container = col._container
+            for i in range(container.layout().count()):
+                item = container.layout().itemAt(i)
+                if item and item.widget() and hasattr(item.widget(), 'order_id'):
+                    card = item.widget()
+                    haystack = (card._data.get('number', '') + ' ' +
+                                card._data.get('product', '') + ' ' +
+                                card._data.get('aircraft_type', '')).lower()
+                    card.setVisible(not text or text in haystack)
+
     def refresh(self):
+        self._all_order_data = {}
         with self.db_manager.get_session() as s:
             total = 0
             for st, col in self._columns.items():
@@ -726,6 +752,45 @@ class PDODispatcherWidget(QWidget):
             wb.save(str(path))
 
         QMessageBox.information(self, 'Готово', f'Карта заказа сохранена:\n{path}')
+
+    def _export_orders(self):
+        import openpyxl
+        from openpyxl.styles import Font, Alignment
+        from config import EXPORT_DIR
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Заказы ПДО'
+        cols = ['Номер', 'Изделие', 'ВС', 'Статус', 'Кол-во',
+                'Заказчик', 'Позиций', 'Записок', 'Срок']
+        for j, h in enumerate(cols, 1):
+            c = ws.cell(row=1, column=j, value=h)
+            c.font = Font(bold=True)
+            c.alignment = Alignment(horizontal='center')
+
+        with self.db_manager.get_session() as s:
+            orders = pdo_module.list_orders_by_status(s, limit=500)
+            for i, o in enumerate(orders):
+                detail = pdo_module.get_order_detail(s, o.id)
+                ws.cell(row=i + 2, column=1, value=o.number)
+                ws.cell(row=i + 2, column=2, value=(
+                    o.product.designation if o.product else ''))
+                ws.cell(row=i + 2, column=3,
+                        value=detail.get('aircraft_type', ''))
+                ws.cell(row=i + 2, column=4, value=o.status.value)
+                ws.cell(row=i + 2, column=5, value=o.qty)
+                ws.cell(row=i + 2, column=6, value=o.customer or '')
+                ws.cell(row=i + 2, column=7,
+                        value=len(detail.get('nomenclature', [])))
+                ws.cell(row=i + 2, column=8,
+                        value=len(detail.get('memos', [])))
+                ws.cell(row=i + 2, column=9,
+                        value=str(o.due_date) if o.due_date else '')
+
+        path = EXPORT_DIR / f'pdo_orders_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        wb.save(str(path))
+        QMessageBox.information(self, 'Экспорт', f'Сохранено:\n{path}')
 
     def closeEvent(self, ev):
         self._refresh_timer.stop()

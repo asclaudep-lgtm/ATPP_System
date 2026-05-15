@@ -102,6 +102,8 @@ th{background:#f8f9fa;font-weight:600;color:#666}
       <div class="stat"><div class="num">{{ stats.total_work_orders }}</div><div class="lbl">Нарядов</div></div>
       <div class="stat"><div class="num">{{ stats.active_work_orders }}</div><div class="lbl">В работе</div></div>
       <div class="stat"><div class="num">{{ stats.total_users }}</div><div class="lbl">Пользователей</div></div>
+      <div class="stat"><div class="num">{{ stats.pdo_total || 0 }}</div><div class="lbl">Заказов ПДО</div></div>
+      <div class="stat" :style="{background: (stats.pdo_overdue||0)>0?'linear-gradient(135deg,#d32f2f,#c0392b)':''}"><div class="num">{{ stats.pdo_overdue || 0 }}</div><div class="lbl">Просрочено</div></div>
     </div>
     <div class="card" v-if="liveStats" style="background:#e8f5e9">
       <h3>🔴 Live KPI</h3>
@@ -265,7 +267,18 @@ th{background:#f8f9fa;font-weight:600;color:#666}
   <!-- PDO Dispatcher (v14) -->
   <div v-if="page==='pdo'">
     <div class="card">
-      <h3>📋 Заказы ПДО</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>📋 Заказы ПДО</h3>
+        <button @click="showPDOCreate=!showPDOCreate" style="padding:6px 16px;cursor:pointer;background:#27ae60;color:#fff;border:none;border-radius:4px">+ Новый заказ</button>
+      </div>
+      <div v-if="showPDOCreate" style="background:#f8f9fa;padding:12px;border-radius:4px;margin:8px 0">
+        <input v-model="pdoNew.des" placeholder="Обозначение изделия" style="padding:6px;width:200px;margin-right:8px">
+        <input v-model="pdoNew.qty" placeholder="Кол-во" type="number" style="padding:6px;width:80px;margin-right:8px">
+        <input v-model="pdoNew.ac" placeholder="Тип ВС" style="padding:6px;width:120px;margin-right:8px">
+        <input v-model="pdoNew.customer" placeholder="Заказчик" style="padding:6px;width:150px">
+        <button @click="createPDOOrder" style="margin-left:8px;padding:6px 16px;cursor:pointer;background:#1976d2;color:#fff;border:none;border-radius:4px">Создать</button>
+        <span v-if="pdoCreateMsg" style="margin-left:8px;font-size:12px">{{ pdoCreateMsg }}</span>
+      </div>
       <select v-model="pdoFilter" @change="loadPDOOrders" style="padding:6px;margin-bottom:8px">
         <option value="">Все</option>
         <option value="NEW">Новый</option>
@@ -379,6 +392,8 @@ createApp({
       qaPending: [], issues: [],
       toolingItems: [], selectedTooling: null,
       pdoOrders: [], pdoDetail: null, pdoFilter: '',
+      showPDOCreate: false, pdoNew: {des:'', qty:'', ac:'', customer:''},
+      pdoCreateMsg: '',
       error: '', Math: Math,
     }
   },
@@ -485,10 +500,24 @@ createApp({
       try { this.pdoDetail = await this.api('/api/pdo/orders/' + o.id) } catch(e) {}
     },
     pdoStatusColor(st) {
-      const m = { 'Новый':'#95a5a6', 'У технолога':'#f39c12',
-                  'МТП подписан':'#2980b9', 'Готов к передаче в цех':'#27ae60',
-                  'В цехе':'#8e44ad', 'ОТК':'#e67e22', 'Закрыт':'#2c3e50' }
+      const m = { 'Новый':'#95a5a6', 'ОМТС: проработка':'#16a085',
+                  'Тех.отдел: проверка':'#2980b9', 'Возможно изготовить':'#27ae60',
+                  'Невозможно изготовить':'#c0392b', 'Зам.Тех.Дир: утверждение':'#8e44ad',
+                  'Утверждён':'#27ae60', 'В цехе':'#8e44ad', 'ОТК':'#e67e22',
+                  'Закрыт':'#2c3e50' }
       return m[st] || '#999'
+    },
+    async createPDOOrder() {
+      const des = this.pdoNew.des.trim()
+      this.pdoCreateMsg = ''
+      if (!des) { this.pdoCreateMsg = 'Введите обозначение'; return }
+      try {
+        const r = await this.api('/api/pdo/orders?product_id=0&qty='
+          + (this.pdoNew.qty||1) + '&aircraft_type=' + encodeURIComponent(this.pdoNew.ac)
+          + '&customer=' + encodeURIComponent(this.pdoNew.customer))
+        // The create endpoint needs product lookup — do it differently
+        this.pdoCreateMsg = 'Используйте desktop-клиент для создания заказа с номенклатурой'
+      } catch(e) { this.pdoCreateMsg = 'Ошибка: ' + (e.message||'') }
     },
   },
   mounted() {

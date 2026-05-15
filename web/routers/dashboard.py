@@ -26,12 +26,30 @@ def get_dashboard_stats(
     ).count()
     total_users = db.query(User).filter(User.is_active == True).count()
 
+    # PDO stats
+    from database.models import ProductionOrder, PDOStatus
+    pdo_total = db.query(ProductionOrder).count()
+    pdo_active = db.query(ProductionOrder).filter(
+        ProductionOrder.status.in_([
+            PDOStatus.NEW, PDOStatus.OMTS_REVIEW, PDOStatus.TECH_DEPT,
+            PDOStatus.FEASIBLE, PDOStatus.DEPUTY_APPROVAL,
+            PDOStatus.APPROVED, PDOStatus.IN_SHOP, PDOStatus.QC,
+        ])).count()
+    from datetime import date
+    pdo_overdue = db.query(ProductionOrder).filter(
+        ProductionOrder.due_date < date.today(),
+        ProductionOrder.status != PDOStatus.CLOSED,
+    ).count()
+
     return DashboardStats(
         total_products=total_products,
         total_tech_processes=total_tps,
         total_work_orders=total_wos,
         active_work_orders=active_wos,
         total_users=total_users,
+        pdo_total=pdo_total,
+        pdo_active=pdo_active,
+        pdo_overdue=pdo_overdue,
     )
 
 

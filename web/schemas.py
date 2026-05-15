@@ -81,3 +81,6 @@ class DashboardStats(BaseModel):
     total_work_orders: int
     active_work_orders: int
     total_users: int
+    pdo_total: int = 0
+    pdo_active: int = 0
+    pdo_overdue: int = 0
