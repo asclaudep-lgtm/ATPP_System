@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QFrame, QGroupBox, QMessageBox, QInputDialog,
     QSplitter, QTextEdit, QSizePolicy, QGridLayout,
+    QLineEdit, QFormLayout, QTableWidget, QTableWidgetItem, QDialog,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
 from PyQt6.QtGui import QFont, QColor, QPalette
@@ -487,44 +488,115 @@ class PDODispatcherWidget(QWidget):
     # ── Actions ───────────────────────────────────────────────────
 
     def _create_order(self):
+        from PyQt6.QtWidgets import QDialog, QFormLayout, QTableWidget
         from database.models import Product
-        des, ok = QInputDialog.getText(
-            self, 'Новый заказ ПДО', 'Обозначение изделия:')
-        if not ok or not des.strip():
-            return
-        qty_str, ok2 = QInputDialog.getText(
-            self, 'Количество', 'Количество, шт:', text='1')
-        if not ok2:
-            return
-        try:
-            qty = int(qty_str)
-        except ValueError:
-            qty = 1
-        with self.db_manager.get_session() as s:
-            p = s.query(Product).filter(
-                Product.designation == des.strip(),
-                Product.is_deleted == False).first()
-            if p is None:
-                QMessageBox.warning(self, 'Ошибка',
-                                    f'Изделие "{des}" не найдено.')
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle('Новый заказ ПДО')
+        dlg.setMinimumSize(650, 500)
+        layout = QVBoxLayout(dlg)
+
+        form = QFormLayout()
+        des_edit = QLineEdit()
+        des_edit.setPlaceholderText('Обозначение основного изделия')
+        form.addRow('Изделие *:', des_edit)
+
+        ac_edit = QLineEdit()
+        ac_edit.setPlaceholderText('Ту-204-300 / Ил-76МД / ...')
+        form.addRow('Тип ВС:', ac_edit)
+
+        customer_edit = QLineEdit()
+        customer_edit.setPlaceholderText('Заказчик')
+        form.addRow('Заказчик:', customer_edit)
+
+        ws_edit = QLineEdit()
+        ws_edit.setPlaceholderText('Краткое описание работ')
+        form.addRow('Объём работ:', ws_edit)
+
+        layout.addLayout(form)
+
+        QLabel('Номенклатура (позиции к изготовлению):').setStyleSheet(
+            'font-weight: bold; margin-top: 8px;')
+        layout.addWidget(QLabel('Номенклатура (позиции к изготовлению):'))
+
+        tbl = QTableWidget(0, 3)
+        tbl.setHorizontalHeaderLabels(['Обозначение', 'Наименование', 'Кол-во'])
+        tbl.setColumnWidth(0, 200)
+        tbl.setColumnWidth(1, 200)
+        tbl.setColumnWidth(2, 60)
+        layout.addWidget(tbl)
+
+        btn_row = QHBoxLayout()
+        add_btn = QPushButton('+ Добавить позицию')
+        add_btn.clicked.connect(lambda: tbl.insertRow(tbl.rowCount()))
+        btn_row.addWidget(add_btn)
+        del_btn = QPushButton('− Удалить')
+        del_btn.clicked.connect(lambda: tbl.removeRow(tbl.currentRow()))
+        btn_row.addWidget(del_btn)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        # Pre-populate with one row
+        tbl.insertRow(0)
+        tbl.setItem(0, 0, QTableWidgetItem(des_edit.text()))
+
+        ok_btn = QPushButton('Создать заказ')
+        ok_btn.setStyleSheet(
+            'QPushButton { background: #27ae60; color: white; '
+            'border: none; padding: 8px; border-radius: 4px; font-weight: bold; }')
+        layout.addWidget(ok_btn)
+
+        def on_create():
+            des = des_edit.text().strip()
+            if not des:
+                QMessageBox.warning(dlg, 'Ошибка', 'Введите обозначение изделия.')
                 return
-            order = pdo_module.create_order(
-                s, product_id=p.id, qty=qty,
-                due_date=date.today(),
-                created_by=self.user.get('id', 1),
-            )
-            msg = (
-                f'Заказ {order.number} создан.\n\n'
+            with self.db_manager.get_session() as s:
+                p = s.query(Product).filter(
+                    Product.designation == des,
+                    Product.is_deleted == False).first()
+                if p is None:
+                    QMessageBox.warning(dlg, 'Ошибка', f'Изделие "{des}" не найдено.')
+                    return
+
+                nomenclature = []
+                for r in range(tbl.rowCount()):
+                    d = tbl.item(r, 0)
+                    n = tbl.item(r, 1)
+                    q = tbl.item(r, 2)
+                    if d and d.text().strip():
+                        try:
+                            qty_val = int(q.text()) if q and q.text().strip() else 1
+                        except ValueError:
+                            qty_val = 1
+                        nomenclature.append({
+                            'designation': d.text().strip(),
+                            'name': n.text().strip() if n else '',
+                            'qty': qty_val,
+                        })
+
+                total_qty = sum(ni['qty'] for ni in nomenclature) or 1
+                order = pdo_module.create_order(
+                    s, product_id=p.id, qty=total_qty,
+                    due_date=date.today(),
+                    customer=customer_edit.text().strip(),
+                    aircraft_type=ac_edit.text().strip(),
+                    work_scope=ws_edit.text().strip(),
+                    created_by=self.user.get('id', 1),
+                    nomenclature=nomenclature,
+                )
+            dlg.accept()
+            QMessageBox.information(
+                self, 'Заказ создан',
+                f'{order.number}\n'
                 f'Изделие: {p.designation} — {p.name}\n'
-                f'Количество: {qty} шт\n'
-                f'Статус: {order.status.value}\n\n'
-            )
-            if order.tp_required:
-                msg += '⚠ Требуется разработка ТП и подпись МТП технологом.'
-            else:
-                msg += '✅ ТП уже утверждён. Можно передавать в цех.'
-            QMessageBox.information(self, 'Заказ создан', msg)
-        self.refresh()
+                f'Позиций: {len(nomenclature)}\n'
+                f'Тип ВС: {ac_edit.text().strip() or "—"}\n'
+                f'Статус: {order.status.value}')
+            self.refresh()
+
+        ok_btn.clicked.connect(on_create)
+        dlg.exec()
 
     def _sign_mtp(self):
         if not hasattr(self, '_current_detail'):

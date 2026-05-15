@@ -269,31 +269,70 @@ th{background:#f8f9fa;font-weight:600;color:#666}
       <select v-model="pdoFilter" @change="loadPDOOrders" style="padding:6px;margin-bottom:8px">
         <option value="">Все</option>
         <option value="NEW">Новый</option>
-        <option value="WITH_TECHNOLOGIST">У технолога</option>
-        <option value="MTP_SIGNED">МТП подписан</option>
+        <option value="OMTS_REVIEW">ОМТС: проработка</option>
+        <option value="TECH_DEPT">Тех.отдел</option>
+        <option value="FEASIBLE">Возможно изготовить</option>
+        <option value="NOT_FEASIBLE">Невозможно</option>
+        <option value="DEPUTY_APPROVAL">Зам.Тех.Дир</option>
+        <option value="APPROVED">Утверждён</option>
         <option value="IN_SHOP">В цехе</option>
         <option value="QC">ОТК</option>
         <option value="CLOSED">Закрыт</option>
       </select>
       <table>
-        <thead><tr><th>Заказ</th><th>Изделие</th><th>Статус</th><th>Технолог</th><th>МТП</th><th>Срок</th></tr></thead>
+        <thead><tr><th>Заказ</th><th>Изделие</th><th>ВС</th><th>Статус</th><th>Поз.</th><th>Записки</th><th>Срок</th></tr></thead>
         <tbody>
           <tr v-for="o in pdoOrders" :key="o.id" @click="selectPDOOrder(o)" style="cursor:pointer"
               :style="{borderLeft:'4px solid '+pdoStatusColor(o.status)}">
-            <td><b>{{ o.number }}</b></td><td>{{ o.product }}</td>
-            <td>{{ o.status }}</td><td>{{ o.technologist }}</td>
-            <td>{{ o.mtp_signed ? '✓' : '✗' }}</td>
-            <td>{{ o.due_date || '—' }}</td>
+            <td><b>{{ o.number }}</b></td>
+            <td>{{ o.product }}</td>
+            <td style="font-size:11px;color:#1976d2">{{ o.aircraft_type || '—' }}</td>
+            <td><span style="font-size:11px">{{ o.status }}</span></td>
+            <td>{{ (o.nomenclature||[]).length || '—' }}</td>
+            <td style="font-size:11px">{{ (o.memos||[]).length ? '📄'+(o.memos||[]).length : '—' }}</td>
+            <td style="font-size:11px">{{ o.due_date || '—' }}</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <!-- PDO detail -->
     <div class="card" v-if="pdoDetail">
-      <h3>{{ pdoDetail.number }} — {{ pdoDetail.product }}</h3>
-      <p>{{ pdoDetail.product_name }} | Статус: {{ pdoDetail.status }} | Кол-во: {{ pdoDetail.qty }} | Выполнено: {{ pdoDetail.qty_done }}</p>
-      <h4 style="margin-top:8px">История передач:</h4>
-      <table>
+      <h3>{{ pdoDetail.number }} — {{ pdoDetail.product }}
+        <span v-if="pdoDetail.aircraft_type" style="color:#1976d2;font-size:14px">✈ {{ pdoDetail.aircraft_type }}</span>
+      </h3>
+      <p>{{ pdoDetail.product_name }} | Статус: <b>{{ pdoDetail.status }}</b> | Кол-во: {{ pdoDetail.qty }}</p>
+
+      <h4 style="margin-top:12px">📋 Номенклатура:</h4>
+      <table v-if="pdoDetail.nomenclature && pdoDetail.nomenclature.length">
+        <thead><tr><th>Feas.</th><th>КД</th><th>Обозначение</th><th>Наименование</th><th>Кол-во</th><th>Материал</th></tr></thead>
+        <tbody>
+          <tr v-for="it in pdoDetail.nomenclature" :key="it.id"
+              :style="{background: it.tech_feasible===true?'#e8f5e9':it.tech_feasible===false?'#ffebee':'#fff'}">
+            <td>{{ it.tech_feasible===true?'✅':it.tech_feasible===false?'❌':'⬜' }}</td>
+            <td>{{ it.kd_ready?'📄':'' }}</td>
+            <td>{{ it.designation }}</td>
+            <td>{{ it.name }}</td>
+            <td>×{{ it.qty }}</td>
+            <td style="font-size:11px">{{ it.material_name || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else style="color:#999">Номенклатура не задана</p>
+
+      <h4 style="margin-top:12px">📄 Служебные записки:</h4>
+      <table v-if="pdoDetail.memos && pdoDetail.memos.length">
+        <thead><tr><th>Тип</th><th>Номер</th><th>Отдел</th><th>Содержание</th><th>Дата</th></tr></thead>
+        <tbody>
+          <tr v-for="m in pdoDetail.memos" :key="m.id">
+            <td>{{ m.memo_type==='У'?'📋 Указание':'📌 Приказ' }}</td>
+            <td>{{ m.memo_number }}</td><td>{{ m.from_dept }}</td>
+            <td style="font-size:11px">{{ m.content }}</td><td>{{ m.issued_at }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else style="color:#999">Служебных записок нет</p>
+
+      <h4 style="margin-top:12px">🔄 История передач:</h4>
+      <table v-if="pdoDetail.handoffs && pdoDetail.handoffs.length">
         <thead><tr><th>От</th><th>Кому</th><th>Статус</th><th>Дата</th></tr></thead>
         <tbody>
           <tr v-for="h in pdoDetail.handoffs" :key="h.created_at">
