@@ -556,7 +556,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
                 font_size=int(user_settings.get('font_size', 9) or 9),
             )
         if hasattr(self, '_toolbar'):
-            self._toolbar.update_theme_button(new)
+            self._toolbar.update_theme(new)
 
     def _cycle_font_size(self):
         from modules import settings as user_settings
