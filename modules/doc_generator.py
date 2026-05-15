@@ -16,10 +16,50 @@ from config import TEMPLATES_DIR, EXPORT_DIR, product_export_dir
 
 
 class DocumentGenerator:
-    """Класс для генерации технологической документации"""
-    
+    """Класс для генерации технологической документации."""
+
+    # Base URL for QR codes pointing to web SPA
+    QR_BASE_URL = 'http://localhost:8000'
+
     def __init__(self, db_session):
         self.session = db_session
+
+    @staticmethod
+    def _qr_code_url(tp_id: int, base_url: str = None) -> str:
+        """Generate a Google Chart API QR code URL for a TP.
+
+        Returns a URL that renders a QR code image. The QR code points to
+        the web SPA showing the TP detail.
+        """
+        base = base_url or DocumentGenerator.QR_BASE_URL
+        target = f'{base}/?page=tps&tp={tp_id}'
+        return (
+            f'https://chart.googleapis.com/chart'
+            f'?chs=150x150&cht=qr&chl={target}&choe=UTF-8'
+        )
+
+    @staticmethod
+    def _add_qr_to_sheet(ws, row: int, col: str, tp_id: int,
+                          base_url: str = None):
+        """Insert a QR code image into an openpyxl worksheet.
+
+        Uses Google Chart API — requires internet access at generation time.
+        For offline use, install ``qrcode`` and ``Pillow``.
+        """
+        try:
+            import tempfile
+            import urllib.request
+
+            qr_url = DocumentGenerator._qr_code_url(tp_id, base_url)
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+                urllib.request.urlretrieve(qr_url, f.name)
+                from openpyxl.drawing.image import Image as XlImage
+                img = XlImage(f.name)
+                img.width = 80
+                img.height = 80
+                ws.add_image(img, f'{col}{row}')
+        except Exception:
+            pass  # QR code is non-critical — skip if offline
 
     @staticmethod
     def _mtp_operations(tp: TechProcess) -> list:
@@ -100,7 +140,10 @@ class DocumentGenerator:
         ws['A1'].font = Font(size=14, bold=True)
         ws['A1'].alignment = Alignment(horizontal='center')
         ws.merge_cells('A1:F1')
-        
+
+        # QR-код — ссылка на ТП в веб-клиенте
+        self._add_qr_to_sheet(ws, 1, 'G', tp.id)
+
         # Информация о детали
         row = 3
         ws[f'A{row}'] = "Обозначение:"
