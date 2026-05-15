@@ -150,16 +150,10 @@ class ReferenceEditorWidget(QWidget):
 
         btn_row = QHBoxLayout()
         save_btn = QPushButton("Сохранить")
-        save_btn.setStyleSheet(
-            "QPushButton { background-color: #27ae60; color: white; "
-            "border: none; padding: 4px 16px; border-radius: 4px; }")
         save_btn.clicked.connect(self._save)
         btn_row.addWidget(save_btn)
 
         del_btn = QPushButton("Удалить")
-        del_btn.setStyleSheet(
-            "QPushButton { color: #e74c3c; border: none; "
-            "padding: 4px 16px; }")
         del_btn.clicked.connect(self._delete)
         btn_row.addWidget(del_btn)
         btn_row.addStretch()

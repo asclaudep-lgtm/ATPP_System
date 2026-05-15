@@ -133,7 +133,6 @@ class JournalWidget(QWidget):
 
         # ── Статус ──────────────────────────────────────────
         self.status = QLabel('')
-        self.status.setStyleSheet('color: #555;')
         root.addWidget(self.status)
 
     def _build_export_menu(self) -> QMenu:

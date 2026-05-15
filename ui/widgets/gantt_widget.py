@@ -89,7 +89,6 @@ class GanttWidget(QWidget):
         hint = QLabel(
             'Жадная FIFO-раскладка по due_date. Один цвет = один наряд. '
             'Конфликтные операции выделены красной рамкой.')
-        hint.setStyleSheet('color:#666;')
         root.addWidget(hint)
 
         self.scene = GanttScene()

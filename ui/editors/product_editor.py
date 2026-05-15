@@ -81,10 +81,6 @@ class ProductEditorWidget(QWidget):
         header.addStretch()
 
         save_btn = QPushButton("Сохранить")
-        save_btn.setStyleSheet(
-            "QPushButton { background-color: #27ae60; color: white; "
-            "border: none; padding: 6px 16px; border-radius: 4px; }"
-        )
         save_btn.clicked.connect(self._save)
         header.addWidget(save_btn)
         layout.addLayout(header)
@@ -162,8 +158,6 @@ class ProductEditorWidget(QWidget):
         sketch_row = QHBoxLayout()
         self._sketch_label = QLabel()
         self._sketch_label.setFixedSize(200, 150)
-        self._sketch_label.setStyleSheet(
-            "border: 1px dashed #bdc3c7; background: #f8f9fa;")
         self._sketch_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._sketch_label.setText("Эскиз\n(нет)")
         sketch_row.addWidget(self._sketch_label)

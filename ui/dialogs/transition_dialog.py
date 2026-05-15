@@ -47,7 +47,6 @@ class TransitionDialog(QDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #bdc3c7;")
         layout.addWidget(line)
 
         tabs = QTabWidget()
@@ -154,8 +153,6 @@ class TransitionDialog(QDialog):
             "n — частота вращения, S — подача."
         )
         calc_t_btn.clicked.connect(self._calc_t_main)
-        calc_t_btn.setStyleSheet("QPushButton { padding: 4px 10px; "
-                                 "background-color: #2ecc71; color: white; }")
 
         calc_row.addWidget(calc_rpm_btn)
         calc_row.addWidget(calc_v_btn)
@@ -164,7 +161,7 @@ class TransitionDialog(QDialog):
         pf.addRow("Расчёт:", calc_row)
 
         self._t_main_label = QLabel('То не рассчитано')
-        self._t_main_label.setStyleSheet('color: #555; font-style: italic;')
+        self._t_main_label.setStyleSheet('font-style: italic;')
         pf.addRow("", self._t_main_label)
 
         tabs.addTab(params_tab, "Режимы обработки")
@@ -190,24 +187,9 @@ class TransitionDialog(QDialog):
         save_btn = QPushButton("  Сохранить  ")
         save_btn.setDefault(True)
         save_btn.clicked.connect(self._on_save)
-        save_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #27ae60; color: white;
-                border: none; padding: 8px 20px;
-                border-radius: 4px; font-weight: bold;
-            }
-            QPushButton:hover { background-color: #229954; }
-        """)
 
         cancel_btn = QPushButton("  Отмена  ")
         cancel_btn.clicked.connect(self.reject)
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #95a5a6; color: white;
-                border: none; padding: 8px 20px; border-radius: 4px;
-            }
-            QPushButton:hover { background-color: #7f8c8d; }
-        """)
 
         btn_layout.addWidget(save_btn)
         btn_layout.addWidget(cancel_btn)
@@ -254,7 +236,7 @@ class TransitionDialog(QDialog):
             f'То = {self._t_main_value:.3f} мин '
             f'(L={L:g}, i={i}, n={n:g}, S={S:g})'
         )
-        self._t_main_label.setStyleSheet('color: #2c7a3f; font-weight: bold;')
+        self._t_main_label.setStyleSheet('font-weight: bold;')
 
     def _pick_from_templates(self):
         """v8: Открыть библиотеку шаблонов и вставить выбранный."""

@@ -65,7 +65,6 @@ class IssuePhotosWidget(QWidget):
         self.hint = QLabel(
             'Поддерживаются PNG, JPG, BMP, GIF, WEBP. Двойной клик — '
             'открыть оригинал в системе.')
-        self.hint.setStyleSheet('color: gray;')
         self.hint.setWordWrap(True)
         root.addWidget(self.hint)
 

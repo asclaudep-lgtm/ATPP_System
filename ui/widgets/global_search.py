@@ -60,7 +60,6 @@ class GlobalSearchWidget(QWidget):
         layout.addWidget(self.tbl, 1)
 
         self._info = QLabel('—')
-        self._info.setStyleSheet('color: #555;')
         layout.addWidget(self._info)
 
     def _search(self):

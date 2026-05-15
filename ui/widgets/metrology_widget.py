@@ -187,7 +187,6 @@ class MetrologyWidget(QWidget):
         hint = QLabel(
             'Учёт средств измерения (СИ) и сроков их поверки. '
             'Подсветка: 🔴 просрочено, 🟡 в ближайшие 30 дней.')
-        hint.setStyleSheet('color:#666;')
         root.addWidget(hint)
 
         self.table = QTableWidget(0, 7)
@@ -221,7 +220,6 @@ class MetrologyWidget(QWidget):
 
         self.alert = QLabel('—')
         self.alert.setWordWrap(True)
-        self.alert.setStyleSheet('color:#b71c1c; font-weight:600;')
         root.addWidget(self.alert)
 
     def refresh(self):

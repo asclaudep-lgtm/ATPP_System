@@ -42,12 +42,11 @@ class KTDBrowserDialog(QDialog):
         layout.addWidget(title)
 
         sub = QLabel("Шаблоны ГОСТ 3.1xxx (КТД) и формы отчётов УЗГА")
-        sub.setStyleSheet("color: #7f8c8d; font-size: 11px;")
+        sub.setStyleSheet("font-size: 11px;")
         layout.addWidget(sub)
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #bdc3c7;")
         layout.addWidget(line)
 
         self.tabs = QTabWidget()
@@ -57,7 +56,7 @@ class KTDBrowserDialog(QDialog):
 
         # Подсказка
         hint = QLabel("Двойной клик по строке — открыть шаблон в Word / Excel")
-        hint.setStyleSheet("color: #95a5a6; font-size: 10px; padding: 2px;")
+        hint.setStyleSheet("font-size: 10px; padding: 2px;")
         layout.addWidget(hint)
 
         # Кнопка закрытия
@@ -81,7 +80,7 @@ class KTDBrowserDialog(QDialog):
             "Шаблоны форм комплекта технологической документации согласно ГОСТ 3.1xxx-82/84/85/86.\n"
             "Открываются в Microsoft Word. Содержат стандартные бланки для ручного заполнения."
         )
-        info.setStyleSheet("color: #555; font-size: 10px;")
+        info.setStyleSheet("font-size: 10px;")
         info.setWordWrap(True)
         layout.addWidget(info)
 
@@ -103,7 +102,6 @@ class KTDBrowserDialog(QDialog):
         btn_layout = QHBoxLayout()
         open_btn = QPushButton("Открыть в Word")
         open_btn.clicked.connect(self._open_ktd_template)
-        open_btn.setStyleSheet("QPushButton { background-color: #2980b9; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
         open_folder_btn = QPushButton("Открыть папку")
         open_folder_btn.clicked.connect(self._open_ktd_folder)
         btn_layout.addWidget(open_btn)
@@ -125,7 +123,7 @@ class KTDBrowserDialog(QDialog):
             "Формы отчётов и ведомостей УЗГА в формате Excel.\n"
             "Содержат пример данных — открываются для ознакомления или ручного заполнения."
         )
-        info.setStyleSheet("color: #555; font-size: 10px;")
+        info.setStyleSheet("font-size: 10px;")
         info.setWordWrap(True)
         layout.addWidget(info)
 
@@ -145,7 +143,6 @@ class KTDBrowserDialog(QDialog):
         btn_layout = QHBoxLayout()
         open_btn = QPushButton("Открыть в Excel")
         open_btn.clicked.connect(self._open_report_template)
-        open_btn.setStyleSheet("QPushButton { background-color: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
         open_folder_btn = QPushButton("Открыть папку")
         open_folder_btn.clicked.connect(self._open_reports_folder)
         btn_layout.addWidget(open_btn)

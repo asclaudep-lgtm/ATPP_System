@@ -51,7 +51,6 @@ class UsersDialog(QDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #bdc3c7;")
         layout.addWidget(line)
 
         # Таблица пользователей
@@ -106,11 +105,9 @@ class UsersDialog(QDialog):
 
         self.add_btn = QPushButton("Добавить")
         self.add_btn.clicked.connect(self._add_user)
-        self.add_btn.setStyleSheet("QPushButton { background-color: #27ae60; color: white; border: none; padding: 6px 14px; border-radius: 4px; }")
 
         self.edit_btn = QPushButton("Сохранить изменения")
         self.edit_btn.clicked.connect(self._edit_user)
-        self.edit_btn.setStyleSheet("QPushButton { background-color: #2980b9; color: white; border: none; padding: 6px 14px; border-radius: 4px; }")
 
         self.reset_pw_btn = QPushButton("Сбросить пароль")
         self.reset_pw_btn.clicked.connect(self._reset_password)

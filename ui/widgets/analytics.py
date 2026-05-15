@@ -74,7 +74,6 @@ class AnalyticsWidget(QWidget):
         layout.addWidget(self.tabs, 1)
 
         self._info = QLabel('—')
-        self._info.setStyleSheet('color: #555; padding: 4px;')
         layout.addWidget(self._info)
 
     def _mk_table(self, headers: List[str]) -> QTableWidget:

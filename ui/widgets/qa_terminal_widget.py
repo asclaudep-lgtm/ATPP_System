@@ -110,11 +110,6 @@ class QATerminalWidget(QWidget):
             ('✗ В брак (с фото)', '#c62828', self._on_scrap),
         ]:
             b = QPushButton(label)
-            b.setStyleSheet(
-                f'QPushButton {{background:{color}; color:white;'
-                f' padding:18px; font-size:18px; font-weight:600;'
-                f' border-radius:8px;}} '
-                f'QPushButton:disabled {{background:#bbb;}}')
             b.clicked.connect(cb)
             btns_layout.addWidget(b)
             self._reg_btn(label, b)

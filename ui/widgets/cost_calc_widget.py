@@ -91,14 +91,6 @@ class CostCalcWidget(QWidget):
         calc_btn = QPushButton("  Рассчитать  ")
         calc_btn.setFixedHeight(40)
         calc_btn.clicked.connect(self._calculate)
-        calc_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #27ae60; color: white;
-                border: none; border-radius: 4px;
-                font-weight: bold; font-size: 13px; padding: 0 16px;
-            }
-            QPushButton:hover { background-color: #229954; }
-        """)
         params_layout.addWidget(calc_btn)
         layout.addWidget(params_group)
 
@@ -129,14 +121,12 @@ class CostCalcWidget(QWidget):
             vl = QVBoxLayout()
             lbl = QLabel(label)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setStyleSheet("font-size: 11px; color: #555;")
             val = QLabel("—")
             val.setAlignment(Qt.AlignmentFlag.AlignCenter)
             val_font = QFont()
             val_font.setPointSize(14)
             val_font.setBold(True)
             val.setFont(val_font)
-            val.setStyleSheet(f"color: {color};")
             vl.addWidget(lbl)
             vl.addWidget(val)
             self._total_labels[key] = val
@@ -144,7 +134,6 @@ class CostCalcWidget(QWidget):
             if key != 'profit':
                 line = QFrame()
                 line.setFrameShape(QFrame.Shape.VLine)
-                line.setStyleSheet("color: #bdc3c7;")
                 tg_layout.addWidget(line)
 
         layout.addWidget(totals_group)

@@ -147,7 +147,7 @@ class JournalRegisterDialog(QDialog):
                 'ТП — можно нажать «Не регистрировать» и оставить '
                 'изначальную запись.')
             note.setWordWrap(True)
-            note.setStyleSheet('color: #b58900; padding-top: 4px;')
+            note.setStyleSheet('padding-top: 4px;')
             opt_layout.addWidget(note)
 
         root.addWidget(opt_box)
@@ -162,9 +162,6 @@ class JournalRegisterDialog(QDialog):
 
         self.ok_btn = QPushButton('✓ Зарегистрировать')
         self.ok_btn.setDefault(True)
-        self.ok_btn.setStyleSheet(
-            'background:#27ae60; color:white; padding:6px 14px;'
-            'font-weight:bold;')
         self.ok_btn.clicked.connect(self._on_register)
         btns_row.addWidget(self.ok_btn)
 

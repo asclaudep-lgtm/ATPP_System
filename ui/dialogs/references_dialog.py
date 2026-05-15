@@ -105,7 +105,6 @@ class ReferencesDialog(QDialog):
         self.mat_edit_btn.clicked.connect(self._edit_material)
         self.mat_del_btn = QPushButton("Удалить")
         self.mat_del_btn.clicked.connect(self._delete_material)
-        self.mat_del_btn.setStyleSheet("QPushButton { color: #e74c3c; }")
         self.mat_clear_btn = QPushButton("Очистить")
         self.mat_clear_btn.clicked.connect(self._clear_material_form)
 
@@ -264,7 +263,6 @@ class ReferencesDialog(QDialog):
         self.eq_edit_btn.clicked.connect(self._edit_equipment)
         self.eq_del_btn = QPushButton("Удалить")
         self.eq_del_btn.clicked.connect(self._delete_equipment)
-        self.eq_del_btn.setStyleSheet("QPushButton { color: #e74c3c; }")
         self.eq_clear_btn = QPushButton("Очистить")
         self.eq_clear_btn.clicked.connect(self._clear_equipment_form)
         for btn in [self.eq_add_btn, self.eq_edit_btn, self.eq_del_btn, self.eq_clear_btn]:
@@ -413,7 +411,6 @@ class ReferencesDialog(QDialog):
         self.tool_edit_btn.clicked.connect(self._edit_tool)
         self.tool_del_btn = QPushButton("Удалить")
         self.tool_del_btn.clicked.connect(self._delete_tool)
-        self.tool_del_btn.setStyleSheet("QPushButton { color: #e74c3c; }")
         self.tool_clear_btn = QPushButton("Очистить")
         self.tool_clear_btn.clicked.connect(self._clear_tool_form)
         for btn in [self.tool_add_btn, self.tool_edit_btn, self.tool_del_btn, self.tool_clear_btn]:
@@ -541,7 +538,6 @@ class ReferencesDialog(QDialog):
         self.prof_edit_btn.clicked.connect(self._edit_profession)
         self.prof_del_btn = QPushButton("Удалить")
         self.prof_del_btn.clicked.connect(self._delete_profession)
-        self.prof_del_btn.setStyleSheet("QPushButton { color: #e74c3c; }")
         self.prof_clear_btn = QPushButton("Очистить")
         self.prof_clear_btn.clicked.connect(self._clear_prof_form)
         for btn in [self.prof_add_btn, self.prof_edit_btn, self.prof_del_btn, self.prof_clear_btn]:

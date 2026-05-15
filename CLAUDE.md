@@ -22,13 +22,42 @@ Python 3.11+ / PyQt6 / SQLAlchemy 2.x / SQLite & PostgreSQL.
 - Migrations: lightweight ALTER TABLE in `db_manager._run_lightweight_migrations()`
 - Seed data: `if session.query(Model).count() == 0:` guard
 
+## UI: Fluent Design (v11, May 2026)
+- **Style library**: PyQt-Fluent-Widgets + centralized QSS in `ui/theme.py`
+- **Accent**: orange `#f97316` (hover `#ea580c`, disabled `#fdba74`)
+- **Background**: light `#F3F3F3` / dark `#1F1F1F`; surface `#FFFFFF` / `#2B2B2B`
+- **Sidebar**: always dark `#0F172A` (web-style)
+- **Font**: Segoe UI Variable (system fallback), base 9pt
+- **Spacing grid**: 4px base → 4, 8, 12, 16, 20, 24, 32
+- **Border radius**: 4px (small), 6px (default), 8px (card)
+- **Widget compatibility**: `ui/fluent_compat.py` — drop-in Fluent imports with PyQt6 fallback
+
+**Critical rule — NO inline setStyleSheet**:
+All styling lives in `ui/theme.py`. If a widget needs custom styling, use `setProperty("key", True)` and add a QSS selector `QClass[key="true"]` to the theme. Never write `widget.setStyleSheet("color: #xxx")` — it overrides the global theme and breaks dark/light switching.
+
+**Widget mapping** (standard → Fluent):
+- `QPushButton` (primary action) → `PrimaryPushButton` from `ui.fluent_compat`
+- `QPushButton` (secondary) → `PushButton` from `ui.fluent_compat`
+- `QLineEdit` → `LineEdit` from `ui.fluent_compat`
+- `QLabel` (title) → `TitleLabel`, `SubtitleLabel` from `ui.fluent_compat`
+- `QLabel` (body) → `BodyLabel` from `ui.fluent_compat`
+- Password fields → `PasswordLineEdit` from `ui.fluent_compat` (has built-in eye toggle)
+- Tables → standard `QTableWidget` / `QTreeWidget` (styled by global QSS)
+
+**What NOT to touch without explicit request**:
+- `database/`, `modules/` — business logic
+- `ui/theme.py` — already rewritten, single source of truth
+- `tests/` — test suite
+- Public method signatures of any widget/dialog
+
 ## Running
 - Desktop: `python main.py`
 - Web server: `python -m web.server` (port 8000)
 - Tests: `pytest tests/ -v`
 - Default login: `admin / admin`
 
-## Current state (v10, May 2026)
-- 156/156 tests pass
-- 21 features implemented across v10 strategic + 14 enhancements
-- See `RELEASE_v9.md` for previous release notes
+## Current state (v11, May 2026)
+- Fluent Design migration in progress
+- Branch: `devin/wip-fluent-base`
+- 182/210 tests pass (28 pre-existing web/e2e failures, not UI-related)
+- See `docs/ui_migration_ru.md` for migration checklist

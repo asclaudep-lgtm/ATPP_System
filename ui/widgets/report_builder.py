@@ -135,9 +135,6 @@ class ReportBuilderWidget(QWidget):
         btn_row.addWidget(select_all_btn)
 
         export_btn = QPushButton('📄 Экспорт Excel')
-        export_btn.setStyleSheet(
-            'QPushButton { background-color: #27ae60; color: white; '
-            'border: none; padding: 6px 12px; border-radius: 4px; }')
         export_btn.clicked.connect(self._export_excel)
         btn_row.addWidget(export_btn)
         ll.addLayout(btn_row)

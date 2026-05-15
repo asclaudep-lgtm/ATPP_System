@@ -73,7 +73,6 @@ class OperationDialog(QDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #bdc3c7;")
         layout.addWidget(line)
 
         tabs = QTabWidget()
@@ -220,24 +219,9 @@ class OperationDialog(QDialog):
         save_btn = QPushButton("  Сохранить  ")
         save_btn.setDefault(True)
         save_btn.clicked.connect(self._on_save)
-        save_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #27ae60; color: white;
-                border: none; padding: 8px 20px;
-                border-radius: 4px; font-weight: bold;
-            }
-            QPushButton:hover { background-color: #229954; }
-        """)
 
         cancel_btn = QPushButton("  Отмена  ")
         cancel_btn.clicked.connect(self.reject)
-        cancel_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #95a5a6; color: white;
-                border: none; padding: 8px 20px; border-radius: 4px;
-            }
-            QPushButton:hover { background-color: #7f8c8d; }
-        """)
 
         btn_layout.addWidget(save_btn)
         btn_layout.addWidget(cancel_btn)

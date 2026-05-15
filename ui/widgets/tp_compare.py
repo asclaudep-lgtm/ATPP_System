@@ -42,8 +42,6 @@ class TPCompareDialog(QDialog):
 
         # Заголовок с названиями двух вариантов
         self.header = QLabel("")
-        self.header.setStyleSheet(
-            "background:#ecf0f1; padding:8px; font-size:13px;")
         root.addWidget(self.header)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -82,7 +80,6 @@ class TPCompareDialog(QDialog):
         l = QVBoxLayout(w)
         l.setContentsMargins(2, 2, 2, 2)
         title_lbl = QLabel(title)
-        title_lbl.setStyleSheet("font-weight:bold; padding:4px;")
         l.addWidget(title_lbl)
         l.addWidget(tbl)
         return w

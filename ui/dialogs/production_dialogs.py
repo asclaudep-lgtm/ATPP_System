@@ -170,7 +170,6 @@ class RegisterDialog(QDialog):
         self.help_lbl = QLabel(
             'Сумма размеров партий должна совпадать с количеством наряда.\n'
             'Каждой партии будет выдан штрих-код Code128.')
-        self.help_lbl.setStyleSheet('color: gray;')
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)

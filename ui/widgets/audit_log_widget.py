@@ -81,7 +81,6 @@ class AuditLogWidget(QWidget):
         lay.addWidget(self._tbl, 1)
 
         self._summary = QLabel('')
-        self._summary.setStyleSheet('color:#555;')
         lay.addWidget(self._summary)
 
     def refresh(self):

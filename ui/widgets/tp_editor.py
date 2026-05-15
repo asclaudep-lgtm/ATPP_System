@@ -173,7 +173,6 @@ class TPEditorWidget(QWidget):
         # Разделитель
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("background-color: #bdc3c7; max-height: 1px;")
         layout.addWidget(line)
 
         # Вкладки
@@ -186,7 +185,6 @@ class TPEditorWidget(QWidget):
 
     def _make_header(self):
         frame = QFrame()
-        frame.setStyleSheet("background-color: #ecf0f1; padding: 6px;")
         layout = QHBoxLayout(frame)
         layout.setSpacing(20)
 
@@ -206,7 +204,6 @@ class TPEditorWidget(QWidget):
             f"Версия: {self._tp.get('version', '1.0')}{variant_part}  |  "
             f"Материал: {self._tp.get('product_material', '—')}"
         )
-        tp_info.setStyleSheet("color: #555; font-size: 12px;")
         left.addWidget(tp_info)
         layout.addLayout(left)
 
@@ -217,10 +214,6 @@ class TPEditorWidget(QWidget):
         if status in STATUS_COLORS:
             color, label = STATUS_COLORS[status]
             status_lbl = QLabel(f"  {label}  ")
-            status_lbl.setStyleSheet(
-                f"background-color: {color}; color: white; "
-                f"border-radius: 4px; padding: 3px 8px; font-weight: bold;"
-            )
             layout.addWidget(status_lbl)
             self._status_lbl = status_lbl
 
@@ -243,10 +236,6 @@ class TPEditorWidget(QWidget):
 
         # Кнопка «Подписи…» — всегда доступна
         sigs_btn = QPushButton('🖋 Подписи…')
-        sigs_btn.setStyleSheet(
-            "QPushButton { background-color: #3498db; color: white; "
-            "border: none; padding: 4px 10px; border-radius: 3px; }"
-        )
         sigs_btn.clicked.connect(self._show_signatures)
         self._status_btn_layout.addWidget(sigs_btn)
 
@@ -263,11 +252,6 @@ class TPEditorWidget(QWidget):
 
         for label, new_status, color in transitions:
             btn = QPushButton(label)
-            btn.setStyleSheet(
-                f"QPushButton {{ background-color: {color}; color: white; "
-                f"border: none; padding: 4px 10px; border-radius: 3px; }}"
-                f"QPushButton:hover {{ opacity: 0.8; }}"
-            )
             btn.clicked.connect(lambda checked, s=new_status: self._change_status(s))
             self._status_btn_layout.addWidget(btn)
 
@@ -279,10 +263,6 @@ class TPEditorWidget(QWidget):
         self._tp['status'] = new_status
         color, label = STATUS_COLORS[new_status]
         self._status_lbl.setText(f"  {label}  ")
-        self._status_lbl.setStyleSheet(
-            f"background-color: {color}; color: white; "
-            f"border-radius: 4px; padding: 3px 8px; font-weight: bold;"
-        )
         self._update_status_buttons()
         self.tp_changed.emit(self.tp_id)
 
@@ -322,17 +302,11 @@ class TPEditorWidget(QWidget):
             btn = QPushButton(text)
             btn.clicked.connect(slot)
             btn.setFixedHeight(26)
-            if color:
-                btn.setStyleSheet(
-                    f"QPushButton {{ background-color: {color}; color: white; "
-                    f"border: none; padding: 2px 8px; border-radius: 3px; }}"
-                )
             op_header.addWidget(btn)
 
         op_layout.addLayout(op_header)
 
         self._time_summary_lbl = QLabel("")
-        self._time_summary_lbl.setStyleSheet("color: #555; font-size: 11px; padding: 2px 4px;")
         op_layout.addWidget(self._time_summary_lbl)
 
         self.op_table = QTableWidget()
@@ -385,10 +359,6 @@ class TPEditorWidget(QWidget):
             btn = QPushButton(text)
             btn.clicked.connect(slot)
             btn.setFixedHeight(26)
-            btn.setStyleSheet(
-                f"QPushButton {{ background-color: {color}; color: white; "
-                f"border: none; padding: 2px 8px; border-radius: 3px; }}"
-            )
             tr_header.addWidget(btn)
 
         tr_layout.addLayout(tr_header)
@@ -612,10 +582,6 @@ class TPEditorWidget(QWidget):
         if hasattr(self, '_status_lbl') and self._tp.get('status') in STATUS_COLORS:
             color, label = STATUS_COLORS[self._tp['status']]
             self._status_lbl.setText(f"  {label}  ")
-            self._status_lbl.setStyleSheet(
-                f"background-color: {color}; color: white; "
-                f"border-radius: 4px; padding: 3px 8px; font-weight: bold;"
-            )
         self._update_status_buttons()
         self.tp_changed.emit(self.tp_id)
 
@@ -1120,25 +1086,11 @@ class TPEditorWidget(QWidget):
         gen_btn = QPushButton("  Сгенерировать выбранные документы  ")
         gen_btn.setFixedHeight(38)
         gen_btn.clicked.connect(self._generate_docs)
-        gen_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2980b9; color: white;
-                border: none; border-radius: 4px; font-weight: bold; font-size: 12px;
-            }
-            QPushButton:hover { background-color: #2471a3; }
-        """)
         left.addWidget(gen_btn)
 
         ktd_btn = QPushButton("📁  Библиотека шаблонов КТД (ГОСТ 3.1xxx)...")
         ktd_btn.setFixedHeight(34)
         ktd_btn.clicked.connect(self._open_ktd_browser)
-        ktd_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #8e44ad; color: white;
-                border: none; border-radius: 4px; font-size: 11px;
-            }
-            QPushButton:hover { background-color: #7d3c98; }
-        """)
         left.addWidget(ktd_btn)
 
         open_folder_btn = QPushButton("📂  Открыть папку экспорта")
@@ -1148,11 +1100,6 @@ class TPEditorWidget(QWidget):
 
         zip_btn = QPushButton("🗂  Собрать ZIP-архив всех документов")
         zip_btn.clicked.connect(self._zip_all_docs)
-        zip_btn.setStyleSheet(
-            "QPushButton { padding: 5px 10px; background-color: #34495e; "
-            "color: white; border: none; border-radius: 3px; }"
-            "QPushButton:hover { background-color: #2c3e50; }"
-        )
         left.addWidget(zip_btn)
 
         left.addStretch()
@@ -1165,10 +1112,6 @@ class TPEditorWidget(QWidget):
         self._doc_log = QTextEdit()
         self._doc_log.setReadOnly(True)
         self._doc_log.setMaximumHeight(160)
-        self._doc_log.setStyleSheet(
-            "font-family: Consolas, monospace; font-size: 10px; "
-            "background-color: #1e1e1e; color: #d4d4d4;"
-        )
         right.addWidget(self._doc_log)
 
         # Список сформированных документов на эту деталь

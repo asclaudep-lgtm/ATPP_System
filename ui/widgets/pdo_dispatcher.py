@@ -96,7 +96,6 @@ class PDOOrderCard(QFrame):
         ac = order_data.get('aircraft_type', '')
         if ac:
             ac_lbl = QLabel(f'✈ {ac[:20]}')
-            ac_lbl.setStyleSheet('color: #1976d2; font-size: 9px;')
             layout.addWidget(ac_lbl)
 
         # Nomenclature summary
@@ -109,11 +108,9 @@ class PDOOrderCard(QFrame):
             n_not = order_data.get('items_not_feasible', 0)
             if n_feas:
                 lbl = QLabel(f' +{n_feas}')
-                lbl.setStyleSheet('color: #27ae60; font-size: 10px;')
                 items_row.addWidget(lbl)
             if n_not:
                 lbl = QLabel(f' -{n_not}')
-                lbl.setStyleSheet('color: #c0392b; font-weight: bold; font-size: 10px;')
                 items_row.addWidget(lbl)
             items_row.addStretch()
             layout.addLayout(items_row)
@@ -121,7 +118,6 @@ class PDOOrderCard(QFrame):
         # Bottom: qty + due date
         bot = QHBoxLayout()
         qty_lbl = QLabel(f"×{order_data.get('qty', 1)} шт")
-        qty_lbl.setStyleSheet('color: #555; font-size: 11px;')
         bot.addWidget(qty_lbl)
         bot.addStretch()
 
@@ -133,11 +129,9 @@ class PDOOrderCard(QFrame):
                 d = date.fromisoformat(due_str)
                 today = date.today()
                 if d < today:
-                    due_lbl.setStyleSheet(
-                        'color: #c0392b; font-weight: bold; font-size: 10px;')
+                    pass
                 elif d == today:
-                    due_lbl.setStyleSheet(
-                        'color: #e67e22; font-weight: bold; font-size: 10px;')
+                    pass
             except ValueError:
                 pass
         bot.addWidget(due_lbl)
@@ -151,20 +145,14 @@ class PDOOrderCard(QFrame):
             memo_row = QHBoxLayout()
             if omts:
                 lbl = QLabel(f'📄 У:{omts[:12]}')
-                lbl.setStyleSheet('font-size: 9px; color: #16a085;')
                 memo_row.addWidget(lbl)
             if deputy:
                 lbl = QLabel(f'П:{deputy[:12]}')
-                lbl.setStyleSheet('font-size: 9px; color: #8e44ad;')
                 memo_row.addWidget(lbl)
             memo_row.addStretch()
             layout.addLayout(memo_row)
 
         # Color indicator on left side
-        self.setStyleSheet(
-            f'PDOOrderCard {{ border-left: 4px solid {status_color}; '
-            f'background: #fff; margin: 2px 4px; border-radius: 4px; }}'
-            f'PDOOrderCard:hover {{ background: #f0f4ff; }}')
 
     def mousePressEvent(self, ev):
         if ev.button() == Qt.MouseButton.LeftButton:
@@ -206,11 +194,6 @@ class PDOKanbanColumn(QGroupBox):
         title = f'{status.value}  '
         self.setTitle(title)
         self.setAcceptDrops(True)
-        self.setStyleSheet(
-            f'PDOKanbanColumn {{ '
-            f'border-top: 3px solid {color}; '
-            f'background: #f8f9fa; border-radius: 6px; '
-            f'padding-top: 12px; }}')
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 4, 2, 2)
@@ -219,8 +202,6 @@ class PDOKanbanColumn(QGroupBox):
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._scroll.setStyleSheet(
-            'QScrollArea { border: none; background: transparent; }')
 
         self._container = QWidget()
         self._card_layout = QVBoxLayout(self._container)
@@ -233,15 +214,9 @@ class PDOKanbanColumn(QGroupBox):
     def dragEnterEvent(self, ev):
         if ev.mimeData().hasText():
             ev.acceptProposedAction()
-            self.setStyleSheet(self.styleSheet().replace(
-                'background: #f8f9fa', 'background: #e3f2fd'))
         super().dragEnterEvent(ev)
 
     def dragLeaveEvent(self, ev):
-        color = STATUS_COLORS.get(self.status, '#999')
-        self.setStyleSheet(
-            f'PDOKanbanColumn {{ border-top: 3px solid {color}; '
-            f'background: #f8f9fa; border-radius: 6px; padding-top: 12px; }}')
         super().dragLeaveEvent(ev)
 
     def dropEvent(self, ev):
@@ -295,10 +270,6 @@ class PDODispatcherWidget(QWidget):
         hdr.addStretch()
 
         new_btn = QPushButton('+ Новый заказ')
-        new_btn.setStyleSheet(
-            'QPushButton { background: #27ae60; color: white; '
-            'border: none; padding: 8px 16px; border-radius: 4px; '
-            'font-weight: bold; }')
         new_btn.clicked.connect(self._create_order)
         hdr.addWidget(new_btn)
 
@@ -326,7 +297,6 @@ class PDODispatcherWidget(QWidget):
         hdr.addWidget(self._search_edit)
 
         self._stats_label = QLabel('')
-        self._stats_label.setStyleSheet('color: #666; margin-left: 12px;')
         hdr.addWidget(self._stats_label)
         layout.addLayout(hdr)
 
@@ -360,8 +330,6 @@ class PDODispatcherWidget(QWidget):
 
     def _build_detail_panel(self):
         panel = QWidget()
-        panel.setStyleSheet(
-            'background: #fff; border-radius: 6px; padding: 8px;')
         layout = QVBoxLayout(panel)
         layout.setSpacing(8)
 
@@ -384,7 +352,6 @@ class PDODispatcherWidget(QWidget):
         ]
         for i, (key, label) in enumerate(fields):
             lbl = QLabel(f'{label}:')
-            lbl.setStyleSheet('color: #666; font-size: 11px;')
             val = QLabel('—')
             val.setWordWrap(True)
             self._info_labels[key] = val
@@ -396,16 +363,10 @@ class PDODispatcherWidget(QWidget):
         self._action_layout = QHBoxLayout()
 
         self._sign_mtp_btn = QPushButton('✍ Подписать МТП')
-        self._sign_mtp_btn.setStyleSheet(
-            'QPushButton { background: #2980b9; color: white; '
-            'border: none; padding: 6px 14px; border-radius: 4px; }')
         self._sign_mtp_btn.clicked.connect(self._sign_mtp)
         self._action_layout.addWidget(self._sign_mtp_btn)
 
         self._release_btn = QPushButton('📦 Передать в цех')
-        self._release_btn.setStyleSheet(
-            'QPushButton { background: #8e44ad; color: white; '
-            'border: none; padding: 6px 14px; border-radius: 4px; }')
         self._release_btn.clicked.connect(self._release_to_shop)
         self._action_layout.addWidget(self._release_btn)
 
@@ -433,8 +394,6 @@ class PDODispatcherWidget(QWidget):
         self._timeline = QTextEdit()
         self._timeline.setReadOnly(True)
         self._timeline.setMaximumHeight(140)
-        self._timeline.setStyleSheet(
-            'font-size: 11px; background: #f8f9fa; border-radius: 4px;')
         layout.addWidget(self._timeline)
 
         return panel
@@ -641,9 +600,6 @@ class PDODispatcherWidget(QWidget):
         tbl.setItem(0, 0, QTableWidgetItem(des_edit.text()))
 
         ok_btn = QPushButton('Создать заказ')
-        ok_btn.setStyleSheet(
-            'QPushButton { background: #27ae60; color: white; '
-            'border: none; padding: 8px; border-radius: 4px; font-weight: bold; }')
         layout.addWidget(ok_btn)
 
         def on_create():

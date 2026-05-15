@@ -64,16 +64,11 @@ class RouteWindow(QDialog):
 
         # Шапка с информацией о наряде
         self.header = QLabel("")
-        self.header.setStyleSheet(
-            "background:#ecf0f1; padding:10px; font-size:12px; "
-            "border-radius:4px;")
         self.header.setTextFormat(Qt.TextFormat.RichText)
         root.addWidget(self.header)
 
         # Активные проблемы — баннер сверху
         self.issues_box = QGroupBox("⚠ Активные проблемы")
-        self.issues_box.setStyleSheet(
-            "QGroupBox { color:#c0392b; font-weight:bold; }")
         ibox = QVBoxLayout(self.issues_box)
         self.issues_table = QTableWidget(0, 5)
         self.issues_table.setHorizontalHeaderLabels(
@@ -115,14 +110,8 @@ class RouteWindow(QDialog):
         btn_row = QHBoxLayout()
         self.btn_start = QPushButton("▶ Старт операции")
         self.btn_start.clicked.connect(self._on_start)
-        self.btn_start.setStyleSheet(
-            "QPushButton { background:#3498db; color:white; border:none; "
-            "padding:6px 14px; border-radius:3px; }")
         self.btn_finish = QPushButton("■ Финиш операции")
         self.btn_finish.clicked.connect(self._on_finish)
-        self.btn_finish.setStyleSheet(
-            "QPushButton { background:#27ae60; color:white; border:none; "
-            "padding:6px 14px; border-radius:3px; }")
         self.btn_refresh = QPushButton("↺ Обновить")
         self.btn_refresh.clicked.connect(self.refresh)
         btn_row.addWidget(self.btn_start)

@@ -42,12 +42,10 @@ class DocGenerateDialog(QDialog):
         layout.addWidget(title)
 
         subtitle = QLabel(f"ТП: {self.tp_number}")
-        subtitle.setStyleSheet("color: #7f8c8d;")
         layout.addWidget(subtitle)
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #bdc3c7;")
         layout.addWidget(line)
 
         # Формат вывода
@@ -93,14 +91,6 @@ class DocGenerateDialog(QDialog):
 
         self.gen_btn = QPushButton("  Сгенерировать  ")
         self.gen_btn.clicked.connect(self._generate)
-        self.gen_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2980b9; color: white;
-                border: none; padding: 8px 20px;
-                border-radius: 4px; font-weight: bold;
-            }
-            QPushButton:hover { background-color: #2471a3; }
-        """)
 
         self.open_folder_btn = QPushButton("Открыть папку")
         self.open_folder_btn.clicked.connect(self._open_export_folder)

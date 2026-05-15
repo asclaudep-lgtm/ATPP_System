@@ -206,7 +206,6 @@ class WorkshopsDialog(QDialog):
             'модуле «Производство». Для каждого участка можно назначить '
             'мастера. Удалить участок нельзя — его можно деактивировать.')
         info.setWordWrap(True)
-        info.setStyleSheet('color: gray;')
         root.addWidget(info)
 
         self.table = QTableWidget(0, 6)

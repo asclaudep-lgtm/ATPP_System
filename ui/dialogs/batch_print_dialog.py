@@ -90,9 +90,6 @@ class BatchPrintDialog(QDialog):
         btn_row.addStretch()
 
         self._generate_btn = QPushButton('▶ Сгенерировать МК для выбранных')
-        self._generate_btn.setStyleSheet(
-            'QPushButton { background-color: #8e44ad; color: white; '
-            'border: none; padding: 8px 16px; border-radius: 4px; }')
         self._generate_btn.clicked.connect(self._start_generation)
         btn_row.addWidget(self._generate_btn)
         layout.addLayout(btn_row)

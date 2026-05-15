@@ -91,14 +91,9 @@ class TPEditorWidget(QWidget):
 
         status_lbl = QLabel(
             f" [{d['status'].value if hasattr(d['status'], 'value') else str(d['status'])}]")
-        status_lbl.setStyleSheet(
-            f"color: {color}; font-weight: bold; font-size: 12px;")
         hdr.addWidget(status_lbl)
 
         save_btn = QPushButton("Сохранить")
-        save_btn.setStyleSheet(
-            "QPushButton { background-color: #27ae60; color: white; "
-            "border: none; padding: 6px 16px; border-radius: 4px; }")
         save_btn.clicked.connect(self._save)
         hdr.addWidget(save_btn)
         layout.addLayout(hdr)
@@ -164,7 +159,6 @@ class TPEditorWidget(QWidget):
 
         # Product link (read-only)
         prod_lbl = QLabel(d['product_name'])
-        prod_lbl.setStyleSheet("color: #2980b9;")
         form.addRow("Изделие:", prod_lbl)
 
         return w

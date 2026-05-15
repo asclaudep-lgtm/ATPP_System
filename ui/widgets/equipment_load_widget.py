@@ -50,7 +50,6 @@ class EquipmentLoadWidget(QWidget):
         self.hint = QLabel(
             'Загрузка = реальное время работы / доступное время '
             '(8-час. смена × рабочие дни). 100 % = занят непрерывно.')
-        self.hint.setStyleSheet('color:#666;')
         self.hint.setWordWrap(True)
         root.addWidget(self.hint)
 
@@ -103,17 +102,5 @@ class EquipmentLoadWidget(QWidget):
             bar.setRange(0, 100)
             bar.setValue(min(int(r.load_percent), 100))
             bar.setFormat(f'{r.load_percent:.0f} %')
-            if r.load_percent >= 90:
-                bar.setStyleSheet(
-                    'QProgressBar::chunk{background:#d32f2f;}')
-            elif r.load_percent >= 50:
-                bar.setStyleSheet(
-                    'QProgressBar::chunk{background:#fbc02d;}')
-            elif r.load_percent < 5:
-                bar.setStyleSheet(
-                    'QProgressBar::chunk{background:#9e9e9e;}')
-            else:
-                bar.setStyleSheet(
-                    'QProgressBar::chunk{background:#388e3c;}')
             self.table.setCellWidget(i, 4, bar)
         self.table.resizeColumnsToContents()

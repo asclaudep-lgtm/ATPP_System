@@ -36,11 +36,9 @@ class MainStatusBar(QStatusBar):
         user_lbl = QLabel(
             f"  {user.get('full_name') or user.get('username')}  [{role}]  "
         )
-        user_lbl.setStyleSheet("color: #2c3e50; font-weight: bold;")
         self.addPermanentWidget(user_lbl)
 
         version_lbl = QLabel(f"  v{APP_VERSION}  ")
-        version_lbl.setStyleSheet("color: #95a5a6;")
         self.addPermanentWidget(version_lbl)
 
     def _build_db_label(self):
@@ -66,7 +64,6 @@ class MainStatusBar(QStatusBar):
             db_text = 'БД: ?'
             db_color = '#c0392b'
         self._db_label.setText(f"  {db_text}  ")
-        self._db_label.setStyleSheet(f"color: {db_color}; font-weight: bold;")
 
     def set_message(self, msg: str):
         self._status_label.setText(msg)

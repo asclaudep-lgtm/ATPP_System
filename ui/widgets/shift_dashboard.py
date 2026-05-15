@@ -60,7 +60,6 @@ class ShiftDashboard(QWidget):
             grp_lay = QVBoxLayout(grp)
             lbl = QLabel('—')
             lbl.setFont(QFont('Arial', 32, QFont.Weight.Bold))
-            lbl.setStyleSheet(f'color: {color};')
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             grp_lay.addWidget(lbl)
             kpi_row.addWidget(grp)

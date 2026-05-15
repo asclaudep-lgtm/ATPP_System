@@ -22,11 +22,6 @@ class _KPICard(QFrame):
                  parent=None):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setStyleSheet(
-            f'_KPICard {{border:1px solid #ccc; border-radius:6px;'
-            f' background:white;}}'
-            f'#title {{color:#666;}}'
-            f'#value {{color:{color}; font-weight:700;}}')
         lay = QVBoxLayout(self)
         lt = QLabel(title)
         lt.setObjectName('title')

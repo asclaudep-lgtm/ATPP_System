@@ -225,9 +225,6 @@ class FormulaEditorWidget(QWidget):
         test_btn.clicked.connect(self._test_formula)
         btn_row.addWidget(test_btn)
         save_btn = QPushButton('Сохранить')
-        save_btn.setStyleSheet(
-            'QPushButton { background-color: #27ae60; color: white; '
-            'border: none; padding: 6px 16px; border-radius: 4px; }')
         save_btn.clicked.connect(self._save_current)
         btn_row.addWidget(save_btn)
         btn_row.addStretch()

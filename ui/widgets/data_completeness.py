@@ -58,7 +58,6 @@ class DataCompletenessWidget(QWidget):
             'Показывает, что в каждом ТП заполнено, а что — нет. '
             'Сортируется по проценту готовности (сначала наименее готовые).'
         )
-        sub.setStyleSheet('color:#555;')
         lay.addWidget(sub)
 
         # Фильтры
@@ -83,12 +82,10 @@ class DataCompletenessWidget(QWidget):
 
         # Сводка
         self._summary = QLabel('')
-        self._summary.setStyleSheet('color:#2c3e50; padding:4px;')
         lay.addWidget(self._summary)
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet('background:#bdc3c7; max-height:1px;')
         lay.addWidget(line)
 
         # Таблица

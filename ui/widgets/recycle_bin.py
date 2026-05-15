@@ -95,7 +95,6 @@ class RecycleBinWidget(QWidget):
         bottom = QHBoxLayout()
         bottom.addStretch()
         purge_btn = QPushButton(f'🧹 Очистить старше {PURGE_AFTER_DAYS} дней')
-        purge_btn.setStyleSheet('color: #c0392b;')
         purge_btn.setToolTip(
             'Окончательно удалить все элементы, помещённые в Корзину '
             f'более {PURGE_AFTER_DAYS} дней назад. Это необратимо.'
@@ -122,7 +121,6 @@ class RecycleBinWidget(QWidget):
         b1.clicked.connect(restore_fn)
         row.addWidget(b1)
         b2 = QPushButton('🗑 Удалить окончательно')
-        b2.setStyleSheet('color: #c0392b;')
         b2.clicked.connect(purge_fn)
         row.addWidget(b2)
         row.addStretch()

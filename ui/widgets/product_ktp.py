@@ -61,9 +61,6 @@ class _VariantRow(QWidget):
 
         # Цветной бейдж (узкий вертикальный прямоугольник + emoji)
         badge = QLabel(f"  {emoji}  ")
-        badge.setStyleSheet(
-            f"background-color: {color}; color: white; "
-            f"border-radius: 3px; padding: 2px 4px; font-size: 13px;")
         badge.setFixedWidth(36)
         lay.addWidget(badge)
 
@@ -100,7 +97,6 @@ class _VariantRow(QWidget):
                 f"{score_label(int(completeness_score))}  "
                 f"{int(completeness_score)}%"
             )
-            cmp_lbl.setStyleSheet("font-size: 11px; color: #555;")
             cmp_lbl.setToolTip(
                 score_tooltip(int(completeness_score),
                               list(completeness_missing))
@@ -109,7 +105,6 @@ class _VariantRow(QWidget):
 
         # Подпись статуса (мелким текстом справа)
         st = QLabel(status_label)
-        st.setStyleSheet(f"color: {color}; font-size: 11px;")
         lay.addWidget(st)
 
 
@@ -201,7 +196,6 @@ class ProductKTPWidget(QWidget):
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("background:#bdc3c7; max-height:1px;")
         root.addWidget(sep)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -231,9 +225,6 @@ class ProductKTPWidget(QWidget):
         btn_row1 = QHBoxLayout()
         btn_new = QPushButton("➕ Новый ТП")
         btn_new.clicked.connect(self._on_new_variant)
-        btn_new.setStyleSheet(
-            "QPushButton { background:#27ae60; color:white; border:none; "
-            "padding:5px 10px; border-radius:3px; }")
 
         btn_copy = QPushButton("⎘ Копия")
         btn_copy.setToolTip("Создать копию выбранного варианта")
@@ -259,7 +250,6 @@ class ProductKTPWidget(QWidget):
         btn_compare.clicked.connect(self._on_compare)
 
         btn_del = QPushButton("🗑 Удалить")
-        btn_del.setStyleSheet("QPushButton { color:#c0392b; }")
         btn_del.clicked.connect(self._on_delete_variant)
 
         btn_row2.addWidget(btn_default)
@@ -283,8 +273,6 @@ class ProductKTPWidget(QWidget):
 
     def _make_header(self) -> QFrame:
         frame = QFrame()
-        frame.setStyleSheet(
-            "background:#ecf0f1; padding:6px;")
         lay = QHBoxLayout(frame)
         lay.setSpacing(20)
 
@@ -307,7 +295,6 @@ class ProductKTPWidget(QWidget):
             info_parts.append(f"Шероховатость: {self._product['roughness']}")
         info = QLabel("  ·  ".join(info_parts) if info_parts
                       else '<span style="color:#999">Параметры детали не заданы</span>')
-        info.setStyleSheet("color:#555; font-size:12px;")
         left.addWidget(info)
 
         lay.addLayout(left)
@@ -317,27 +304,20 @@ class ProductKTPWidget(QWidget):
     def _make_placeholder(self) -> QWidget:
         """Большой плейсхолдер для случая, когда вариантов нет (улучшение #i)."""
         w = QWidget()
-        w.setStyleSheet("background:#fafafa;")
         l = QVBoxLayout(w)
         l.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title = QLabel("📝  У этой детали пока нет ни одного ТП")
-        title.setStyleSheet("font-size:18px; color:#555;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(title)
         sub = QLabel(
             "Создайте первый вариант ТП — например, «Универсальное оборудование» "
             "или «Обработка ЧПУ». Несколько вариантов одной детали — это нормально."
         )
-        sub.setStyleSheet("color:#777; font-size:13px;")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sub.setWordWrap(True)
         l.addWidget(sub)
         l.addSpacing(10)
         btn = QPushButton("➕  Создать первый вариант ТП")
-        btn.setStyleSheet(
-            "QPushButton { background:#27ae60; color:white; border:none; "
-            "padding:8px 16px; border-radius:4px; font-size:13px; }"
-            "QPushButton:hover { background:#229954; }")
         btn.clicked.connect(self._on_new_variant)
         wrap = QHBoxLayout()
         wrap.addStretch()

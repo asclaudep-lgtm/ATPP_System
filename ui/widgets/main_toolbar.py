@@ -78,11 +78,7 @@ class MainToolBar(QToolBar):
         self._apply_btn_styles()
 
     def _apply_btn_styles(self):
-        normal = BTN_DARK if self._theme == 'dark' else BTN_LIGHT
-        for btn in self._btns:
-            btn.setStyleSheet(normal)
-        for btn in self._primary_btns:
-            btn.setStyleSheet(BTN_PRIMARY)
+        pass
 
     def _add(self, text, signal, primary=False):
         btn = QPushButton(text)

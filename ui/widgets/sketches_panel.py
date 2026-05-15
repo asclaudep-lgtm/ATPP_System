@@ -98,7 +98,6 @@ class SketchesPanel(QWidget):
             '<i>Можно перетащить файлы из проводника прямо сюда '
             'или нажать «Добавить файл…».</i>'
         )
-        self._hint.setStyleSheet('color:#888; font-size:11px;')
         layout.addWidget(self._hint)
 
         # Кнопки

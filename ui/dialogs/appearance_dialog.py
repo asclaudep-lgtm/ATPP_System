@@ -68,7 +68,7 @@ class AppearanceDialog(QDialog):
             "Тема и размер шрифта применяются сразу.\n"
             "Смена языка вступает в силу после перезапуска приложения."
         )
-        hint.setStyleSheet("color: #7f8c8d; font-style: italic;")
+        hint.setStyleSheet("font-style: italic;")
         lay.addWidget(hint)
 
         buttons = QDialogButtonBox(

@@ -84,7 +84,6 @@ class WhereIsPartDialog(QDialog):
         root.addWidget(self.tbl, 1)
 
         self.info_lbl = QLabel("—")
-        self.info_lbl.setStyleSheet("color:#666; padding:4px;")
         root.addWidget(self.info_lbl)
 
         # Кнопки

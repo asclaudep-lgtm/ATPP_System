@@ -118,7 +118,6 @@ class ECNWidget(QWidget):
             'согласовывает / отклоняет. Когда все согласовали — '
             'статус APPROVED, после применения изменений — APPLIED.')
         self.hint.setWordWrap(True)
-        self.hint.setStyleSheet('color:#666;')
         root.addWidget(self.hint)
 
     def refresh(self):

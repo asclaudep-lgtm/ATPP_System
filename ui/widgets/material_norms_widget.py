@@ -126,13 +126,6 @@ class MaterialNormsWidget(QWidget):
         calc_btn = QPushButton("Рассчитать")
         calc_btn.setFixedHeight(36)
         calc_btn.clicked.connect(self._calculate)
-        calc_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2980b9; color: white;
-                border: none; border-radius: 4px; font-weight: bold;
-            }
-            QPushButton:hover { background-color: #2471a3; }
-        """)
         btn_layout.addStretch()
         btn_layout.addWidget(calc_btn)
         calc_main.addLayout(btn_layout)
@@ -156,7 +149,6 @@ class MaterialNormsWidget(QWidget):
             val_font.setPointSize(13)
             val_font.setBold(True)
             val_lbl.setFont(val_font)
-            val_lbl.setStyleSheet("color: #2c3e50;")
             vl.addWidget(val_lbl)
             self._result_labels[key] = val_lbl
             result_layout.addLayout(vl)
@@ -178,7 +170,6 @@ class MaterialNormsWidget(QWidget):
         norms_header.addStretch()
         del_btn = QPushButton("Удалить выбранную")
         del_btn.clicked.connect(self._delete_norm)
-        del_btn.setStyleSheet("QPushButton { color: #e74c3c; }")
         norms_header.addWidget(del_btn)
         norms_layout.addLayout(norms_header)
 

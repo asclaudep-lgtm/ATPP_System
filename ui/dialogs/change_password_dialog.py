@@ -37,8 +37,6 @@ class ChangePasswordDialog(QDialog):
                 'систему или администратор сбросил Ваш пароль. Установите '
                 'новый пароль, чтобы продолжить.')
             warn.setWordWrap(True)
-            warn.setStyleSheet('background:#fff3cd; padding:8px; '
-                               'border:1px solid #ffeeba; color:#856404;')
             root.addWidget(warn)
 
         form = QFormLayout()
@@ -58,7 +56,6 @@ class ChangePasswordDialog(QDialog):
 
         policy = QLabel('<i>Политика:</i><br>' +
                         password_policy.describe_policy().replace('\n', '<br>'))
-        policy.setStyleSheet('color:#555;')
         policy.setWordWrap(True)
         root.addWidget(policy)
 
