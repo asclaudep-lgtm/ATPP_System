@@ -184,6 +184,8 @@ class MainMenu(QMenuBar):
         m.addAction(self.act_shift_dashboard)
         self.act_pdo_dispatcher = QAction("📋 Диспетчер ПДО...", self)
         m.addAction(self.act_pdo_dispatcher)
+        self.act_pdo_analytics = QAction("📊 Аналитика ПДО...", self)
+        m.addAction(self.act_pdo_analytics)
         self.act_op_templates = QAction("📚 Библиотека типовых операций...", self)
         m.addAction(self.act_op_templates)
         self.act_transition_templates = QAction("📋 Шаблоны переходов...", self)
@@ -252,5 +254,9 @@ class MainMenu(QMenuBar):
 
     def _build_help_menu(self):
         m = self.addMenu("Справка")
+        self.act_hotkeys = QAction("Горячие клавиши...", self)
+        self.act_hotkeys.setShortcut("F1")
+        m.addAction(self.act_hotkeys)
+        m.addSeparator()
         self.act_about = QAction("О программе", self)
         m.addAction(self.act_about)

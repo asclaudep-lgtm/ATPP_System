@@ -26,6 +26,27 @@ def export_csv(session, model_key: str, out_path: Path) -> Path:
     return out_path
 
 
+def validate_csv(file_path: Path, model_key: str) -> dict:
+    """Validate a CSV file before import. Returns {valid: count, errors: [msg]}."""
+    model_cls, fields = EXPORT_MODELS[model_key]
+    errors = []
+    valid = 0
+    try:
+        with open(file_path, 'r', encoding='utf-8-sig') as f:
+            reader = csv.reader(f)
+            header = next(reader, None)
+            for i, row in enumerate(reader, 2):
+                if not any(row):
+                    continue
+                if len(row) < len([f for f in fields if f in EXPORT_MODELS[model_key][1]]):
+                    errors.append(f'Строка {i}: недостаточно колонок')
+                    continue
+                valid += 1
+    except Exception as e:
+        errors.append(f'Ошибка чтения: {e}')
+    return {'valid': valid, 'errors': errors}
+
+
 def import_csv(session, model_key: str, file_path: Path,
                skip_header: bool = True, replace: bool = False) -> int:
     """Import a CSV file into a reference table. Returns count of imported rows."""

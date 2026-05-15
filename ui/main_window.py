@@ -174,6 +174,8 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             menu.act_shift_dashboard.triggered.connect(self._open_shift_dashboard)
         if hasattr(menu, 'act_pdo_dispatcher'):
             menu.act_pdo_dispatcher.triggered.connect(self._open_pdo_dispatcher)
+        if hasattr(menu, 'act_pdo_analytics'):
+            menu.act_pdo_analytics.triggered.connect(self._open_pdo_analytics)
         menu.act_op_templates.triggered.connect(self._open_op_templates)
         menu.act_transition_templates.triggered.connect(self._open_transition_templates)
         menu.act_excel_import.triggered.connect(self._open_excel_import)
@@ -196,6 +198,8 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         menu.act_toggle_messages.triggered.connect(
             lambda checked: (self._messages_dock.show()
                              if checked else self._messages_dock.hide()))
+        if hasattr(menu, 'act_hotkeys'):
+            menu.act_hotkeys.triggered.connect(self._show_hotkeys)
         menu.act_about.triggered.connect(self._show_about)
 
         # Toolbar

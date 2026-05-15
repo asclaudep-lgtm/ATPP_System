@@ -458,6 +458,15 @@ class DialogLaunchersMixin:
         w = PDODispatcherWidget(self.db_manager, self.user, self)
         self._add_or_focus_tab(w, 'Диспетчер ПДО')
 
+    def _show_hotkeys(self):
+        from ui.dialogs.hotkey_help import show_hotkey_help
+        show_hotkey_help(parent=self)
+
+    def _open_pdo_analytics(self):
+        from ui.widgets.pdo_analytics_widget import PDOAnalyticsWidget
+        w = PDOAnalyticsWidget(self.db_manager, self)
+        self._add_or_focus_tab(w, 'Аналитика ПДО')
+
     def _open_registration_journal(self):
         from ui.widgets.journal_widget import JournalWidget
         w = JournalWidget(self.db_manager, self.user, self)

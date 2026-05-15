@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
 from PyQt6.QtGui import QFont, QColor, QPalette
+from PyQt6.QtWidgets import QCompleter
 
 from modules import pdo_module
 from database.models import PDOStatus
@@ -246,6 +247,14 @@ class PDODispatcherWidget(QWidget):
             'font-weight: bold; }')
         new_btn.clicked.connect(self._create_order)
         hdr.addWidget(new_btn)
+
+        # Batch action: move all selected to next status
+        self._batch_combo = QComboBox()
+        self._batch_combo.addItem('Пакетно: переместить в...', None)
+        for st in PDOStatus:
+            self._batch_combo.addItem(st.value, st)
+        self._batch_combo.currentIndexChanged.connect(self._batch_move)
+        hdr.addWidget(self._batch_combo)
 
         export_btn = QPushButton('📄 Экспорт Excel')
         export_btn.clicked.connect(self._export_orders)
@@ -525,6 +534,16 @@ class PDODispatcherWidget(QWidget):
         form = QFormLayout()
         des_edit = QLineEdit()
         des_edit.setPlaceholderText('Обозначение основного изделия')
+        # Autocomplete from existing products
+        with self.db_manager.get_session() as s:
+            from database.models import Product
+            all_des = [p.designation for p in s.query(Product.designation)
+                       .filter(Product.is_deleted == False)
+                       .order_by(Product.designation).all()]
+        completer = QCompleter(all_des, des_edit)
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer.setMaxVisibleItems(10)
+        des_edit.setCompleter(completer)
         form.addRow('Изделие *:', des_edit)
 
         ac_edit = QLineEdit()
@@ -752,6 +771,34 @@ class PDODispatcherWidget(QWidget):
             wb.save(str(path))
 
         QMessageBox.information(self, 'Готово', f'Карта заказа сохранена:\n{path}')
+
+    def _batch_move(self):
+        target = self._batch_combo.currentData()
+        if target is None:
+            return
+        count = 0
+        with self.db_manager.get_session() as s:
+            for st, col in self._columns.items():
+                container = col._container
+                for i in range(container.layout().count()):
+                    item_w = container.layout().itemAt(i)
+                    if item_w and item_w.widget():
+                        card = item_w.widget()
+                        if hasattr(card, 'order_id') and card.isVisible():
+                            order = s.query(
+                                __import__('database.models',
+                                           fromlist=['ProductionOrder'])
+                                .ProductionOrder
+                            ).get(card.order_id)
+                            if order:
+                                order.status = target
+                                count += 1
+        self._batch_combo.setCurrentIndex(0)
+        if count:
+            QMessageBox.information(
+                self, 'Пакетная операция',
+                f'{count} заказов → «{target.value}»')
+        self.refresh()
 
     def _export_orders(self):
         import openpyxl
