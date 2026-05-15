@@ -59,7 +59,30 @@ class DatabaseManager:
         except Exception:
             log.debug('Alembic upgrade skipped (no new migrations or DB unavailable)')
 
+        # v14: гарантировать новые колонки (даже если Alembic не сработал)
+        self._ensure_v14_columns()
+
         self._create_initial_data()
+
+    def _ensure_v14_columns(self):
+        """Добавляет колонки api_key (users) и changes (change_logs) при необходимости."""
+        from sqlalchemy import inspect, text
+        inspector = inspect(self.engine)
+        with self.engine.connect() as conn:
+            # api_key on users
+            if 'users' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('users')]
+                if 'api_key' not in cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN api_key VARCHAR(64)"))
+                    conn.commit()
+                    log.info('Added column users.api_key')
+            # changes on change_logs
+            if 'change_logs' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('change_logs')]
+                if 'changes' not in cols:
+                    conn.execute(text("ALTER TABLE change_logs ADD COLUMN changes JSON"))
+                    conn.commit()
+                    log.info('Added column change_logs.changes')
     
     def _ensure_primary_keys(self):
         """v13: гарантирует INTEGER PRIMARY KEY AUTOINCREMENT для всех id.
