@@ -31,7 +31,7 @@ class TestIoT:
             assert rec_id > 0
 
             # Проверим MachineStatus
-            rec = s.query(MachineStatus).get(rec_id)
+            rec = s.get(MachineStatus, rec_id)
             assert rec is not None
             assert rec.status == 'running'
             assert rec.spindle_speed == 1500.0

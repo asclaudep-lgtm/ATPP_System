@@ -669,7 +669,7 @@ class DialogLaunchersMixin:
     def _edit_product(self, product_id):
         session = self.db_manager.Session()
         try:
-            p = session.query(Product).get(product_id)
+            p = session.get(Product, product_id)
             if not p:
                 return
             prod_data = {
@@ -694,7 +694,7 @@ class DialogLaunchersMixin:
             data = dlg.get_data()
             try:
                 with self.db_manager.get_session() as session:
-                    p = session.query(Product).get(product_id)
+                    p = session.get(Product, product_id)
                     if p:
                         p.designation = data['designation']
                         p.name = data['name']
@@ -722,7 +722,7 @@ class DialogLaunchersMixin:
     def _delete_product(self, product_id):
         session = self.db_manager.Session()
         try:
-            p = session.query(Product).get(product_id)
+            p = session.get(Product, product_id)
             if not p:
                 return
             designation = p.designation
@@ -747,7 +747,7 @@ class DialogLaunchersMixin:
                 from datetime import datetime as _dt
                 uid = (self.user or {}).get('id')
                 with self.db_manager.get_session() as session:
-                    p = session.query(Product).get(product_id)
+                    p = session.get(Product, product_id)
                     if not p:
                         return
                     p.is_deleted = True
@@ -822,7 +822,7 @@ class DialogLaunchersMixin:
     def _delete_tp(self, tp_id):
         session = self.db_manager.Session()
         try:
-            tp = session.query(TechProcess).get(tp_id)
+            tp = session.get(TechProcess, tp_id)
             if not tp:
                 return
             number = tp.number
@@ -841,7 +841,7 @@ class DialogLaunchersMixin:
                 if tp_id in self._open_tp_tabs:
                     self._close_tab(self._open_tp_tabs[tp_id])
                 with self.db_manager.get_session() as session:
-                    tp = session.query(TechProcess).get(tp_id)
+                    tp = session.get(TechProcess, tp_id)
                     if tp:
                         tp.is_deleted = True
                         tp.deleted_at = datetime.now()
@@ -866,7 +866,7 @@ class DialogLaunchersMixin:
         from modules.tp_designer import TPDesigner
 
         with self.db_manager.get_session() as s:
-            tp = s.query(TechProcess).get(tp_id)
+            tp = s.get(TechProcess, tp_id)
             if not tp:
                 return
             original_number = tp.number
@@ -1024,7 +1024,7 @@ class DialogLaunchersMixin:
     def _archive_tp(self, tp_id):
         session = self.db_manager.Session()
         try:
-            tp = session.query(TechProcess).get(tp_id)
+            tp = session.get(TechProcess, tp_id)
             if not tp:
                 return
             number = tp.number
@@ -1043,7 +1043,7 @@ class DialogLaunchersMixin:
             return
         try:
             with self.db_manager.get_session() as session:
-                tp = session.query(TechProcess).get(tp_id)
+                tp = session.get(TechProcess, tp_id)
                 if not tp:
                     return
                 tp.status = TPStatus.DRAFT if currently_archived else TPStatus.ARCHIVED
@@ -1174,7 +1174,7 @@ class DialogLaunchersMixin:
         try:
             with self.db_manager.get_session() as s:
                 if kind == 'product':
-                    obj = s.query(Product).get(entity_id)
+                    obj = s.get(Product, entity_id)
                     if obj is None:
                         return
                     entry = journal_mod.register_product(
@@ -1190,7 +1190,7 @@ class DialogLaunchersMixin:
                         auto_number=False,
                     )
                 else:
-                    tp = s.query(TechProcess).get(entity_id)
+                    tp = s.get(TechProcess, entity_id)
                     if tp is None:
                         return
                     entry = journal_mod.register_tp(

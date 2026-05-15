@@ -315,7 +315,7 @@ class JournalWidget(QWidget):
                                     'Выберите запись для редактирования.')
             return
         with self.db.get_session() as s:
-            e = s.query(RegistrationJournal).get(eid)
+            e = s.get(RegistrationJournal, eid)
             if e is None:
                 return
             defaults = {
@@ -338,7 +338,7 @@ class JournalWidget(QWidget):
         if data is None:
             return
         with self.db.get_session() as s:
-            e = s.query(RegistrationJournal).get(eid)
+            e = s.get(RegistrationJournal, eid)
             if e is None:
                 return
             e.tp_number = data['tp_number'] or None
@@ -399,7 +399,7 @@ class JournalWidget(QWidget):
             return
         eid = eid_item.data(Qt.ItemDataRole.UserRole)
         with self.db.get_session() as s:
-            e = s.query(RegistrationJournal).get(eid)
+            e = s.get(RegistrationJournal, eid)
             if e is None:
                 return
             tp_id = e.tech_process_id

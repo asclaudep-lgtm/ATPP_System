@@ -73,7 +73,7 @@ def snapshot_tp(db_manager, *, tp_id: int, user_id: Optional[int],
     """
     try:
         with db_manager.get_session() as s:
-            tp = s.query(TechProcess).get(tp_id)
+            tp = s.get(TechProcess, tp_id)
             if tp is None:
                 return None
             data = {

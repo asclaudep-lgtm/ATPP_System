@@ -277,7 +277,7 @@ class MaterialNormsWidget(QWidget):
                      .all())
             self._norms_table.setRowCount(0)
             for n in norms:
-                mat = session.query(Material).get(n.material_id)
+                mat = session.get(Material, n.material_id)
                 mat_name = f"{mat.name} {mat.grade or ''}".strip() if mat else '—'
 
                 row = self._norms_table.rowCount()
@@ -303,7 +303,7 @@ class MaterialNormsWidget(QWidget):
                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                                 ) == QMessageBox.StandardButton.Yes:
             with self.db_manager.get_session() as session:
-                n = session.query(MaterialNorm).get(norm_id)
+                n = session.get(MaterialNorm, norm_id)
                 if n:
                     session.delete(n)
             self._load_existing_norms()

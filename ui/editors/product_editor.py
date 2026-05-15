@@ -41,7 +41,7 @@ class ProductEditorWidget(QWidget):
                 (m.id, f"{m.name} {m.grade or ''}".strip(), m.gost or '')
                 for m in mats
             ]
-            prod = s.query(Product).get(self.product_id)
+            prod = s.get(Product, self.product_id)
             if prod:
                 self._original_data = {
                     'designation': prod.designation,
@@ -221,7 +221,7 @@ class ProductEditorWidget(QWidget):
             return
         try:
             with self.db_manager.get_session() as s:
-                prod = s.query(Product).get(self.product_id)
+                prod = s.get(Product, self.product_id)
                 if not prod:
                     return
                 prod.designation = designation

@@ -326,13 +326,13 @@ def generate_mtp_excel(
         TechProcess, WorkOrder, Operation, Equipment,
     )
 
-    tp = session.query(TechProcess).get(tech_process_id)
+    tp = session.get(TechProcess, tech_process_id)
     if tp is None:
         raise MTPExcelError(f'ТП id={tech_process_id} не найден.')
 
     wo = None
     if work_order_id is not None:
-        wo = session.query(WorkOrder).get(work_order_id)
+        wo = session.get(WorkOrder, work_order_id)
         if wo is None:
             raise MTPExcelError(f'Наряд id={work_order_id} не найден.')
 
@@ -384,7 +384,7 @@ def generate_mtp_excel(
     if product and getattr(product, 'material_id', None):
         try:
             from database.models import Material
-            material = session.query(Material).get(product.material_id)
+            material = session.get(Material, product.material_id)
             if material:
                 mat_name = material.name or ''
                 mat_desig = material.designation or ''
@@ -417,7 +417,7 @@ def generate_mtp_excel(
         op_text = op.name or ''
         if op.equipment_id:
             try:
-                eq = session.query(Equipment).get(op.equipment_id)
+                eq = session.get(Equipment, op.equipment_id)
                 if eq:
                     eq_label = eq.name or ''
                     if eq.model:

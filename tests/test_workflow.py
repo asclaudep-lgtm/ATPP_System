@@ -21,7 +21,7 @@ def test_lock_after_full_signatures(db_manager):
     tp_id = _make_tp(db_manager)
     with db_manager.get_session() as s:
         # Нет подписей → не утверждено, не заблокировано
-        tp = s.query(TechProcess).get(tp_id)
+        tp = s.get(TechProcess, tp_id)
         assert not workflow.is_locked(tp)
         # Добавляем все обязательные подписи
         for role in workflow.DEFAULT_REQUIRED_ROLES:
@@ -37,7 +37,7 @@ def test_unlock_requires_reason(db_manager):
     from modules import workflow
     tp_id = _make_tp(db_manager)
     with db_manager.get_session() as s:
-        tp = s.query(TechProcess).get(tp_id)
+        tp = s.get(TechProcess, tp_id)
         tp.status = TPStatus.APPROVED
         ok = workflow.unlock_for_edit(s, tp_id, user_id=1, reason='Доработка')
         assert ok is True

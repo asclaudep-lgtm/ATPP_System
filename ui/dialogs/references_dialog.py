@@ -179,7 +179,7 @@ class ReferencesDialog(QDialog):
             QMessageBox.warning(self, "Ошибка", "Введите наименование")
             return
         with self.db_manager.get_session() as session:
-            mat = session.query(Material).get(mat_id)
+            mat = session.get(Material, mat_id)
             if mat:
                 mat.name = name
                 mat.grade = self.mat_grade.text().strip() or None
@@ -200,7 +200,7 @@ class ReferencesDialog(QDialog):
         if reply == QMessageBox.StandardButton.Yes:
             try:
                 with self.db_manager.get_session() as session:
-                    mat = session.query(Material).get(mat_id)
+                    mat = session.get(Material, mat_id)
                     if mat:
                         session.delete(mat)
                 self._load_materials()
@@ -336,7 +336,7 @@ class ReferencesDialog(QDialog):
         if not name:
             return
         with self.db_manager.get_session() as session:
-            eq = session.query(Equipment).get(eq_id)
+            eq = session.get(Equipment, eq_id)
             if eq:
                 eq.name = name
                 eq.model = self.eq_model.text().strip() or None
@@ -356,7 +356,7 @@ class ReferencesDialog(QDialog):
                                 ) == QMessageBox.StandardButton.Yes:
             try:
                 with self.db_manager.get_session() as session:
-                    eq = session.query(Equipment).get(eq_id)
+                    eq = session.get(Equipment, eq_id)
                     if eq:
                         session.delete(eq)
                 self._load_equipment()
@@ -471,7 +471,7 @@ class ReferencesDialog(QDialog):
             return
         tool_id = int(self.tool_table.item(row, 0).text())
         with self.db_manager.get_session() as session:
-            t = session.query(Tool).get(tool_id)
+            t = session.get(Tool, tool_id)
             if t:
                 t.designation = self.tool_desig.text().strip()
                 t.name = self.tool_name.text().strip() or None
@@ -489,7 +489,7 @@ class ReferencesDialog(QDialog):
                                 ) == QMessageBox.StandardButton.Yes:
             try:
                 with self.db_manager.get_session() as session:
-                    t = session.query(Tool).get(tool_id)
+                    t = session.get(Tool, tool_id)
                     if t:
                         session.delete(t)
                 self._load_tools()
@@ -600,7 +600,7 @@ class ReferencesDialog(QDialog):
             return
         prof_id = int(self.prof_table.item(row, 0).text())
         with self.db_manager.get_session() as session:
-            p = session.query(Profession).get(prof_id)
+            p = session.get(Profession, prof_id)
             if p:
                 p.name = self.prof_name.text().strip()
                 p.typical_grade = self.prof_grade.value()
@@ -617,7 +617,7 @@ class ReferencesDialog(QDialog):
                                 ) == QMessageBox.StandardButton.Yes:
             try:
                 with self.db_manager.get_session() as session:
-                    p = session.query(Profession).get(prof_id)
+                    p = session.get(Profession, prof_id)
                     if p:
                         session.delete(p)
                 self._load_professions()

@@ -217,7 +217,7 @@ def get_ecn_pending_actions(session, *, ecn_id: int) -> List[dict]:
 def sign_ecn(session, *, ecn_id: int, approval_id: int,
              user_id: int, decision: str, comment: str = '') -> ECN:
     """Подписать ECN от имени конкретной роли."""
-    approval = session.query(ECNApproval).get(approval_id)
+    approval = session.get(ECNApproval, approval_id)
     if approval is None or approval.ecn_id != ecn_id:
         raise ValueError('Подпись не найдена')
     approval.user_id = user_id
@@ -226,13 +226,13 @@ def sign_ecn(session, *, ecn_id: int, approval_id: int,
     approval.comment = comment or None
 
     if decision == 'REJECTED':
-        ecn = session.query(ECN).get(ecn_id)
+        ecn = session.get(ECN, ecn_id)
         ecn.status = ECNStatus.REJECTED
     elif decision == 'APPROVED':
         pending = get_ecn_pending_actions(session, ecn_id=ecn_id)
         if not pending:
-            ecn = session.query(ECN).get(ecn_id)
+            ecn = session.get(ECN, ecn_id)
             ecn.status = ECNStatus.APPROVED
 
     session.flush()
-    return session.query(ECN).get(ecn_id)
+    return session.get(ECN, ecn_id)

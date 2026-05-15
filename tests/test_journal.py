@@ -27,7 +27,7 @@ def test_register_product_assigns_number(db_manager):
     from modules import journal as J
     pid, _ = _seed_product_and_tp(db_manager)
     with db_manager.get_session() as s:
-        p = s.query(Product).get(pid)
+        p = s.get(Product, pid)
         e = J.register_product(s, p, user_id=1, executor='Иванов И.И.')
         assert e.tp_number == 'УЗГА.02101.00001'
         assert e.mtp_number == 'УЗГА.02101.00001'
@@ -53,14 +53,14 @@ def test_exclude_and_restore(db_manager):
     from modules import journal as J
     pid, _ = _seed_product_and_tp(db_manager)
     with db_manager.get_session() as s:
-        p = s.query(Product).get(pid)
+        p = s.get(Product, pid)
         e = J.register_product(s, p, user_id=1)
         eid = e.id
     with db_manager.get_session() as s:
         ok = J.exclude_entry(s, eid, user_id=1, reason='тест')
         assert ok is True
     with db_manager.get_session() as s:
-        e = s.query(RegistrationJournal).get(eid)
+        e = s.get(RegistrationJournal, eid)
         assert e.excluded is True
         assert e.excluded_reason == 'тест'
         # active list не должен включать
@@ -70,7 +70,7 @@ def test_exclude_and_restore(db_manager):
         ok = J.restore_entry(s, eid, user_id=1)
         assert ok is True
     with db_manager.get_session() as s:
-        e = s.query(RegistrationJournal).get(eid)
+        e = s.get(RegistrationJournal, eid)
         assert e.excluded is False
         active = J.list_entries(s, only_active=True)
         assert eid in [x.id for x in active]
@@ -80,7 +80,7 @@ def test_export_layouts(db_manager, tmp_path):
     from modules import journal as J
     pid, tpid = _seed_product_and_tp(db_manager)
     with db_manager.get_session() as s:
-        p = s.query(Product).get(pid)
+        p = s.get(Product, pid)
         J.register_product(s, p, user_id=1, executor='X')
         rows = J.list_entries(s)
     for layout in ('tp', 'mtp', 'unified'):

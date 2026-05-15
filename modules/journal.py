@@ -92,7 +92,7 @@ def _resolve_user_name(session, user_id: Optional[int]) -> Optional[str]:
     if not user_id:
         return None
     from database.models import User
-    u = session.query(User).get(user_id)
+    u = session.get(User, user_id)
     if u is None:
         return None
     return u.full_name or u.username
@@ -194,7 +194,7 @@ def register_tp(session, tp, user_id: Optional[int] = None,
 
 def exclude_entry(session, entry_id: int, user_id: Optional[int],
                   reason: Optional[str] = None) -> bool:
-    e = session.query(RegistrationJournal).get(entry_id)
+    e = session.get(RegistrationJournal, entry_id)
     if e is None:
         return False
     e.excluded = True
@@ -205,7 +205,7 @@ def exclude_entry(session, entry_id: int, user_id: Optional[int],
 
 
 def restore_entry(session, entry_id: int, user_id: Optional[int]) -> bool:
-    e = session.query(RegistrationJournal).get(entry_id)
+    e = session.get(RegistrationJournal, entry_id)
     if e is None:
         return False
     e.excluded = False

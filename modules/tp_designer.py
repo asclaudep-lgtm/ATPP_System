@@ -395,7 +395,7 @@ class TPDesigner:
         Returns:
             Словарь с результатами проверки
         """
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         
         errors = []
         warnings = []
@@ -478,7 +478,7 @@ class TPDesigner:
         Returns:
             Скопированный ТП
         """
-        source_tp = self.session.query(TechProcess).get(source_tp_id)
+        source_tp = self.session.get(TechProcess, source_tp_id)
         
         # Создаём новый ТП
         new_tp = TechProcess(

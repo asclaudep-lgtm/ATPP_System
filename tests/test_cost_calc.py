@@ -46,7 +46,7 @@ def test_cost_no_crash_with_none_fields(db_manager):
     from modules.cost_calc import CostCalculator
     from database.models import TechProcess
     with db_manager.get_session() as s:
-        tp = s.query(TechProcess).get(tp_id)
+        tp = s.get(TechProcess, tp_id)
         calc = CostCalculator(s)
         # Каждая публичная функция не должна бросать исключение
         m = calc.calculate_material_cost(tp)

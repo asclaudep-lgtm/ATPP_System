@@ -67,7 +67,7 @@ def restore_sketch_version(
     session, sketch_id: int, operation_id: int
 ) -> Optional[Sketch]:
     """Restore a specific sketch version as the latest (creates a copy)."""
-    src = session.query(Sketch).get(sketch_id)
+    src = session.get(Sketch, sketch_id)
     if src is None:
         return None
     src_path = SKETCHES_DIR.parent / src.stored_path
@@ -85,7 +85,7 @@ def restore_sketch_version(
 
 def delete_sketch_version(session, sketch_id: int) -> bool:
     """Soft-delete a sketch version (keep file, hide from UI)."""
-    sketch = session.query(Sketch).get(sketch_id)
+    sketch = session.get(Sketch, sketch_id)
     if sketch is None:
         return False
     # We don't have is_deleted on Sketch, so just remove the record

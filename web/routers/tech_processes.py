@@ -57,7 +57,7 @@ def get_tp(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    tp = db.query(TechProcess).get(tp_id)
+    tp = db.get(TechProcess, tp_id)
     if not tp or tp.is_deleted:
         raise HTTPException(404, "TechProcess not found")
 

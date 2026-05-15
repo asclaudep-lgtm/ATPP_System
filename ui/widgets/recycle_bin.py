@@ -137,7 +137,7 @@ class RecycleBinWidget(QWidget):
         if not uid:
             return ''
         try:
-            u = s.query(User).get(int(uid))
+            u = s.get(User, int(uid))
             return u.full_name or u.username if u else f'#{uid}'
         except Exception:
             return f'#{uid}'
@@ -223,7 +223,7 @@ class RecycleBinWidget(QWidget):
         if tid is None:
             return
         with self.db.get_session() as s:
-            tp = s.query(TechProcess).get(tid)
+            tp = s.get(TechProcess, tid)
             if tp:
                 tp.is_deleted = False
                 tp.deleted_at = None
@@ -241,7 +241,7 @@ class RecycleBinWidget(QWidget):
         ) != QMessageBox.StandardButton.Yes:
             return
         with self.db.get_session() as s:
-            tp = s.query(TechProcess).get(tid)
+            tp = s.get(TechProcess, tid)
             if tp:
                 s.delete(tp)
         self.changed.emit()
@@ -253,7 +253,7 @@ class RecycleBinWidget(QWidget):
         if oid is None:
             return
         with self.db.get_session() as s:
-            op = s.query(Operation).get(oid)
+            op = s.get(Operation, oid)
             if op:
                 op.is_deleted = False
                 op.deleted_at = None
@@ -270,7 +270,7 @@ class RecycleBinWidget(QWidget):
         ) != QMessageBox.StandardButton.Yes:
             return
         with self.db.get_session() as s:
-            op = s.query(Operation).get(oid)
+            op = s.get(Operation, oid)
             if op:
                 s.delete(op)
         self.changed.emit()
@@ -282,7 +282,7 @@ class RecycleBinWidget(QWidget):
         if pid is None:
             return
         with self.db.get_session() as s:
-            p = s.query(Product).get(pid)
+            p = s.get(Product, pid)
             if p:
                 p.is_deleted = False
                 p.deleted_at = None
@@ -301,7 +301,7 @@ class RecycleBinWidget(QWidget):
         ) != QMessageBox.StandardButton.Yes:
             return
         with self.db.get_session() as s:
-            p = s.query(Product).get(pid)
+            p = s.get(Product, pid)
             if p:
                 s.delete(p)
         self.changed.emit()
@@ -313,7 +313,7 @@ class RecycleBinWidget(QWidget):
         if wid is None:
             return
         with self.db.get_session() as s:
-            w = s.query(WorkOrder).get(wid)
+            w = s.get(WorkOrder, wid)
             if w:
                 w.is_deleted = False
                 w.deleted_at = None
@@ -331,7 +331,7 @@ class RecycleBinWidget(QWidget):
         ) != QMessageBox.StandardButton.Yes:
             return
         with self.db.get_session() as s:
-            w = s.query(WorkOrder).get(wid)
+            w = s.get(WorkOrder, wid)
             if w:
                 s.delete(w)
         self.changed.emit()

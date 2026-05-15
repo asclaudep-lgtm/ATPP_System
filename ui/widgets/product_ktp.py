@@ -138,7 +138,7 @@ class ProductKTPWidget(QWidget):
     def _load_product(self) -> dict:
         s = self.db_manager.Session()
         try:
-            p = s.query(Product).get(self.product_id)
+            p = s.get(Product, self.product_id)
             if not p:
                 return {}
             mat = ''
@@ -442,7 +442,7 @@ class ProductKTPWidget(QWidget):
             return
         s = self.db_manager.Session()
         try:
-            tp = s.query(TechProcess).get(tp_id)
+            tp = s.get(TechProcess, tp_id)
             if not tp:
                 return
             old_num = tp.number
@@ -484,7 +484,7 @@ class ProductKTPWidget(QWidget):
             return
         s = self.db_manager.Session()
         try:
-            tp = s.query(TechProcess).get(tp_id)
+            tp = s.get(TechProcess, tp_id)
             if not tp:
                 return
             cur = tp.execution_variant or ''
@@ -500,7 +500,7 @@ class ProductKTPWidget(QWidget):
             return
         try:
             with self.db_manager.get_session() as s:
-                tp = s.query(TechProcess).get(tp_id)
+                tp = s.get(TechProcess, tp_id)
                 tp.execution_variant = new_var.strip() or None
             self._reload_variants()
             self.tp_changed.emit(tp_id)
@@ -532,7 +532,7 @@ class ProductKTPWidget(QWidget):
             return
         s = self.db_manager.Session()
         try:
-            tp = s.query(TechProcess).get(tp_id)
+            tp = s.get(TechProcess, tp_id)
             if not tp:
                 return
             num = tp.number
@@ -548,7 +548,7 @@ class ProductKTPWidget(QWidget):
         try:
             from datetime import datetime
             with self.db_manager.get_session() as s:
-                tp = s.query(TechProcess).get(tp_id)
+                tp = s.get(TechProcess, tp_id)
                 if tp:
                     tp.is_deleted = True
                     tp.deleted_at = datetime.now()

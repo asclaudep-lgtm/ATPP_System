@@ -330,8 +330,8 @@ def test_optimistic_lock_on_concurrent_update(db_manager):
     s1 = factory()
     s2 = factory()
     try:
-        item1 = s1.query(WorkOrderItem).get(item_id)
-        item2 = s2.query(WorkOrderItem).get(item_id)
+        item1 = s1.get(WorkOrderItem, item_id)
+        item2 = s2.get(WorkOrderItem, item_id)
         item1.status = WorkOrderItemStatus.IN_PROGRESS
         s1.commit()
         item2.status = WorkOrderItemStatus.MOVED
@@ -401,7 +401,7 @@ def test_rework_returns_partition_to_previous_step(db_manager):
     wo_id, item_id, master = _setup_three_op_partial(db_manager,
                                                      finished_count=2)
     with db_manager.get_session() as s:
-        item = s.query(WorkOrderItem).get(item_id)
+        item = s.get(WorkOrderItem, item_id)
         # До rework: на 3-й операции, шаги 1,2 = DONE, шаг 3 = PENDING
         steps_before = sorted(item.route_steps, key=lambda x: x.seq)
         assert steps_before[0].status == RouteStepStatus.DONE

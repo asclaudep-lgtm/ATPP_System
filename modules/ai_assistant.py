@@ -183,7 +183,7 @@ def find_similar_products(session: Session, *,
                           top_n: int = 5,
                           min_similarity: float = 0.15) -> List[SimilarProduct]:
     """Найти top-N похожих изделий."""
-    product = session.query(Product).get(product_id)
+    product = session.get(Product, product_id)
     if product is None:
         return []
 
@@ -296,7 +296,7 @@ def suggest_operations(session: Session, *,
 
 def suggest_tp(session: Session, *, product_id: int) -> Optional[TPSuggestion]:
     """Сгенерировать предложение ТП целиком."""
-    product = session.query(Product).get(product_id)
+    product = session.get(Product, product_id)
     if product is None:
         return None
 
@@ -312,7 +312,7 @@ def suggest_tp(session: Session, *, product_id: int) -> Optional[TPSuggestion]:
     for sp in similar:
         if sp.tp_id is None:
             continue
-        tp = session.query(TechProcess).get(sp.tp_id)
+        tp = session.get(TechProcess, sp.tp_id)
         if tp and tp.technology_type:
             tv = tp.technology_type.value \
                 if hasattr(tp.technology_type, 'value') \

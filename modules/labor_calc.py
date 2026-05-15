@@ -166,7 +166,7 @@ class LaborCalculator:
         Returns:
             Словарь с нормами времени
         """
-        operation = self.session.query(Operation).get(operation_id)
+        operation = self.session.get(Operation, operation_id)
         
         if not operation:
             raise ValueError(f"Операция с ID {operation_id} не найдена")
@@ -278,7 +278,7 @@ class LaborCalculator:
         """
         from database.models import TechProcess
         
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")

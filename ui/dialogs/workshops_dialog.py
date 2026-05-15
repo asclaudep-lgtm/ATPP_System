@@ -104,7 +104,7 @@ class WorkshopEditDialog(QDialog):
 
             if self.workshop_id is None:
                 return
-            ws = s.query(Workshop).get(self.workshop_id)
+            ws = s.get(Workshop, self.workshop_id)
             if ws is None:
                 return
             self.code_edit.setText(ws.code or '')
@@ -153,7 +153,7 @@ class WorkshopEditDialog(QDialog):
                     s.flush()
                     self.saved_id = ws.id
                 else:
-                    ws = s.query(Workshop).get(self.workshop_id)
+                    ws = s.get(Workshop, self.workshop_id)
                     if ws is None:
                         QMessageBox.warning(self, 'Сохранение',
                                             'Участок не найден.')
@@ -323,7 +323,7 @@ class WorkshopsDialog(QDialog):
                                     'Выберите участок в таблице.')
             return
         with self.db_manager.get_session() as s:
-            ws = s.query(Workshop).get(ws_id)
+            ws = s.get(Workshop, ws_id)
             if ws is None:
                 return
             count = (s.query(WorkOrderItem)

@@ -179,7 +179,7 @@ class TransitionTemplatesDialog(QDialog):
         if rid is None:
             return None
         with self.db.get_session() as s:
-            r = s.query(TransitionTemplate).get(rid)
+            r = s.get(TransitionTemplate, rid)
             if not r:
                 return None
             return {'id': r.id, 'code': r.code or '', 'text': r.text or ''}
@@ -217,7 +217,7 @@ class TransitionTemplatesDialog(QDialog):
                                     'Выберите строку.')
             return
         with self.db.get_session() as s:
-            r = s.query(TransitionTemplate).get(rid)
+            r = s.get(TransitionTemplate, rid)
             if not r:
                 return
             dlg = _TemplateEditDialog(self, code=r.code or '',
@@ -238,7 +238,7 @@ class TransitionTemplatesDialog(QDialog):
         if r != QMessageBox.StandardButton.Yes:
             return
         with self.db.get_session() as s:
-            obj = s.query(TransitionTemplate).get(rid)
+            obj = s.get(TransitionTemplate, rid)
             if obj:
                 s.delete(obj)
         self._reload()

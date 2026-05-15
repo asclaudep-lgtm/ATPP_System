@@ -71,13 +71,13 @@ def _load_data(session, tech_process_id: int,
         TechProcess, WorkOrder, Operation, Equipment, Material,
     )
 
-    tp = session.query(TechProcess).get(tech_process_id)
+    tp = session.get(TechProcess, tech_process_id)
     if tp is None:
         raise MTPPDFError(f'ТП id={tech_process_id} не найден.')
 
     wo = None
     if work_order_id is not None:
-        wo = session.query(WorkOrder).get(work_order_id)
+        wo = session.get(WorkOrder, work_order_id)
         if wo is None:
             raise MTPPDFError(f'Наряд id={work_order_id} не найден.')
 
@@ -96,7 +96,7 @@ def _load_data(session, tech_process_id: int,
     mat_desig = ''
     if product and getattr(product, 'material_id', None):
         try:
-            mat = session.query(Material).get(product.material_id)
+            mat = session.get(Material, product.material_id)
             if mat:
                 mat_name = mat.name or ''
                 mat_desig = mat.designation or ''
@@ -109,7 +109,7 @@ def _load_data(session, tech_process_id: int,
         eq_label = ''
         if op.equipment_id:
             try:
-                eq = session.query(Equipment).get(op.equipment_id)
+                eq = session.get(Equipment, op.equipment_id)
                 if eq:
                     eq_label = eq.name or ''
                     if eq.model:
@@ -345,7 +345,7 @@ def generate_mtp_pdf_batch(
     styles = _build_styles()
     story = []
     for i, wo_id in enumerate(work_order_ids):
-        wo = session.query(WorkOrder).get(wo_id)
+        wo = session.get(WorkOrder, wo_id)
         if wo is None or wo.tech_process_id is None:
             continue
         try:

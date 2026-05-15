@@ -104,7 +104,7 @@ def try_auto_approve(session, tp_id: int,
     в «Утверждён» и фиксируем approved_at / approved_by.
     Возвращает True, если статус изменился.
     """
-    tp = session.query(TechProcess).get(tp_id)
+    tp = session.get(TechProcess, tp_id)
     if tp is None:
         return False
     if tp.status == TPStatus.APPROVED:
@@ -114,7 +114,7 @@ def try_auto_approve(session, tp_id: int,
     tp.status = TPStatus.APPROVED
     tp.approved_at = datetime.now()
     if user_id is not None:
-        u = session.query(User).get(user_id)
+        u = session.get(User, user_id)
         if u is not None:
             tp.approved_by = u.full_name or u.username
     audit.log_change_session(session, entity_type='TechProcess',
@@ -130,7 +130,7 @@ def unlock_for_edit(session, tp_id: int, user_id: int,
     комментарием. Подписи сохраняются (видны в истории), но обнуляются
     флаги approved_at / approved_by.
     """
-    tp = session.query(TechProcess).get(tp_id)
+    tp = session.get(TechProcess, tp_id)
     if tp is None:
         return False
     if tp.status not in LOCKED_STATUSES:

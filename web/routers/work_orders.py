@@ -53,7 +53,7 @@ def get_work_order(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    wo = db.query(WorkOrder).get(wo_id)
+    wo = db.get(WorkOrder, wo_id)
     if not wo or wo.is_deleted:
         raise HTTPException(404, "WorkOrder not found")
     return {

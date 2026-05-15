@@ -48,7 +48,7 @@ class TPEditorWidget(QWidget):
 
     def _load(self):
         with self.db_manager.get_session() as s:
-            tp = s.query(TechProcess).get(self.tp_id)
+            tp = s.get(TechProcess, self.tp_id)
             if tp:
                 prod = tp.product
                 self._tp_data = {
@@ -316,7 +316,7 @@ class TPEditorWidget(QWidget):
             return
         try:
             with self.db_manager.get_session() as s:
-                tp = s.query(TechProcess).get(self.tp_id)
+                tp = s.get(TechProcess, self.tp_id)
                 if not tp:
                     return
                 tp.number = number

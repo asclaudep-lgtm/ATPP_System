@@ -107,7 +107,7 @@ class DocumentGenerator:
         Returns:
             Путь к созданному файлу
         """
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
@@ -329,7 +329,7 @@ class DocumentGenerator:
         output_format: str = "xlsx"
     ) -> Path:
         """Сгенерировать операционную карту (ГОСТ 3.1118-82)."""
-        op = self.session.query(Operation).get(operation_id)
+        op = self.session.get(Operation, operation_id)
         if not op:
             raise ValueError(f"Операция с ID {operation_id} не найдена")
         tp = op.tech_process
@@ -447,7 +447,7 @@ class DocumentGenerator:
         output_format: str = "xlsx"
     ) -> Path:
         """Сгенерировать материальную спецификацию."""
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
         out_dir = product_export_dir(tp)
@@ -511,7 +511,7 @@ class DocumentGenerator:
         self, tech_process_id: int, output_format: str = "xlsx"
     ) -> List[Path]:
         """Generate OK (ГОСТ 3.1118-82) for every operation in the TP."""
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
         out_dir = product_export_dir(tp)
@@ -533,7 +533,7 @@ class DocumentGenerator:
         self, tech_process_id: int, output_format: str = "xlsx"
     ) -> Path:
         """Generate sketch card listing all sketches per operation."""
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
         out_dir = product_export_dir(tp)
@@ -614,7 +614,7 @@ class DocumentGenerator:
         self, tech_process_id: int, output_format: str = "xlsx"
     ) -> Path:
         """Generate tooling list (ВО) for a TP — tools + tooling items per operation."""
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
         out_dir = product_export_dir(tp)
@@ -724,7 +724,7 @@ class DocumentGenerator:
         tooling list, material list.  Returns list of file paths.
         """
         import zipfile
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
 

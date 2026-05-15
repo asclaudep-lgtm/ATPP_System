@@ -158,7 +158,7 @@ def generate_labels_pdf(session, work_order_id: int) -> bytes:
     # Импорт моделей выполняем здесь, чтобы избежать циклов на старте
     from database.models import WorkOrder, WorkOrderItem  # noqa: F401
 
-    wo = session.query(WorkOrder).get(work_order_id)
+    wo = session.get(WorkOrder, work_order_id)
     if wo is None:
         raise BarcodeError(f'Наряд id={work_order_id} не найден.')
     items = list(wo.items)

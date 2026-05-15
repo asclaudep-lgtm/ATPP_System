@@ -38,7 +38,7 @@ def suggest_grade_for_profession(db_manager, profession_id: int) -> Optional[int
         return None
     from database.models import Profession
     with db_manager.get_session() as s:
-        p = s.query(Profession).get(profession_id)
+        p = s.get(Profession, profession_id)
         if p is not None and p.typical_grade:
             return int(p.typical_grade)
         row = (s.query(Operation.grade, func.count(Operation.id).label('cnt'))

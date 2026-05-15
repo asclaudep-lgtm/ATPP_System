@@ -176,7 +176,7 @@ class NestingWidget(QWidget):
         """Load parts from a product's BOM into the table."""
         from database.models import Product, BOMItem
         with self.db_manager.get_session() as s:
-            p = s.query(Product).get(product_id)
+            p = s.get(Product, product_id)
             if p is None:
                 return
             bom_items = s.query(BOMItem).filter(

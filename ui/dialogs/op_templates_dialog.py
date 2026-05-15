@@ -141,7 +141,7 @@ class OpTemplatesDialog(QDialog):
             QMessageBox.information(self, 'Шаблон', 'Выберите шаблон.')
             return
         with self.db.get_session() as s:
-            t = s.query(OperationTemplate).get(tid)
+            t = s.get(OperationTemplate, tid)
             if t is None:
                 return
             self.selected_template = {
@@ -180,7 +180,7 @@ class OpTemplatesDialog(QDialog):
                                 'Удалить шаблон?') != QMessageBox.StandardButton.Yes:
             return
         with self.db.get_session() as s:
-            t = s.query(OperationTemplate).get(tid)
+            t = s.get(OperationTemplate, tid)
             if t:
                 s.delete(t)
         self._reload()
@@ -296,7 +296,7 @@ class _OpTemplateEditDialog(QDialog):
 
     def _load(self, tid: int):
         with self.db.get_session() as s:
-            t = s.query(OperationTemplate).get(tid)
+            t = s.get(OperationTemplate, tid)
             if t is None:
                 return
             self.name_in.setText(t.name or '')
@@ -334,7 +334,7 @@ class _OpTemplateEditDialog(QDialog):
                 s.flush()
                 self.template_id = t.id
             else:
-                t = s.query(OperationTemplate).get(self.template_id)
+                t = s.get(OperationTemplate, self.template_id)
                 if t is None:
                     return
             t.name = name

@@ -168,7 +168,7 @@ def release_to_production(
     if qty_total <= 0:
         raise ProductionError('Количество должно быть > 0.')
 
-    tp = session.query(TechProcess).get(tech_process_id)
+    tp = session.get(TechProcess, tech_process_id)
     if tp is None:
         raise ProductionError('Технологический процесс не найден.')
 
@@ -229,7 +229,7 @@ def register_work_order(
     """
     _check_role(user, ROLE_REGISTER, 'регистрация наряда')
 
-    wo = session.query(WorkOrder).get(work_order_id)
+    wo = session.get(WorkOrder, work_order_id)
     if wo is None:
         raise ProductionError('Наряд не найден.')
     if wo.status != WorkOrderStatus.RELEASED:
@@ -237,7 +237,7 @@ def register_work_order(
             f'Наряд в статусе «{wo.status.value}», его нельзя регистрировать заново.'
         )
 
-    workshop = session.query(Workshop).get(initial_workshop_id)
+    workshop = session.get(Workshop, initial_workshop_id)
     if workshop is None or not workshop.is_active:
         raise ProductionError('Начальный участок не найден или неактивен.')
 
@@ -324,7 +324,7 @@ def start_operation(
     """Мастер/рабочий начинает выполнение текущей операции."""
     _check_role(user, ROLE_MOVE, 'начало операции')
 
-    item = session.query(WorkOrderItem).get(item_id)
+    item = session.get(WorkOrderItem, item_id)
     if item is None:
         raise ProductionError('Партия не найдена.')
 
@@ -382,7 +382,7 @@ def finish_operation(
     if qty_good < 0 or qty_scrap < 0:
         raise ProductionError('Количество не может быть отрицательным.')
 
-    item = session.query(WorkOrderItem).get(item_id)
+    item = session.get(WorkOrderItem, item_id)
     if item is None:
         raise ProductionError('Партия не найдена.')
 
@@ -510,7 +510,7 @@ def open_issue(
     if not title.strip():
         raise ProductionError('Укажите краткое описание проблемы.')
 
-    wo = session.query(WorkOrder).get(work_order_id)
+    wo = session.get(WorkOrder, work_order_id)
     if wo is None:
         raise ProductionError('Наряд не найден.')
 
@@ -577,7 +577,7 @@ def open_issue(
 
 
 def acknowledge_issue(session: Session, *, user: dict, issue_id: int) -> ProductionIssue:
-    issue = session.query(ProductionIssue).get(issue_id)
+    issue = session.get(ProductionIssue, issue_id)
     if issue is None:
         raise ProductionError('Проблема не найдена.')
     if issue.status != IssueStatus.OPEN:
@@ -604,7 +604,7 @@ def resolve_issue(
     if not resolution.strip():
         raise ProductionError('Укажите, как именно проблема была решена.')
 
-    issue = session.query(ProductionIssue).get(issue_id)
+    issue = session.get(ProductionIssue, issue_id)
     if issue is None:
         raise ProductionError('Проблема не найдена.')
     if issue.status == IssueStatus.RESOLVED:
@@ -750,7 +750,7 @@ def rework_partition(
     if not (reason or '').strip():
         raise ProductionError('Укажите причину возврата на доработку.')
 
-    item = session.query(WorkOrderItem).get(item_id)
+    item = session.get(WorkOrderItem, item_id)
     if item is None:
         raise ProductionError('Партия не найдена.')
 
@@ -840,7 +840,7 @@ def cancel_work_order(
     if not (reason or '').strip():
         raise ProductionError('Укажите причину отмены наряда.')
 
-    wo = session.query(WorkOrder).get(work_order_id)
+    wo = session.get(WorkOrder, work_order_id)
     if wo is None:
         raise ProductionError('Наряд не найден.')
 
@@ -877,7 +877,7 @@ def cancel_work_order(
 
 def work_order_progress(session: Session, work_order_id: int) -> dict:
     """Сводка прогресса по наряду: где партии, сколько готово/брака, проблемы."""
-    wo = session.query(WorkOrder).get(work_order_id)
+    wo = session.get(WorkOrder, work_order_id)
     if wo is None:
         raise ProductionError('Наряд не найден.')
 

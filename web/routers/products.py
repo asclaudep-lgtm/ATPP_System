@@ -35,7 +35,7 @@ def get_product(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    p = db.query(Product).get(product_id)
+    p = db.get(Product, product_id)
     if not p or p.is_deleted:
         raise HTTPException(404, "Product not found")
     return ProductOut.model_validate(p)

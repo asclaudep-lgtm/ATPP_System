@@ -78,7 +78,7 @@ class SignaturesDialog(QDialog):
 
     def _reload(self):
         with self.db.get_session() as s:
-            tp = s.query(TechProcess).get(self.tp_id)
+            tp = s.get(TechProcess, self.tp_id)
             sigs_by_role = {x.role: x for x in workflow.get_signatures(s, self.tp_id)}
             req = workflow.DEFAULT_REQUIRED_ROLES
 

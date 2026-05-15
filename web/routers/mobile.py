@@ -71,7 +71,7 @@ def mobile_product_detail(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    p = db.query(Product).get(product_id)
+    p = db.get(Product, product_id)
     if not p or p.is_deleted:
         raise HTTPException(404, "Product not found")
     tps = db.query(TechProcess).filter(
@@ -133,7 +133,7 @@ def mobile_tp_detail(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    tp = db.query(TechProcess).get(tp_id)
+    tp = db.get(TechProcess, tp_id)
     if not tp or tp.is_deleted:
         raise HTTPException(404, "TP not found")
     ops = sorted(

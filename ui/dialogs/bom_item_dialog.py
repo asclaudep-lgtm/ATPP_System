@@ -59,7 +59,7 @@ class BOMItemDialog(QDialog):
         if self._editing:
             with self.db_manager.get_session() as s:
                 from database.models import BOMItem
-                item = s.query(BOMItem).get(self._bom_item_id)
+                item = s.get(BOMItem, self._bom_item_id)
                 if item:
                     idx = self.product_cb.findData(item.product_id)
                     if idx >= 0:

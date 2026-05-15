@@ -128,7 +128,7 @@ class ReportGenerator:
         Маршрутно-сопроводительная карта (МСК)
         Колонки аналогичны шаблону «Маршрутно-сопроводительная карта.xls»
         """
-        tp = self.session.query(TechProcess).get(tp_id)
+        tp = self.session.get(TechProcess, tp_id)
         if not tp:
             raise ValueError(f'ТП {tp_id} не найден')
 
@@ -263,7 +263,7 @@ class ReportGenerator:
         order_task_number — внешние сведения, которых нет в модели; могут
         быть пусты.
         """
-        tp = self.session.query(TechProcess).get(tp_id)
+        tp = self.session.get(TechProcess, tp_id)
         if not tp:
             raise ValueError(f'ТП {tp_id} не найден')
 
@@ -278,7 +278,7 @@ class ReportGenerator:
         )
         # Если норма указана для другого материала — берём оттуда
         if mn and mn.material_id and (not mat or mn.material_id != mat.id):
-            mat = self.session.query(Material).get(mn.material_id) or mat
+            mat = self.session.get(Material, mn.material_id) or mat
 
         if template_path is None:
             template_path = TEMPLATES_DIR / 'mtp_template.xlsx'
@@ -402,7 +402,7 @@ class ReportGenerator:
         Ведомость норм времени по ТП
         Аналог шаблона «Ведомость норм времени.xls»
         """
-        tp = self.session.query(TechProcess).get(tp_id)
+        tp = self.session.get(TechProcess, tp_id)
         if not tp:
             raise ValueError(f'ТП {tp_id} не найден')
 
@@ -500,7 +500,7 @@ class ReportGenerator:
         Калькуляция себестоимости ДСЕ
         Аналог шаблона «Калькуляция себестоимости.xls»
         """
-        tp = self.session.query(TechProcess).get(tp_id)
+        tp = self.session.get(TechProcess, tp_id)
         if not tp:
             raise ValueError(f'ТП {tp_id} не найден')
 
@@ -593,7 +593,7 @@ class ReportGenerator:
         Ведомость норм расхода материалов
         Аналог шаблона «Ведомость материалов.xls»
         """
-        tp = self.session.query(TechProcess).get(tp_id)
+        tp = self.session.get(TechProcess, tp_id)
         if not tp:
             raise ValueError(f'ТП {tp_id} не найден')
 
@@ -636,7 +636,7 @@ class ReportGenerator:
 
         total_cost = 0.0
         for n in norms:
-            mat = self.session.query(Material).get(n.material_id) if n.material_id else None
+            mat = self.session.get(Material, n.material_id) if n.material_id else None
             mat_name = mat.name if mat else ''
             mat_grade = mat.grade if mat else ''
             mat_gost  = mat.gost if mat else ''
@@ -700,7 +700,7 @@ class ReportGenerator:
         from database.models import Sketch
         from config import DATA_DIR
 
-        tp = self.session.query(TechProcess).get(tp_id)
+        tp = self.session.get(TechProcess, tp_id)
         if not tp:
             raise ValueError(f'ТП #{tp_id} не найден')
 

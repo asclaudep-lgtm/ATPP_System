@@ -164,7 +164,7 @@ class RouteWindow(QDialog):
     def refresh(self):
         s = self.db_manager.Session()
         try:
-            wo = s.query(WorkOrder).get(self.work_order_id)
+            wo = s.get(WorkOrder, self.work_order_id)
             if not wo:
                 self.header.setText("Наряд не найден.")
                 return
@@ -343,7 +343,7 @@ class RouteWindow(QDialog):
         item_id, step_id = data
         s = self.db_manager.Session()
         try:
-            step = s.query(RouteStep).get(step_id)
+            step = s.get(RouteStep, step_id)
             if not step:
                 return
             self.btn_start.setEnabled(step.status == RouteStepStatus.PENDING)
@@ -383,7 +383,7 @@ class RouteWindow(QDialog):
         try:
             from modules import production
             with self.db_manager.get_session() as s:
-                item = s.query(WorkOrderItem).get(item_id)
+                item = s.get(WorkOrderItem, item_id)
                 qty = item.qty if item else 0
                 production.finish_operation(
                     s, user=self.user,

@@ -411,7 +411,7 @@ class SketchesPanel(QWidget):
         if sk_id is None:
             return
         with self.db_manager.get_session() as s:
-            sk = s.query(Sketch).get(sk_id)
+            sk = s.get(Sketch, sk_id)
             if sk is None:
                 return
             full = Path(sk.stored_path)
@@ -428,7 +428,7 @@ class SketchesPanel(QWidget):
         if sk_id is None:
             return
         with self.db_manager.get_session() as s:
-            sk = s.query(Sketch).get(sk_id)
+            sk = s.get(Sketch, sk_id)
             if sk is None:
                 return
             old_title = sk.title or ''
@@ -440,7 +440,7 @@ class SketchesPanel(QWidget):
         if not ok:
             return
         with self.db_manager.get_session() as s:
-            sk = s.query(Sketch).get(sk_id)
+            sk = s.get(Sketch, sk_id)
             if sk is not None:
                 sk.title = (new_title or '').strip()[:200] or None
         self.refresh()
@@ -466,7 +466,7 @@ class SketchesPanel(QWidget):
         if reply != QMessageBox.StandardButton.Yes:
             return
         with self.db_manager.get_session() as s:
-            sk = s.query(Sketch).get(sk_id)
+            sk = s.get(Sketch, sk_id)
             if sk is None:
                 return
             full = Path(sk.stored_path)

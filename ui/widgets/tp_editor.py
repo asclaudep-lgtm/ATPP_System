@@ -67,7 +67,7 @@ class TPEditorWidget(QWidget):
     def _load_tp_data(self):
         session = self.db_manager.Session()
         try:
-            tp = session.query(TechProcess).get(self.tp_id)
+            tp = session.get(TechProcess, self.tp_id)
             if not tp:
                 self._tp = {}
                 return
@@ -273,7 +273,7 @@ class TPEditorWidget(QWidget):
 
     def _change_status(self, new_status):
         with self.db_manager.get_session() as session:
-            tp = session.query(TechProcess).get(self.tp_id)
+            tp = session.get(TechProcess, self.tp_id)
             if tp:
                 tp.status = new_status
         self._tp['status'] = new_status
@@ -606,7 +606,7 @@ class TPEditorWidget(QWidget):
         dlg.exec()
         # Возможно статус изменился — обновим заголовок и статус-кнопки
         with self.db_manager.get_session() as s:
-            tp = s.query(TechProcess).get(self.tp_id)
+            tp = s.get(TechProcess, self.tp_id)
             if tp is not None:
                 self._tp['status'] = tp.status
         if hasattr(self, '_status_lbl') and self._tp.get('status') in STATUS_COLORS:
@@ -688,7 +688,7 @@ class TPEditorWidget(QWidget):
         if accepted:
             data = dlg.get_data()
             with self.db_manager.get_session() as session:
-                op = session.query(Operation).get(op_id)
+                op = session.get(Operation, op_id)
                 if op:
                     op.number = data['number']
                     op.name = data['name']
@@ -724,7 +724,7 @@ class TPEditorWidget(QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             from datetime import datetime
             with self.db_manager.get_session() as session:
-                op = session.query(Operation).get(op_id)
+                op = session.get(Operation, op_id)
                 if op:
                     op.is_deleted = True
                     op.deleted_at = datetime.now()
@@ -754,7 +754,7 @@ class TPEditorWidget(QWidget):
 
         next_num = self._next_op_number()
         with self.db_manager.get_session() as s:
-            src = s.query(OpM).get(src_op_id)
+            src = s.get(OpM, src_op_id)
             if not src:
                 QMessageBox.warning(self, "Ошибка", "Операция-источник не найдена")
                 return
@@ -827,8 +827,8 @@ class TPEditorWidget(QWidget):
         op_id_b = int(self.op_table.item(new_row, 0).text())
 
         with self.db_manager.get_session() as session:
-            op_a = session.query(Operation).get(op_id_a)
-            op_b = session.query(Operation).get(op_id_b)
+            op_a = session.get(Operation, op_id_a)
+            op_b = session.get(Operation, op_id_b)
             if op_a and op_b:
                 op_a.sort_order, op_b.sort_order = op_b.sort_order, op_a.sort_order
 
@@ -942,7 +942,7 @@ class TPEditorWidget(QWidget):
         if accepted:
             data = dlg.get_data()
             with self.db_manager.get_session() as session:
-                tr = session.query(Transition).get(tr_id)
+                tr = session.get(Transition, tr_id)
                 if tr:
                     tr.number = data['number']
                     tr.text = data['text']
@@ -969,7 +969,7 @@ class TPEditorWidget(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         ) == QMessageBox.StandardButton.Yes:
             with self.db_manager.get_session() as session:
-                tr = session.query(Transition).get(tr_id)
+                tr = session.get(Transition, tr_id)
                 if tr:
                     session.delete(tr)
             op_id = getattr(self, '_current_op_id', None)

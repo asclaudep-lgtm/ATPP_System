@@ -205,7 +205,7 @@ def auto_fill_product(session: Session, *,
     Не перезаписывает существующие не-null значения.
     """
     result = CadImportResult(product_id=product_id)
-    product = session.query(Product).get(product_id)
+    product = session.get(Product, product_id)
     if product is None:
         result.warnings.append(f'Product id={product_id} не найден')
         return result

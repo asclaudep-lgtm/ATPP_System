@@ -220,7 +220,7 @@ class UsersDialog(QDialog):
 
         cur_login = self.current_user.get('username', '')
         with self.db_manager.get_session() as session:
-            user = session.query(User).get(user_id)
+            user = session.get(User, user_id)
             if not user:
                 return
             user.full_name = self.fullname_edit.text().strip() or None
@@ -257,7 +257,7 @@ class UsersDialog(QDialog):
             return
 
         with self.db_manager.get_session() as session:
-            user = session.query(User).get(user_id)
+            user = session.get(User, user_id)
             if not user:
                 return
             from modules import password_policy

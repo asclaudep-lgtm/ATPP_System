@@ -233,7 +233,7 @@ class ReferenceEditorWidget(QWidget):
 
     def _load_to_form(self, obj_id):
         with self.db_manager.get_session() as s:
-            obj = s.query(self._model_class).get(obj_id)
+            obj = s.get(self._model_class,obj_id)
             if not obj:
                 self._clear_form()
                 return
@@ -304,7 +304,7 @@ class ReferenceEditorWidget(QWidget):
         saved_id = self._current_id
         try:
             with self.db_manager.get_session() as s:
-                obj = s.query(self._model_class).get(saved_id)
+                obj = s.get(self._model_class,saved_id)
                 if not obj:
                     return
                 for fdef in self._cfg['fields']:
@@ -330,7 +330,7 @@ class ReferenceEditorWidget(QWidget):
             return
         try:
             with self.db_manager.get_session() as s:
-                obj = s.query(self._model_class).get(self._current_id)
+                obj = s.get(self._model_class,self._current_id)
                 if obj:
                     s.delete(obj)
             self._current_id = None

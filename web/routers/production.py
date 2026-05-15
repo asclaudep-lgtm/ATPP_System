@@ -16,7 +16,7 @@ router = APIRouter(tags=["production"])
 def get_route_slip(work_order_id: int,
                    db: Session = Depends(get_db),
                    _=Depends(get_current_user)):
-    wo = db.query(WorkOrder).get(work_order_id)
+    wo = db.get(WorkOrder, work_order_id)
     if not wo:
         raise HTTPException(404, "Work order not found")
     items = db.query(WorkOrderItem).filter(

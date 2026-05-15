@@ -410,7 +410,7 @@ class GroupTreeWidget(QTreeWidget):
     def _rename_group(self, group_id: int):
         s = self.db_manager.Session()
         try:
-            g = s.query(ProductGroup).get(group_id)
+            g = s.get(ProductGroup, group_id)
             if not g:
                 return
             cur = g.display_name or g.name or ''
@@ -422,7 +422,7 @@ class GroupTreeWidget(QTreeWidget):
             return
         try:
             with self.db_manager.get_session() as s:
-                g = s.query(ProductGroup).get(group_id)
+                g = s.get(ProductGroup, group_id)
                 g.display_name = new_name.strip()
             self.reload()
             self.group_changed.emit()
@@ -432,7 +432,7 @@ class GroupTreeWidget(QTreeWidget):
     def _delete_empty_group(self, group_id: int):
         try:
             with self.db_manager.get_session() as s:
-                g = s.query(ProductGroup).get(group_id)
+                g = s.get(ProductGroup, group_id)
                 if not g:
                     return
                 # Только если пустая
@@ -469,7 +469,7 @@ class GroupTreeWidget(QTreeWidget):
 
         try:
             with self.db_manager.get_session() as s:
-                p = s.query(Product).get(product_id)
+                p = s.get(Product, product_id)
                 if not p:
                     return
                 p.group_id = new_group_id  # None если "Без группы"

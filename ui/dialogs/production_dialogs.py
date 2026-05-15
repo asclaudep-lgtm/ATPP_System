@@ -185,7 +185,7 @@ class RegisterDialog(QDialog):
 
     def _load(self):
         with self.db_manager.get_session() as s:
-            wo = s.query(WorkOrder).get(self.work_order_id)
+            wo = s.get(WorkOrder, self.work_order_id)
             if wo is None:
                 self.info_lbl.setText('Наряд не найден.')
                 return
@@ -412,7 +412,7 @@ class ResolveIssueDialog(QDialog):
 
     def _load(self):
         with self.db_manager.get_session() as s:
-            issue = s.query(ProductionIssue).get(self.issue_id)
+            issue = s.get(ProductionIssue, self.issue_id)
             if issue is None:
                 self.info_lbl.setText('Проблема не найдена.')
                 return
@@ -479,7 +479,7 @@ class BarcodePreviewDialog(QDialog):
     def _load(self):
         from modules import barcode_gen
         with self.db_manager.get_session() as s:
-            item = s.query(WorkOrderItem).get(self.item_id)
+            item = s.get(WorkOrderItem, self.item_id)
             if item is None:
                 self.info_lbl.setText('Партия не найдена.')
                 return
@@ -563,7 +563,7 @@ class ReworkDialog(QDialog):
 
     def _load(self):
         with self.db_manager.get_session() as s:
-            item = s.query(WorkOrderItem).get(self.item_id)
+            item = s.get(WorkOrderItem, self.item_id)
             if item is None:
                 self.info_lbl.setText('Партия не найдена.')
                 return
@@ -672,7 +672,7 @@ class CancelWorkOrderDialog(QDialog):
 
     def _load(self):
         with self.db_manager.get_session() as s:
-            wo = s.query(WorkOrder).get(self.work_order_id)
+            wo = s.get(WorkOrder, self.work_order_id)
             if wo is None:
                 self.info_lbl.setText('Наряд не найден.')
                 return

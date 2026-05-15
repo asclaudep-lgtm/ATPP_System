@@ -115,7 +115,7 @@ class CostCalculator:
         for operation in tech_process.operations:
             t_piece = self._operation_time_minutes(operation, time_mode)
             if operation.profession_id and t_piece > 0:
-                profession = self.session.query(Profession).get(operation.profession_id)
+                profession = self.session.get(Profession, operation.profession_id)
                 
                 if profession and profession.hourly_rates:
                     try:
@@ -186,7 +186,7 @@ class CostCalculator:
         Returns:
             Расчёт себестоимости
         """
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
@@ -274,7 +274,7 @@ class CostCalculator:
             # Рассчитываем если ещё не рассчитано
             cost_calc = self.calculate_full_cost(tech_process_id)
         
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         
         breakdown = {
             'tech_process': {

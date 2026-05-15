@@ -433,7 +433,7 @@ class DatabaseManager:
                               clear_must_change: bool = True):
         """Меняет пароль пользователя и снимает флаг must_change_password."""
         with self.get_session() as s:
-            u = s.query(User).get(user_id)
+            u = s.get(User, user_id)
             if u is None:
                 raise ValueError(f'Пользователь id={user_id} не найден.')
             u.password_hash = self._hash_password(new_password)

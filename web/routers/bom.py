@@ -16,7 +16,7 @@ def get_product_bom(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    product = db.query(Product).get(product_id)
+    product = db.get(Product, product_id)
     if not product:
         raise HTTPException(404, "Product not found")
 

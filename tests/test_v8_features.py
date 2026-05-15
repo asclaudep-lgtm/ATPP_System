@@ -41,12 +41,12 @@ def test_product_soft_delete_persists(db_manager):
         pid = p.id
 
     with db_manager.get_session() as s:
-        p = s.query(Product).get(pid)
+        p = s.get(Product, pid)
         p.is_deleted = True
         p.deleted_at = datetime.now()
 
     with db_manager.get_session() as s:
-        p = s.query(Product).get(pid)
+        p = s.get(Product, pid)
         assert p.is_deleted is True
         assert p.deleted_at is not None
 
@@ -55,7 +55,7 @@ def test_product_soft_delete_persists(db_manager):
         p.deleted_at = None
 
     with db_manager.get_session() as s:
-        p = s.query(Product).get(pid)
+        p = s.get(Product, pid)
         assert p.is_deleted is False
 
 
@@ -70,12 +70,12 @@ def test_workorder_soft_delete_persists(db_manager):
         wid = wo.id
 
     with db_manager.get_session() as s:
-        wo = s.query(WorkOrder).get(wid)
+        wo = s.get(WorkOrder, wid)
         wo.is_deleted = True
         wo.deleted_at = datetime.now()
 
     with db_manager.get_session() as s:
-        wo = s.query(WorkOrder).get(wid)
+        wo = s.get(WorkOrder, wid)
         assert wo.is_deleted is True
 
 
@@ -114,13 +114,13 @@ def test_transition_template_crud(db_manager):
         tid = tpl.id
 
     with db_manager.get_session() as s:
-        tpl = s.query(TransitionTemplate).get(tid)
+        tpl = s.get(TransitionTemplate, tid)
         assert tpl is not None
         assert 'Точить' in tpl.text
         s.delete(tpl)
 
     with db_manager.get_session() as s:
-        assert s.query(TransitionTemplate).get(tid) is None
+        assert s.get(TransitionTemplate, tid) is None
 
 
 def test_transition_templates_seed_runs_only_once(db_manager):

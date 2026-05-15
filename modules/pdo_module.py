@@ -83,7 +83,7 @@ def create_order(
 def omts_start_review(session, *, order_id: int, memo_number: str = '',
                        issued_by: int = None, content: str = '') -> ServiceMemo:
     """ОМТС начинает проработку — проверка наличия материала."""
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     if order is None:
         raise ValueError(f'Order #{order_id} not found')
 
@@ -114,7 +114,7 @@ def omts_start_review(session, *, order_id: int, memo_number: str = '',
 
 def tech_dept_review(session, *, order_id: int) -> ProductionOrder:
     """Передать заказ в тех.отдел на проверку КД."""
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     order.status = PDOStatus.TECH_DEPT
 
     handoff = PDOHandoff(
@@ -135,7 +135,7 @@ def set_feasibility(session, *, item_id: int, feasible: bool,
                      kd_ready: bool = False, material_name: str = '',
                      tech_notes: str = '') -> NomenclatureItem:
     """Тех.отдел: отметить позицию как возможную/невозможную к изготовлению."""
-    item = session.query(NomenclatureItem).get(item_id)
+    item = session.get(NomenclatureItem, item_id)
     if item is None:
         raise ValueError(f'NomenclatureItem #{item_id} not found')
 
@@ -167,7 +167,7 @@ def any_not_feasible(session, *, order_id: int) -> bool:
 
 def complete_tech_review(session, *, order_id: int) -> ProductionOrder:
     """Завершить проверку тех.отдела: если всё '+' → на утверждение, иначе → отказ."""
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
 
     if any_not_feasible(session, order_id=order_id):
         order.status = PDOStatus.NOT_FEASIBLE
@@ -185,7 +185,7 @@ def complete_tech_review(session, *, order_id: int) -> ProductionOrder:
 def deputy_approve(session, *, order_id: int, memo_number: str = '',
                     issued_by: int = None, content: str = '') -> ServiceMemo:
     """Зам.Тех.Дир утверждает заказ и выпускает записку на изготовление."""
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     if order is None:
         raise ValueError(f'Order #{order_id} not found')
 
@@ -208,7 +208,7 @@ def deputy_approve(session, *, order_id: int, memo_number: str = '',
 
 def approve_order(session, *, order_id: int) -> ProductionOrder:
     """Финальное утверждение: заказ готов к передаче в цех."""
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     order.status = PDOStatus.APPROVED
 
     handoff = PDOHandoff(
@@ -233,11 +233,11 @@ def approve_order(session, *, order_id: int) -> ProductionOrder:
 def sign_mtp(session, *, order_id: int, tech_process_id: int,
              signed_by: int, comment: str = '') -> MTPSignoff:
     """Технолог подписывает МТП для заказа."""
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     if order is None:
         raise ValueError(f'Order #{order_id} not found')
 
-    tp = session.query(TechProcess).get(tech_process_id)
+    tp = session.get(TechProcess, tech_process_id)
     if tp is None:
         raise ValueError(f'TP #{tech_process_id} not found')
 
@@ -275,7 +275,7 @@ def sign_mtp(session, *, order_id: int, tech_process_id: int,
 def release_to_shop(session, *, order_id: int, shop: str,
                      released_by: int) -> ProductionOrder:
     """Передать заказ в цех. Создаёт WorkOrder если ещё не создан."""
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     if order is None:
         raise ValueError(f'Order #{order_id} not found')
 
@@ -320,7 +320,7 @@ def release_to_shop(session, *, order_id: int, shop: str,
 
 
 def accept_in_shop(session, *, order_id: int, accepted_by: int) -> PDOHandoff:
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     order.status = PDOStatus.IN_SHOP
     handoff = session.query(PDOHandoff).filter(
         PDOHandoff.order_id == order_id,
@@ -335,7 +335,7 @@ def accept_in_shop(session, *, order_id: int, accepted_by: int) -> PDOHandoff:
 
 
 def send_to_qc(session, *, order_id: int, transferred_by: int) -> PDOHandoff:
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     order.status = PDOStatus.QC
     handoff = PDOHandoff(
         order_id=order_id, from_dept='Цех', to_dept='ОТК',
@@ -349,7 +349,7 @@ def send_to_qc(session, *, order_id: int, transferred_by: int) -> PDOHandoff:
 
 def close_order(session, *, order_id: int, qty_done: int = 0,
                 qty_scrap: int = 0) -> ProductionOrder:
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     order.status = PDOStatus.CLOSED
     order.qty_done = qty_done
     order.qty_scrap = qty_scrap
@@ -406,7 +406,7 @@ def get_memos(session, order_id: int) -> list:
 
 
 def get_order_detail(session, order_id: int) -> dict:
-    order = session.query(ProductionOrder).get(order_id)
+    order = session.get(ProductionOrder, order_id)
     if order is None:
         return {}
 

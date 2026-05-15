@@ -67,7 +67,7 @@ def get_bom_tree(session: Session, *,
     Если ничего — все корневые (parent_id IS NULL).
     """
     if bom_item_id is not None:
-        item = session.query(BOMItem).get(bom_item_id)
+        item = session.get(BOMItem, bom_item_id)
         if item is None:
             return []
         return [_build_subtree(session, item)]
@@ -117,7 +117,7 @@ def _detect_circular(session: Session, *, parent_id: int,
     """
     current_id = parent_id
     while current_id is not None:
-        item = session.query(BOMItem).get(current_id)
+        item = session.get(BOMItem, current_id)
         if item is None:
             break
         if item.product_id == target_product_id:
@@ -165,7 +165,7 @@ def add_bom_item(session: Session, *,
 
 def remove_bom_item(session: Session, *, bom_item_id: int):
     """Удалить узел БОМ. Каскадно удаляет детей (cascade='all, delete-orphan')."""
-    item = session.query(BOMItem).get(bom_item_id)
+    item = session.get(BOMItem, bom_item_id)
     if item is None:
         raise ValueError(f'BOMItem id={bom_item_id} не найден')
     session.delete(item)
@@ -174,7 +174,7 @@ def remove_bom_item(session: Session, *, bom_item_id: int):
 
 def update_bom_item(session: Session, *, bom_item_id: int, **kwargs):
     """Обновить поля BOM-узла (quantity, position, note, level, sort_order)."""
-    item = session.query(BOMItem).get(bom_item_id)
+    item = session.get(BOMItem, bom_item_id)
     if item is None:
         raise ValueError(f'BOMItem id={bom_item_id} не найден')
     for k, v in kwargs.items():
@@ -231,7 +231,7 @@ def get_bom_for_product(session: Session, *,
     for item in items:
         root = item
         while root.parent_id is not None:
-            root = session.query(BOMItem).get(root.parent_id)
+            root = session.get(BOMItem, root.parent_id)
             if root is None:
                 break
         if root.id not in seen_root_ids:

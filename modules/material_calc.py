@@ -132,7 +132,7 @@ class MaterialCalculator:
             Норма расхода материала
         """
         # Получаем материал
-        material = self.session.query(Material).get(material_id)
+        material = self.session.get(Material, material_id)
         if not material:
             raise ValueError(f"Материал с ID {material_id} не найден")
         
@@ -219,7 +219,7 @@ class MaterialCalculator:
         Returns:
             Словарь с материальной спецификацией
         """
-        tp = self.session.query(TechProcess).get(tech_process_id)
+        tp = self.session.get(TechProcess, tech_process_id)
         
         specification = {
             'tech_process': {
@@ -234,7 +234,7 @@ class MaterialCalculator:
         
         # Основные материалы
         for norm in tp.material_norms:
-            material = norm.material if hasattr(norm, 'material') else self.session.query(Material).get(norm.material_id)
+            material = norm.material if hasattr(norm, 'material') else self.session.get(Material, norm.material_id)
             
             specification['main_materials'].append({
                 'name': material.name,

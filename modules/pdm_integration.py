@@ -238,7 +238,7 @@ class MockPdmAdapter(AbstractPdmAdapter):
         from database.db_manager import _get_db_manager
         db = _get_db_manager()
         with db.get_session() as s:
-            tp = s.query(TechProcess).get(tp_id)
+            tp = s.get(TechProcess, tp_id)
             if tp is None:
                 return False
             data = {
@@ -272,7 +272,7 @@ def export_bom_json(session, product_id: int) -> dict:
     """Export full product BOM tree as nested JSON for PDM exchange."""
 
     def _node(prod_id: int) -> dict:
-        p = session.query(Product).get(prod_id)
+        p = session.get(Product, prod_id)
         if p is None:
             return {}
         children = session.query(BOMItem).filter(
@@ -315,7 +315,7 @@ def export_bom_flat_xlsx(session, product_id: int,
     pos_counter = [0]
 
     def _walk(prod_id: int, level: int):
-        p = session.query(Product).get(prod_id)
+        p = session.get(Product, prod_id)
         if p is None:
             return
         pos_counter[0] += 1

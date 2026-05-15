@@ -73,7 +73,7 @@ class TestCADImport:
             assert result.product_id is not None
             assert result.designation == 'test'
 
-            p = s.query(Product).get(result.product_id)
+            p = s.get(Product, result.product_id)
             assert p is not None
             assert p.dimensions == '100x50x20'
 

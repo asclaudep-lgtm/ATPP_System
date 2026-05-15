@@ -16,7 +16,7 @@ def approval_action(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    tp = db.query(TechProcess).get(body.tp_id)
+    tp = db.get(TechProcess, body.tp_id)
     if not tp or tp.is_deleted:
         raise HTTPException(404, "TechProcess not found")
 

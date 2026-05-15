@@ -829,7 +829,7 @@ class PDODispatcherWidget(QWidget):
     def _on_order_dropped(self, order_id, new_status):
         with self.db_manager.get_session() as s:
             from database.models import ProductionOrder
-            order = s.query(ProductionOrder).get(order_id)
+            order = s.get(ProductionOrder, order_id)
             if order and order.status != new_status:
                 old_status = order.status
                 order.status = new_status

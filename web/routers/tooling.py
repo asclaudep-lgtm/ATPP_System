@@ -53,7 +53,7 @@ def list_tooling_issues(tooling_item_id: Optional[int] = Query(None),
 def get_tooling_history(tooling_item_id: int,
                         db: Session = Depends(get_db),
                         _=Depends(get_current_user)):
-    ti = db.query(ToolingItem).get(tooling_item_id)
+    ti = db.get(ToolingItem, tooling_item_id)
     if not ti:
         raise HTTPException(404, "Tooling item not found")
     issues = db.query(ToolingIssue).filter(

@@ -144,7 +144,7 @@ def update_norms_from_chrono(session: Session, *,
         return None  # недостаточно данных
 
     avg_actual = sum(r.actual_minutes for r in op_records) / len(op_records)
-    op = session.query(Operation).get(operation_id)
+    op = session.get(Operation, operation_id)
     if op is None:
         return None
 

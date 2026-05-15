@@ -140,8 +140,8 @@ class TestReferenceEditor:
 
         # Test DB persistence directly
         with db_manager.get_session() as s:
-            obj = s.query(Material).get(mid)
+            obj = s.get(Material, mid)
             obj.grade = "After"
         with db_manager.get_session() as s:
-            m2 = s.query(Material).get(mid)
+            m2 = s.get(Material, mid)
             assert m2.grade == "After"

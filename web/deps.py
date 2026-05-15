@@ -53,7 +53,7 @@ async def get_current_user(
         )
     user_id = int(payload.get("sub", 0))
     from database.models import User
-    user = db.query(User).get(user_id)
+    user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

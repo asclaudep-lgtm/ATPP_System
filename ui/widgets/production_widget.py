@@ -227,7 +227,7 @@ class OrdersTab(QWidget):
         if not wo_id:
             return
         with self.db.get_session() as s:
-            wo = s.query(WorkOrder).get(wo_id)
+            wo = s.get(WorkOrder, wo_id)
             if wo is None:
                 return
             status = wo.status
@@ -280,7 +280,7 @@ class OrdersTab(QWidget):
         try:
             from modules.mtp_excel import generate_mtp_excel
             with self.db.get_session() as s:
-                wo = s.query(WorkOrder).get(wo_id)
+                wo = s.get(WorkOrder, wo_id)
                 if not wo:
                     return
                 default_name = (
@@ -328,7 +328,7 @@ class OrdersTab(QWidget):
         try:
             from modules.mtp_pdf import generate_mtp_pdf
             with self.db.get_session() as s:
-                wo = s.query(WorkOrder).get(wo_id)
+                wo = s.get(WorkOrder, wo_id)
                 if not wo:
                     return
                 default_name = (
@@ -415,7 +415,7 @@ class OrdersTab(QWidget):
             errs: list[str] = []
             with self.db.get_session() as s:
                 for wid in ids:
-                    wo = s.query(WorkOrder).get(wid)
+                    wo = s.get(WorkOrder, wid)
                     if not wo or wo.tech_process_id is None:
                         errs.append(f'#{wid}: нет ТП')
                         continue
@@ -454,7 +454,7 @@ class OrdersTab(QWidget):
                                     'Выберите наряд в таблице.')
             return
         with self.db.get_session() as s:
-            wo = s.query(WorkOrder).get(wo_id)
+            wo = s.get(WorkOrder, wo_id)
             if wo is None:
                 return
             status = wo.status
@@ -477,7 +477,7 @@ class OrdersTab(QWidget):
                                     'Выберите наряд в таблице.')
             return
         with self.db.get_session() as s:
-            wo = s.query(WorkOrder).get(wo_id)
+            wo = s.get(WorkOrder, wo_id)
             if wo is None:
                 return
             wo_number = wo.number
@@ -506,7 +506,7 @@ class OrdersTab(QWidget):
                                     'Выберите наряд в таблице.')
             return
         with self.db.get_session() as s:
-            wo = s.query(WorkOrder).get(wo_id)
+            wo = s.get(WorkOrder, wo_id)
             if wo is None:
                 return
             wo_number = wo.number
@@ -706,7 +706,7 @@ class ItemsTab(QWidget):
                 # затем по id из ATPP-WI-<id>-...
                 parsed = production.parse_barcode(text)
                 if parsed:
-                    item = s.query(WorkOrderItem).get(parsed)
+                    item = s.get(WorkOrderItem, parsed)
             if item is None:
                 QMessageBox.information(
                     self, 'Сканер',
@@ -762,7 +762,7 @@ class ItemsTab(QWidget):
             QMessageBox.information(self, 'Завершение', 'Выберите партию.')
             return
         with self.db.get_session() as s:
-            item = s.query(WorkOrderItem).get(item_id)
+            item = s.get(WorkOrderItem, item_id)
             if item is None:
                 return
             qty = item.qty
@@ -785,7 +785,7 @@ class ItemsTab(QWidget):
         # Если есть следующий шаг — спросим, на какой участок передать
         next_workshop_id = None
         with self.db.get_session() as s:
-            item = s.query(WorkOrderItem).get(item_id)
+            item = s.get(WorkOrderItem, item_id)
             cur = production._current_step(item)
             has_next = False
             if cur is not None:
@@ -842,7 +842,7 @@ class ItemsTab(QWidget):
             QMessageBox.information(self, 'Проблема', 'Выберите партию.')
             return
         with self.db.get_session() as s:
-            item = s.query(WorkOrderItem).get(item_id)
+            item = s.get(WorkOrderItem, item_id)
             if item is None:
                 return
             wo_id = item.work_order_id

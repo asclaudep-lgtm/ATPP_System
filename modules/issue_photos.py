@@ -39,7 +39,7 @@ def attach_photo(
     uploaded_by: Optional[int] = None,
 ) -> IssuePhoto:
     """Копирует файл в storage и регистрирует в БД."""
-    issue = session.query(ProductionIssue).get(issue_id)
+    issue = session.get(ProductionIssue, issue_id)
     if issue is None:
         raise ValueError(f'Проблема id={issue_id} не найдена.')
 
@@ -80,7 +80,7 @@ def list_photos(session: Session, issue_id: int) -> list[IssuePhoto]:
 def remove_photo(session: Session, photo_id: int, *,
                  delete_file: bool = True) -> bool:
     """Удаляет фотографию (запись и опционально файл)."""
-    photo = session.query(IssuePhoto).get(photo_id)
+    photo = session.get(IssuePhoto, photo_id)
     if photo is None:
         return False
     path = photo.file_path

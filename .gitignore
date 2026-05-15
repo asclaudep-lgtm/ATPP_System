@@ -59,5 +59,9 @@ temp/
 .env
 .env.docker
 
+# Node / Vite
+node_modules/
+web/static/dist/
+
 # Claude Code (progress journal, not committed)
 .claude/

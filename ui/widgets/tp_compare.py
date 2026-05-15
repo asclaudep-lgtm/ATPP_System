@@ -105,8 +105,8 @@ class TPCompareDialog(QDialog):
     def _load(self):
         s = self.db_manager.Session()
         try:
-            tp_l = s.query(TechProcess).get(self.tp_id_left)
-            tp_r = s.query(TechProcess).get(self.tp_id_right)
+            tp_l = s.get(TechProcess, self.tp_id_left)
+            tp_r = s.get(TechProcess, self.tp_id_right)
             if not tp_l or not tp_r:
                 self.header.setText("Не удалось загрузить ТП.")
                 return
