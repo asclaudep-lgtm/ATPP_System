@@ -71,11 +71,6 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         self.work_area.setTabsClosable(True)
         self.work_area.setMovable(True)
         self.work_area.tabCloseRequested.connect(self._close_tab)
-        self.work_area.setStyleSheet("""
-            QTabWidget::pane { border: 1px solid #bdc3c7; }
-            QTabBar::tab { padding: 6px 14px; min-width: 120px; }
-            QTabBar::tab:selected { background: #ecf0f1; font-weight: bold; }
-        """)
         splitter.addWidget(self.work_area)
 
         splitter.setStretchFactor(0, 0)
