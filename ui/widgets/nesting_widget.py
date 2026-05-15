@@ -125,6 +125,7 @@ class NestingWidget(QWidget):
         self._algo_combo = QComboBox()
         self._algo_combo.addItem('Shelf (полочный)')
         self._algo_combo.addItem('Guillotine (гильотинный)')
+        self._algo_combo.addItem('Genetic (генетический)')
         grp_lay.addWidget(self._algo_combo)
         ctrl.addWidget(grp)
 
@@ -269,7 +270,9 @@ class NestingWidget(QWidget):
             QMessageBox.warning(self, 'Раскрой', 'Добавьте заготовки.')
             return
 
-        if algo == 1:
+        if algo == 2:
+            placed = self._genetic_pack(sheet_w, sheet_h, parts)
+        elif algo == 1:
             placed = self._guillotine_cut(sheet_w, sheet_h, parts)
         else:
             placed = self._shelf_pack(sheet_w, sheet_h, parts)
@@ -366,3 +369,27 @@ class NestingWidget(QWidget):
 
         _fit(0, 0, sheet_w, sheet_h, list(parts))
         return placed
+
+    def _genetic_pack(self, sheet_w, sheet_h, parts):
+        """Genetic algorithm — random-restart optimization of part ordering.
+
+        Tries multiple random shuffles of parts, uses shelf packing as
+        fitness evaluator. Returns the best layout found within iterations.
+        """
+        import random
+        best_placed = []
+        best_util = 0.0
+        iterations = min(50, max(10, len(parts) * 2))
+
+        for _ in range(iterations):
+            shuffled = list(parts)
+            random.shuffle(shuffled)
+            candidate = self._shelf_pack(sheet_w, sheet_h, shuffled)
+            used = sum(p[2] * p[3] for p in candidate)
+            util = used / (sheet_w * sheet_h) * 100
+            if util > best_util:
+                best_util = util
+                best_placed = candidate
+
+        return best_placed if best_placed else self._shelf_pack(
+            sheet_w, sheet_h, parts)
