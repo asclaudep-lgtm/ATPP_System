@@ -65,24 +65,37 @@ class DatabaseManager:
         self._create_initial_data()
 
     def _ensure_v14_columns(self):
-        """Добавляет колонки api_key (users) и changes (change_logs) при необходимости."""
+        """Синхронизирует все колонки моделей с БД (добавляет отсутствующие)."""
         from sqlalchemy import inspect, text
         inspector = inspect(self.engine)
         with self.engine.connect() as conn:
-            # api_key on users
-            if 'users' in inspector.get_table_names():
-                cols = [c['name'] for c in inspector.get_columns('users')]
-                if 'api_key' not in cols:
-                    conn.execute(text("ALTER TABLE users ADD COLUMN api_key VARCHAR(64)"))
-                    conn.commit()
-                    log.info('Added column users.api_key')
-            # changes on change_logs
-            if 'change_logs' in inspector.get_table_names():
-                cols = [c['name'] for c in inspector.get_columns('change_logs')]
-                if 'changes' not in cols:
-                    conn.execute(text("ALTER TABLE change_logs ADD COLUMN changes JSON"))
-                    conn.commit()
-                    log.info('Added column change_logs.changes')
+            # Пройти по всем моделям и проверить колонки
+            for table_name, table in Base.metadata.tables.items():
+                if table_name not in inspector.get_table_names():
+                    continue  # таблица ещё не создана — create_all сделает позже
+                existing = {c['name'] for c in inspector.get_columns(table_name)}
+                for col in table.columns:
+                    if col.name not in existing:
+                        # построить DDL для колонки
+                        col_type_str = str(col.type).upper()
+                        # упрощаем типы для SQLite
+                        nullable = '' if col.nullable else ' NOT NULL'
+                        default = ''
+                        if col.default and col.default.arg is not None:
+                            dv = col.default.arg
+                            if isinstance(dv, bool):
+                                default = f' DEFAULT {1 if dv else 0}'
+                            elif isinstance(dv, (int, float)):
+                                default = f' DEFAULT {dv}'
+                            elif isinstance(dv, str):
+                                default = f" DEFAULT '{dv}'"
+                        sql = f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type_str}{default}{nullable}"
+                        try:
+                            conn.execute(text(sql))
+                            conn.commit()
+                            log.info('Added column %s.%s', table_name, col.name)
+                        except Exception as e:
+                            log.debug('Skip %s.%s: %s', table_name, col.name, e)
     
     def _ensure_primary_keys(self):
         """v13: гарантирует INTEGER PRIMARY KEY AUTOINCREMENT для всех id.
