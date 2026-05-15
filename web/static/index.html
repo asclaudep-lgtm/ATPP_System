@@ -512,12 +512,20 @@ createApp({
       this.pdoCreateMsg = ''
       if (!des) { this.pdoCreateMsg = 'Введите обозначение'; return }
       try {
-        const r = await this.api('/api/pdo/orders?product_id=0&qty='
-          + (this.pdoNew.qty||1) + '&aircraft_type=' + encodeURIComponent(this.pdoNew.ac)
-          + '&customer=' + encodeURIComponent(this.pdoNew.customer))
-        // The create endpoint needs product lookup — do it differently
-        this.pdoCreateMsg = 'Используйте desktop-клиент для создания заказа с номенклатурой'
-      } catch(e) { this.pdoCreateMsg = 'Ошибка: ' + (e.message||'') }
+        const qty = this.pdoNew.qty || 1
+        const r = await this.api('/api/pdo/orders?' +
+          'designation=' + encodeURIComponent(des) +
+          '&qty=' + qty +
+          '&aircraft_type=' + encodeURIComponent(this.pdoNew.ac || '') +
+          '&customer=' + encodeURIComponent(this.pdoNew.customer || '') +
+          '&priority=3', { method: 'POST' })
+        this.pdoCreateMsg = 'Создан: ' + r.number
+        this.showPDOCreate = false
+        this.pdoNew = {des:'', qty:'', ac:'', customer:''}
+        this.loadPDOOrders()
+      } catch(e) {
+        this.pdoCreateMsg = 'Ошибка: изделие не найдено или нет прав'
+      }
     },
   },
   mounted() {

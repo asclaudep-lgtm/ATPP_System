@@ -40,7 +40,8 @@ def get_order(order_id: int,
 
 @router.post("/pdo/orders")
 def create_order(
-    product_id: int = Query(...),
+    product_id: int = Query(0),
+    designation: str = Query(""),
     qty: int = Query(...),
     due_date: str = Query(""),
     customer: str = Query(""),
@@ -51,6 +52,17 @@ def create_order(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    # Resolve product by designation if product_id not given
+    from database.models import Product
+    if not product_id and designation:
+        p = db.query(Product).filter(
+            Product.designation == designation.strip(),
+            Product.is_deleted == False).first()
+        if p:
+            product_id = p.id
+    if not product_id:
+        raise HTTPException(400, "Укажите product_id или designation")
+
     dd = date.fromisoformat(due_date) if due_date else date.today()
     order = pdo_module.create_order(
         db, product_id=product_id, qty=qty, due_date=dd,

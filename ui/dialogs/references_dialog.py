@@ -144,11 +144,11 @@ class ReferencesDialog(QDialog):
         self.mat_gost.setText(self.mat_table.item(row, 3).text())
         try:
             self.mat_density.setValue(float(self.mat_table.item(row, 4).text()))
-        except:
+        except (ValueError, TypeError, AttributeError):
             self.mat_density.setValue(0)
         try:
             self.mat_price.setValue(float(self.mat_table.item(row, 5).text()))
-        except:
+        except (ValueError, TypeError, AttributeError):
             self.mat_price.setValue(0)
 
     def _add_material(self):
@@ -302,11 +302,11 @@ class ReferencesDialog(QDialog):
         self.eq_type.setText(self.eq_table.item(row, 3).text())
         try:
             self.eq_power.setValue(float(self.eq_table.item(row, 4).text()))
-        except:
+        except (ValueError, TypeError, AttributeError):
             self.eq_power.setValue(0)
         try:
             self.eq_cost.setValue(float(self.eq_table.item(row, 5).text()))
-        except:
+        except (ValueError, TypeError, AttributeError):
             self.eq_cost.setValue(0)
 
     def _add_equipment(self):
@@ -574,7 +574,7 @@ class ReferencesDialog(QDialog):
         self.prof_name.setText(self.prof_table.item(row, 1).text())
         try:
             self.prof_grade.setValue(int(self.prof_table.item(row, 2).text()))
-        except:
+        except (ValueError, TypeError, AttributeError):
             self.prof_grade.setValue(3)
 
     def _add_profession(self):

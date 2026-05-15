@@ -81,7 +81,37 @@ def health():
     return {"status": "ok", "db": db_status, "version": "11.0.0"}
 
 
-# ——— Prometheus metrics —————————————————————
+# ——— Rate limiting ————————————————————————
+
+_rate_limit_store = {}  # {ip: [timestamps]}
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request, call_next):
+    """Simple rate limiter: 60 requests per minute per IP."""
+    from fastapi.responses import JSONResponse
+    import time as _time
+
+    ip = request.client.host if request.client else 'unknown'
+    now = _time.time()
+    window = now - 60
+
+    if ip not in _rate_limit_store:
+        _rate_limit_store[ip] = [now]
+    else:
+        _rate_limit_store[ip] = [
+            t for t in _rate_limit_store[ip] if t > window]
+        _rate_limit_store[ip].append(now)
+
+    if len(_rate_limit_store[ip]) > 60:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Wait."})
+
+    return await call_next(request)
+
+
+# ——— Prometheus metrics ————————————————————————
 
 _request_count = 0
 _request_errors = 0
