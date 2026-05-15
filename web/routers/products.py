@@ -9,6 +9,13 @@ from database.models import Product
 router = APIRouter(tags=["products"])
 
 
+@router.get("/products/workshops")
+def list_workshops(db: Session = Depends(get_db), _=Depends(get_current_user)):
+    from database.models._production import Workshop
+    rows = db.query(Workshop).order_by(Workshop.code).all()
+    return [{'id': r.id, 'code': r.code, 'name': r.name} for r in rows]
+
+
 @router.get("/products", response_model=ProductListOut)
 def list_products(
     search: str = Query(""),

@@ -88,24 +88,19 @@ def scrap_by_month(
     workshop: str = Query(None),
 ):
     """Брак по месяцам за последние N месяцев."""
-    from database.models import ScrapRecord, Equipment, Workshop
-    cutoff = date.today().replace(day=1) - timedelta(days=1)
-    cutoff = cutoff.replace(day=1) - timedelta(days=(months - 1) * 30)
-    cutoff = cutoff.replace(day=1)
-
+    from database.models._v9 import ScrapRecord
+    cutoff = date.today().replace(day=1)
     results = []
-    cursor = date.today().replace(day=1)
     for _ in range(months):
-        month_start = cursor
-        month_end = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
+        month_end = cutoff
+        month_start = (cutoff.replace(day=1) - timedelta(days=1)).replace(day=1)
         q = db.query(func.count(ScrapRecord.id)).filter(
-            ScrapRecord.created_at >= month_start.isoformat(),
-            ScrapRecord.created_at < month_end.isoformat(),
+            ScrapRecord.reported_at >= month_start.isoformat(),
+            ScrapRecord.reported_at < month_end.isoformat(),
         )
         count = q.scalar() or 0
         results.append({'month': month_start.strftime('%Y-%m'), 'count': count})
-        # prev month
-        cursor = (cursor - timedelta(days=1)).replace(day=1)
+        cutoff = month_start
 
     return {'months': list(reversed(results))}
 
@@ -117,14 +112,28 @@ def production_rate(
     days: int = Query(30, ge=7, le=365),
     workshop: str = Query(None),
 ):
-    """Выработка по дням: выполнено операций."""
-    from database.models import Operation
+    """Выработка по дням: завершённых шагов маршрута."""
+    from database.models._production import RouteStep, RouteStepStatus
     cutoff = date.today() - timedelta(days=days)
+    q = db.query(
+        func.date(RouteStep.finished_at),
+        func.count(RouteStep.id),
+    ).filter(
+        RouteStep.finished_at >= cutoff.isoformat(),
+        RouteStep.finished_at.isnot(None),
+        RouteStep.status == RouteStepStatus.DONE,
+    )
+    if workshop:
+        from database.models._production import Workshop
+        ws = db.query(Workshop).filter(Workshop.code == workshop).first()
+        if ws:
+            q = q.filter(RouteStep.workshop_id == ws.id)
+    q = q.group_by(func.date(RouteStep.finished_at)).order_by(
+        func.date(RouteStep.finished_at))
+    rows = dict(q.all())
+
     results = []
     for i in range(days):
-        d = cutoff + timedelta(days=i)
-        results.append({
-            'date': d.isoformat(),
-            'count': i % 7 + 3 + (i * 7) % 11,  # placeholder — real impl needs RouteStep.actual_end
-        })
+        d = (cutoff + timedelta(days=i)).isoformat()
+        results.append({'date': d, 'count': rows.get(d, 0)})
     return {'days': results}
