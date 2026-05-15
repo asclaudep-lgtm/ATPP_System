@@ -69,7 +69,8 @@ class MainToolBar(QToolBar):
             btn.setToolTip(tooltip)
         if primary:
             btn.setProperty("primary", True)
-            btn.setStyleSheet("")  # force style refresh
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
         self.addWidget(btn)
         return btn
 
