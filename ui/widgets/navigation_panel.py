@@ -1,23 +1,45 @@
-"""Navigation panel — product group tree, TP tree, search, context menus."""
+"""Sidebar navigation panel — module buttons + product/TP tree.
 
+Web-style sidebar: dark bg, orange accent, module sections.
+"""
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTreeWidget,
     QTreeWidgetItem, QPushButton, QLineEdit, QMenu, QMessageBox,
+    QLabel, QFrame, QSizePolicy, QScrollArea,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QFont, QColor
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
+from PyQt6.QtGui import QAction, QFont, QColor, QIcon
 
 from database.models import (
     Product, ProductGroup, TechProcess, TPStatus,
 )
 
 STATUS_BADGE = {
-    TPStatus.DRAFT:    ('#f39c12', 'Черновик'),
-    TPStatus.REVIEW:   ('#8e44ad', 'Согласование'),
-    TPStatus.REWORK:   ('#e74c3c', 'Доработка'),
-    TPStatus.APPROVED: ('#27ae60', 'Утверждён'),
-    TPStatus.ARCHIVED: ('#95a5a6', 'Архив'),
+    TPStatus.DRAFT:    ('#f97316', 'Черновик'),
+    TPStatus.REVIEW:   ('#8b5cf6', 'Согласование'),
+    TPStatus.REWORK:   ('#ef4444', 'Доработка'),
+    TPStatus.APPROVED: ('#22c55e', 'Утверждён'),
+    TPStatus.ARCHIVED: ('#94a3b8', 'Архив'),
 }
+
+
+class ModuleButton(QPushButton):
+    """Clickable module button with icon + label + optional counter."""
+    def __init__(self, icon: str, label: str, parent=None):
+        super().__init__(parent)
+        self.setText(f"{icon}  {label}")
+        self.setFixedHeight(36)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFlat(True)
+        self.setStyleSheet("""
+            QPushButton {
+                text-align: left; padding: 0 16px; border: none;
+                border-left: 3px solid transparent; border-radius: 0;
+                font-size: 13px; color: #94a3b8; background: transparent;
+            }
+            QPushButton:hover { background: #1e293b; color: #e2e8f0; }
+            QPushButton:checked { background: rgba(249,115,22,0.12); color: #fb923c; border-left: 3px solid #f97316; }
+        """)
 
 
 class NavigationPanel(QWidget):
@@ -26,429 +48,302 @@ class NavigationPanel(QWidget):
     product_edit_requested = pyqtSignal(int)
     product_delete_requested = pyqtSignal(int)
     new_product_requested = pyqtSignal()
-    new_tp_requested = pyqtSignal(object)  # product_id or None
+    new_tp_requested = pyqtSignal(object)
 
-    def __init__(self, db_manager, parent=None):
+    # Module signals
+    production_clicked = pyqtSignal()
+    qa_clicked = pyqtSignal()
+    tooling_clicked = pyqtSignal()
+    orders_clicked = pyqtSignal()
+    pdo_clicked = pyqtSignal()
+    dashboard_clicked = pyqtSignal()
+    references_clicked = pyqtSignal()
+    documents_clicked = pyqtSignal()
+    users_clicked = pyqtSignal()
+    audit_clicked = pyqtSignal()
+    batch_clicked = pyqtSignal()
+
+    def __init__(self, db_manager, user: dict = None, parent=None):
         super().__init__(parent)
         self.db_manager = db_manager
-        self.setMinimumWidth(240)
-        self.setMaximumWidth(340)
+        self.user = user or {}
+        self.setObjectName("nav_panel")
+        self.setMinimumWidth(260)
+        self.setMaximumWidth(360)
+        self.setStyleSheet("QWidget#nav_panel { background: #0f172a; }")
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # ── Header ──
+        header = QFrame()
+        header.setFixedHeight(52)
+        header.setStyleSheet(
+            "QFrame { background: #0f172a; border-bottom: 1px solid #1e293b; }")
+        h_layout = QHBoxLayout(header)
+        h_layout.setContentsMargins(16, 8, 16, 8)
+        icon_lbl = QLabel("A")
+        icon_lbl.setFixedSize(28, 28)
+        icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_lbl.setStyleSheet(
+            "QLabel { background: #f97316; color: white; border-radius: 6px; font-weight: bold; font-size: 14px; }")
+        h_layout.addWidget(icon_lbl)
+        title_lbl = QLabel("ATPP System")
+        title_lbl.setStyleSheet("QLabel { color: white; font-weight: 600; font-size: 14px; }")
+        h_layout.addWidget(title_lbl)
+        h_layout.addStretch()
+        layout.addWidget(header)
+
+        # ── Quick actions ──
+        actions_frame = QFrame()
+        actions_frame.setStyleSheet("QFrame { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 8px 12px; }")
+        al = QHBoxLayout(actions_frame)
+        al.setContentsMargins(4, 4, 4, 4)
+        al.setSpacing(6)
+
+        new_prod_btn = QPushButton("＋ Изделие")
+        new_prod_btn.setFixedHeight(32)
+        new_prod_btn.setStyleSheet(
+            "QPushButton { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); border-radius: 6px; padding: 0 12px; font-size: 12px; font-weight: 500; }"
+            "QPushButton:hover { background: rgba(249,115,22,0.25); }")
+        new_prod_btn.clicked.connect(self.new_product_requested)
+        al.addWidget(new_prod_btn)
+
+        new_tp_btn = QPushButton("＋ ТП")
+        new_tp_btn.setFixedHeight(32)
+        new_tp_btn.setStyleSheet(
+            "QPushButton { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); border-radius: 6px; padding: 0 12px; font-size: 12px; font-weight: 500; }"
+            "QPushButton:hover { background: rgba(139,92,246,0.25); }")
+        new_tp_btn.clicked.connect(lambda: self.new_tp_requested.emit(None))
+        al.addWidget(new_tp_btn)
+        al.addStretch()
+        layout.addWidget(actions_frame)
+
+        # ── Module buttons ──
+        modules_scroll = QScrollArea()
+        modules_scroll.setWidgetResizable(True)
+        modules_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        modules_scroll.setStyleSheet(
+            "QScrollArea { background: #0f172a; border: none; } "
+            "QScrollBar:vertical { width: 4px; background: transparent; } "
+            "QScrollBar::handle:vertical { background: #334155; border-radius: 2px; }")
+
+        modules_widget = QWidget()
+        modules_widget.setStyleSheet("background: #0f172a;")
+        mod_layout = QVBoxLayout(modules_widget)
+        mod_layout.setContentsMargins(0, 8, 0, 8)
+        mod_layout.setSpacing(1)
+
+        # Section: Production
+        self._add_section_label(mod_layout, "ПРОИЗВОДСТВО")
+        self._mod_dashboard = ModuleButton("📊", "Дашборд")
+        self._mod_dashboard.clicked.connect(self.dashboard_clicked)
+        mod_layout.addWidget(self._mod_dashboard)
+
+        self._mod_orders = ModuleButton("📋", "Производственные заказы")
+        self._mod_orders.clicked.connect(self.orders_clicked)
+        mod_layout.addWidget(self._mod_orders)
+
+        self._mod_pdo = ModuleButton("📦", "Диспетчер ПДО")
+        self._mod_pdo.clicked.connect(self.pdo_clicked)
+        mod_layout.addWidget(self._mod_pdo)
+
+        self._mod_qa = ModuleButton("✓", "QA-терминал")
+        self._mod_qa.clicked.connect(self.qa_clicked)
+        mod_layout.addWidget(self._mod_qa)
+
+        self._mod_tooling = ModuleButton("🔧", "Оснастка и инструмент")
+        self._mod_tooling.clicked.connect(self.tooling_clicked)
+        mod_layout.addWidget(self._mod_tooling)
+
+        # Section: Data
+        self._add_section_label(mod_layout, "ДАННЫЕ")
+        self._mod_refs = ModuleButton("📚", "Справочники")
+        self._mod_refs.clicked.connect(self.references_clicked)
+        mod_layout.addWidget(self._mod_refs)
+
+        self._mod_docs = ModuleButton("📄", "Документы")
+        self._mod_docs.clicked.connect(self.documents_clicked)
+        mod_layout.addWidget(self._mod_docs)
+
+        # Section: System (admin only)
+        if self.user.get('role') == 'admin':
+            self._add_section_label(mod_layout, "СИСТЕМА")
+            self._mod_users = ModuleButton("👤", "Пользователи")
+            self._mod_users.clicked.connect(self.users_clicked)
+            mod_layout.addWidget(self._mod_users)
+
+        self._mod_audit = ModuleButton("📋", "Аудит изменений")
+        self._mod_audit.clicked.connect(self.audit_clicked)
+        mod_layout.addWidget(self._mod_audit)
+
+        self._mod_batch = ModuleButton("⚡", "Batch-операции")
+        self._mod_batch.clicked.connect(self.batch_clicked)
+        mod_layout.addWidget(self._mod_batch)
+
+        mod_layout.addStretch()
+        modules_scroll.setWidget(modules_widget)
+        layout.addWidget(modules_scroll)
+
+        # ── Tree view (compact, below modules) ──
+        self._tab_widget = QTabWidget()
+        self._tab_widget.setStyleSheet("""
+            QTabWidget::pane { border: none; background: #0f172a; }
+            QTabBar::tab { background: #1e293b; color: #94a3b8; padding: 4px 12px; border: none; font-size: 11px; }
+            QTabBar::tab:selected { background: #0f172a; color: #fb923c; }
+        """)
+        self._product_tree = QTreeWidget()
+        self._product_tree.setHeaderHidden(True)
+        self._product_tree.setIndentation(16)
+        self._product_tree.setStyleSheet("""
+            QTreeWidget { background: #0f172a; color: #cbd5e1; border: none; font-size: 12px; }
+            QTreeWidget::item:hover { background: #1e293b; }
+            QTreeWidget::item:selected { background: rgba(249,115,22,0.12); color: #fb923c; }
+        """)
+        self._product_tree.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self._product_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._product_tree.customContextMenuRequested.connect(self._on_context_menu)
+
+        self._tp_tree = QTreeWidget()
+        self._tp_tree.setHeaderHidden(True)
+        self._tp_tree.setIndentation(16)
+        self._tp_tree.setStyleSheet("""
+            QTreeWidget { background: #0f172a; color: #cbd5e1; border: none; font-size: 12px; }
+            QTreeWidget::item:hover { background: #1e293b; }
+            QTreeWidget::item:selected { background: rgba(249,115,22,0.12); color: #fb923c; }
+        """)
+        self._tp_tree.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self._tp_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._tp_tree.customContextMenuRequested.connect(self._on_tp_context_menu)
+
+        self._tab_widget.addTab(self._product_tree, "📦 Изделия")
+        self._tab_widget.addTab(self._tp_tree, "📋 ТП")
+        layout.addWidget(self._tab_widget, 1)
+
+        # ── User footer ──
+        footer = QFrame()
+        footer.setFixedHeight(52)
+        footer.setStyleSheet("QFrame { background: #0f172a; border-top: 1px solid #1e293b; }")
+        f_layout = QHBoxLayout(footer)
+        f_layout.setContentsMargins(16, 8, 16, 8)
+        avatar = QLabel((self.user.get('full_name') or self.user.get('username') or '?')[0].upper())
+        avatar.setFixedSize(32, 32)
+        avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        avatar.setStyleSheet(
+            "QLabel { background: #334155; color: #e2e8f0; border-radius: 16px; font-weight: 600; font-size: 13px; }")
+        f_layout.addWidget(avatar)
+        user_info = QLabel(f"{self.user.get('full_name') or self.user.get('username')}\n{self.user.get('role') or ''}")
+        user_info.setStyleSheet("QLabel { color: #cbd5e1; font-size: 11px; }")
+        f_layout.addWidget(user_info)
+        f_layout.addStretch()
+        layout.addWidget(footer)
 
         # Search
-        search_layout = QHBoxLayout()
         self._search_edit = QLineEdit()
-        self._search_edit.setPlaceholderText("Поиск...")
+        self._search_edit.setPlaceholderText("🔎 Поиск...")
+        self._search_edit.setStyleSheet(
+            "QLineEdit { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 6px 12px; margin: 8px 12px; font-size: 12px; }"
+            "QLineEdit:focus { border-color: #f97316; }")
         self._search_edit.textChanged.connect(self._on_search)
-        search_layout.addWidget(self._search_edit)
-        layout.addLayout(search_layout)
+        layout.addWidget(self._search_edit)
 
-        # Navigation tabs
-        nav_tabs = QTabWidget()
-        nav_tabs.setTabPosition(QTabWidget.TabPosition.South)
-
-        # Products tab
-        products_panel = self._build_products_tab()
-        nav_tabs.addTab(products_panel, "Группа")
-
-        # TP tab
-        tp_panel = self._build_tp_tab()
-        nav_tabs.addTab(tp_panel, "ТП")
-
-        layout.addWidget(nav_tabs)
-        self._nav_tabs = nav_tabs
-
-    # ── Products tab ──────────────────────────────────────────────
-
-    def _build_products_tab(self):
-        panel = QWidget()
-        pl = QVBoxLayout(panel)
-        pl.setContentsMargins(0, 0, 0, 0)
-        pl.setSpacing(2)
-
-        btn_row = QHBoxLayout()
-        add_btn = QPushButton("+ Изделие")
-        add_btn.setFixedHeight(24)
-        add_btn.clicked.connect(self.new_product_requested)
-        add_btn.setStyleSheet(
-            "QPushButton { background-color: #27ae60; color: white; "
-            "border: none; padding: 2px 8px; border-radius: 3px; }")
-        edit_btn = QPushButton("Ред.")
-        edit_btn.setFixedHeight(24)
-        edit_btn.clicked.connect(self._on_edit_product_btn)
-        edit_btn.setStyleSheet(
-            "QPushButton { background-color: #2980b9; color: white; "
-            "border: none; padding: 2px 6px; border-radius: 3px; }")
-        del_btn = QPushButton("Удал.")
-        del_btn.setFixedHeight(24)
-        del_btn.clicked.connect(self._on_delete_product_btn)
-        del_btn.setStyleSheet(
-            "QPushButton { color: #e74c3c; border: none; padding: 2px 6px; }")
-        btn_row.addWidget(add_btn)
-        btn_row.addWidget(edit_btn)
-        btn_row.addWidget(del_btn)
-        btn_row.addStretch()
-        pl.addLayout(btn_row)
-
-        from ui.widgets.group_tree import GroupTreeWidget
-        self.group_tree = GroupTreeWidget(self.db_manager)
-        self.group_tree.product_double_clicked.connect(
-            self.product_double_clicked)
-        self.group_tree.product_edit_requested.connect(
-            self.product_edit_requested)
-        self.group_tree.product_delete_requested.connect(
-            self.product_delete_requested)
-        self.group_tree.new_product_requested.connect(
-            lambda gid: self.new_product_requested.emit())
-        self.group_tree.template_double_clicked.connect(
-            self.tp_double_clicked)
-        self.products_tree = self.group_tree
-        pl.addWidget(self.group_tree)
-
-        return panel
-
-    def _on_edit_product_btn(self):
-        item = self.products_tree.currentItem()
-        if item:
-            data = item.data(0, Qt.ItemDataRole.UserRole)
-            if isinstance(data, int):
-                self.product_edit_requested.emit(data)
-
-    def _on_delete_product_btn(self):
-        item = self.products_tree.currentItem()
-        if item:
-            data = item.data(0, Qt.ItemDataRole.UserRole)
-            if isinstance(data, int):
-                self.product_delete_requested.emit(data)
-
-    # ── TP tab ────────────────────────────────────────────────────
-
-    def _build_tp_tab(self):
-        panel = QWidget()
-        tpl = QVBoxLayout(panel)
-        tpl.setContentsMargins(0, 0, 0, 0)
-        tpl.setSpacing(2)
-
-        btn_row = QHBoxLayout()
-        add_btn = QPushButton("+ ТП")
-        add_btn.setFixedHeight(24)
-        add_btn.clicked.connect(lambda: self.new_tp_requested.emit(None))
-        add_btn.setStyleSheet(
-            "QPushButton { background-color: #8e44ad; color: white; "
-            "border: none; padding: 2px 8px; border-radius: 3px; }")
-        refresh_btn = QPushButton("↺")
-        refresh_btn.setFixedHeight(24)
-        refresh_btn.setToolTip("Обновить")
-        refresh_btn.clicked.connect(self.load_data)
-        btn_row.addWidget(add_btn)
-        btn_row.addStretch()
-        btn_row.addWidget(refresh_btn)
-        tpl.addLayout(btn_row)
-
-        self.tp_tree = QTreeWidget()
-        self.tp_tree.setHeaderHidden(True)
-        self.tp_tree.itemDoubleClicked.connect(self._on_tp_dbl_click)
-        self.tp_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.tp_tree.customContextMenuRequested.connect(self._tp_context_menu)
-        tpl.addWidget(self.tp_tree)
-
-        return panel
-
-    def _on_tp_dbl_click(self, item, col):
-        tp_id = item.data(0, Qt.ItemDataRole.UserRole)
-        if isinstance(tp_id, int):
-            self.tp_double_clicked.emit(tp_id)
-
-    # ── Data loading ──────────────────────────────────────────────
-
-    def load_data(self):
-        self._load_products_tree()
-        self._load_tp_tree()
-
-    def reload(self):
-        self.load_data()
-
-    def _load_products_tree(self):
-        if hasattr(self, 'group_tree'):
-            self.group_tree.reload()
-            return
-
-        # Legacy fallback (deprecated)
-        self.products_tree.clear()
-        session = self.db_manager.Session()
-        try:
-            root_groups = (session.query(ProductGroup)
-                           .filter(ProductGroup.parent_id.is_(None))
-                           .order_by(ProductGroup.sort_order, ProductGroup.name)
-                           .all())
-
-            group_items = {}
-
-            def make_group_item(group):
-                if group.id in group_items:
-                    return group_items[group.id]
-                display = group.display_name or group.name
-                count = _count_products_in_group(session, group)
-                g_item = QTreeWidgetItem()
-                g_item.setText(0, f"📁 {display}  ({count})")
-                g_item.setData(0, Qt.ItemDataRole.UserRole, ('group', group.id))
-                font = g_item.font(0)
-                font.setBold(True)
-                g_item.setFont(0, font)
-                g_item.setForeground(0, QColor('#2c3e50'))
-                group_items[group.id] = g_item
-                return g_item
-
-            def _count_products_in_group(sess, group):
-                cnt = sess.query(Product).filter_by(group_id=group.id).count()
-                for child in group.children:
-                    cnt += _count_products_in_group(sess, child)
-                return cnt
-
-            auto_subgroups = {}
-
-            def _get_or_make_subgroup(parent_item, prefix):
-                key = (id(parent_item), prefix)
-                cached = auto_subgroups.get(key)
-                if cached is not None:
-                    return cached
-                sg = QTreeWidgetItem()
-                sg.setText(0, f"📂 {prefix}")
-                sg.setData(0, Qt.ItemDataRole.UserRole, ('auto_group', prefix))
-                f = sg.font(0)
-                f.setBold(True)
-                sg.setFont(0, f)
-                sg.setForeground(0, QColor('#34495e'))
-                parent_item.addChild(sg)
-                auto_subgroups[key] = sg
-                return sg
-
-            def _split_designation(designation):
-                import re
-                parts = [s for s in re.split(r'[.\s]+', (designation or '').strip()) if s]
-                return parts
-
-            def _add_product_item(p, group_item, group_prefix=''):
-                designation = (p.designation or '').strip()
-                trimmed = designation
-                if group_prefix and designation.startswith(group_prefix):
-                    rest = designation[len(group_prefix):]
-                    if rest.startswith('.') or rest.startswith(' ') or not rest:
-                        trimmed = rest.lstrip('. ')
-                parts = _split_designation(trimmed)
-                container = group_item
-                for i in range(len(parts) - 1):
-                    prefix = '.'.join(parts[: i + 1])
-                    container = _get_or_make_subgroup(container, prefix)
-
-                item = QTreeWidgetItem()
-                item.setText(0, f"{designation}  —  {p.name}")
-                item.setData(0, Qt.ItemDataRole.UserRole, p.id)
-                item.setToolTip(0,
-                    f"Обозначение: {p.designation}\n"
-                    f"Наименование: {p.name}\n"
-                    f"Материал: {p.material.name if p.material else '—'}\n"
-                    f"Масса: {p.mass or '—'} кг"
-                )
-                container.addChild(item)
-                tps = (session.query(TechProcess)
-                       .filter(TechProcess.product_id == p.id,
-                               (TechProcess.is_deleted == False) | (TechProcess.is_deleted.is_(None)))
-                       .all())
-                for tp in tps:
-                    color, status_label = STATUS_BADGE.get(
-                        tp.status, ('#555', str(tp.status)))
-                    variant = getattr(tp, 'execution_variant', None)
-                    variant_part = f"  /  Исп.: {variant}" if variant else ""
-                    tp_item = QTreeWidgetItem()
-                    tp_item.setText(0, f"  ТП: {tp.number}{variant_part}  [{status_label}]")
-                    tp_item.setData(0, Qt.ItemDataRole.UserRole, ('tp', tp.id))
-                    tp_item.setForeground(0, QColor(color))
-                    tp_item.setToolTip(0,
-                        f"ТП: {tp.number}\n"
-                        f"Версия: {tp.version or '1.0'}\n"
-                        f"Вариант исполнения: {variant or '—'}\n"
-                        f"Статус: {status_label}"
-                    )
-                    item.addChild(tp_item)
-
-            def add_group_to_tree(group, parent_item=None):
-                g_item = make_group_item(group)
-                if parent_item is None:
-                    self.products_tree.addTopLevelItem(g_item)
-                else:
-                    parent_item.addChild(g_item)
-                for child_group in sorted(group.children,
-                                          key=lambda g: (g.sort_order, g.name)):
-                    add_group_to_tree(child_group, g_item)
-                products = (session.query(Product)
-                            .filter_by(group_id=group.id)
-                            .order_by(Product.designation)
-                            .all())
-                group_prefix = (group.name or '').strip()
-                for p in products:
-                    _add_product_item(p, g_item, group_prefix=group_prefix)
-                if _count_products_in_group(session, group) <= 50:
-                    g_item.setExpanded(True)
-
-            for root_group in root_groups:
-                add_group_to_tree(root_group)
-
-            ungrouped = (session.query(Product)
-                         .filter(Product.group_id.is_(None))
-                         .order_by(Product.designation)
-                         .all())
-            if ungrouped:
-                other_item = QTreeWidgetItem()
-                other_item.setText(0, f"📁 Без группы  ({len(ungrouped)})")
-                other_item.setData(0, Qt.ItemDataRole.UserRole, ('group', None))
-                font = other_item.font(0)
-                font.setBold(True)
-                other_item.setFont(0, font)
-                self.products_tree.addTopLevelItem(other_item)
-                for p in ungrouped:
-                    _add_product_item(p, other_item)
-
-        finally:
-            session.close()
-
-    def _load_tp_tree(self):
-        self.tp_tree.clear()
-        session = self.db_manager.Session()
-        try:
-            status_groups = {
-                TPStatus.DRAFT:    QTreeWidgetItem(['Черновики']),
-                TPStatus.REVIEW:   QTreeWidgetItem(['На согласовании']),
-                TPStatus.REWORK:   QTreeWidgetItem(['На доработке']),
-                TPStatus.APPROVED: QTreeWidgetItem(['Утверждённые']),
-                TPStatus.ARCHIVED: QTreeWidgetItem(['Архив']),
-            }
-
-            tps = (session.query(TechProcess)
-                   .join(Product)
-                   .filter((TechProcess.is_deleted == False) | (TechProcess.is_deleted.is_(None)))
-                   .order_by(TechProcess.number)
-                   .all())
-
-            counts = {s: 0 for s in status_groups}
-
-            for tp in tps:
-                color, status_label = STATUS_BADGE.get(tp.status, ('#555', str(tp.status)))
-                item = QTreeWidgetItem()
-                prod_name = tp.product.name if tp.product else ''
-                item.setText(0, f"{tp.number}  —  {prod_name}")
-                item.setData(0, Qt.ItemDataRole.UserRole, tp.id)
-                item.setToolTip(0, f"ТП: {tp.number}\nИзделие: {prod_name}\nСтатус: {status_label}")
-                item.setForeground(0, QColor(color))
-
-                if tp.status in status_groups:
-                    status_groups[tp.status].addChild(item)
-                    counts[tp.status] = counts.get(tp.status, 0) + 1
-
-            for status, group_item in status_groups.items():
-                count = counts.get(status, 0)
-                if count > 0:
-                    color, lbl = STATUS_BADGE.get(status, ('#555', ''))
-                    group_item.setText(0, f"{lbl}  ({count})")
-                    group_item.setForeground(0, QColor(color))
-                    group_font = QFont()
-                    group_font.setBold(True)
-                    group_item.setFont(0, group_font)
-                    self.tp_tree.addTopLevelItem(group_item)
-                    group_item.setExpanded(True)
-
-        finally:
-            session.close()
-
-    # ── Search ────────────────────────────────────────────────────
+    def _add_section_label(self, layout, text):
+        lbl = QLabel(text)
+        lbl.setStyleSheet(
+            "QLabel { color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 8px 16px 4px 16px; }")
+        layout.addWidget(lbl)
 
     def _on_search(self, text):
-        if hasattr(self, 'group_tree') and self.group_tree is self.products_tree:
-            self.group_tree.set_search(text)
-            self._on_search_tp_tree(text)
+        self._populate_products(text)
+
+    def _on_item_double_clicked(self, item, column):
+        entity_id = item.data(0, Qt.ItemDataRole.UserRole)
+        item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if entity_id is None:
             return
-        self._on_search_legacy(text)
+        if item_type == 'product':
+            self.product_double_clicked.emit(entity_id)
+        elif item_type == 'tp':
+            self.tp_double_clicked.emit(entity_id)
 
-    def _on_search_tp_tree(self, text):
-        text = (text or '').lower().strip()
-
-        def _filt(item):
-            haystack = item.text(0).lower()
-            tip = item.toolTip(0)
-            if tip:
-                haystack += '\n' + tip.lower()
-            any_child = False
-            for j in range(item.childCount()):
-                if _filt(item.child(j)):
-                    any_child = True
-            visible = (not text) or (text in haystack) or any_child
-            item.setHidden(not visible)
-            if visible and any_child:
-                item.setExpanded(True)
-            return visible
-
-        if hasattr(self, 'tp_tree') and self.tp_tree:
-            for i in range(self.tp_tree.topLevelItemCount()):
-                _filt(self.tp_tree.topLevelItem(i))
-
-    def _on_search_legacy(self, text):
-        text = (text or '').lower().strip()
-
-        def _filter_item(item):
-            data = item.data(0, Qt.ItemDataRole.UserRole)
-            is_group = isinstance(data, tuple) and data[0] in ('group', 'auto_group')
-            if not text:
-                item.setHidden(False)
-                for j in range(item.childCount()):
-                    _filter_item(item.child(j))
-                return True
-            haystacks = [item.text(0).lower()]
-            tip = item.toolTip(0)
-            if tip:
-                haystacks.append(tip.lower())
-            if isinstance(data, tuple) and len(data) > 1:
-                haystacks.append(str(data[1]).lower())
-            self_match = any(text in h for h in haystacks)
-            any_child_visible = False
-            for j in range(item.childCount()):
-                if _filter_item(item.child(j)):
-                    any_child_visible = True
-            visible = (self_match or any_child_visible) if not is_group else any_child_visible
-            item.setHidden(not visible)
-            if visible and (any_child_visible or self_match):
-                item.setExpanded(True)
-            return visible
-
-        for tree in (getattr(self, 'products_tree', None),
-                     getattr(self, 'tp_tree', None)):
-            if tree is None:
-                continue
-            for i in range(tree.topLevelItemCount()):
-                _filter_item(tree.topLevelItem(i))
-
-    def focus_search(self):
-        self._search_edit.setFocus()
-        self._search_edit.selectAll()
-
-    # ── Context menus ─────────────────────────────────────────────
-
-    def _tp_context_menu(self, pos):
-        item = self.tp_tree.itemAt(pos)
+    def _on_context_menu(self, pos):
+        item = self._product_tree.itemAt(pos)
+        if item is None:
+            return
+        entity_id = item.data(0, Qt.ItemDataRole.UserRole)
+        item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if entity_id is None:
+            return
         menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 4px; }
+            QMenu::item { padding: 6px 16px; border-radius: 4px; }
+            QMenu::item:selected { background: rgba(249,115,22,0.15); }
+        """)
+        if item_type == 'product':
+            menu.addAction("✎ Редактировать", lambda: self.product_edit_requested.emit(entity_id))
+            menu.addAction("＋ Новый ТП", lambda: self.new_tp_requested.emit(entity_id))
+            menu.addAction("🗑 Удалить", lambda: self.product_delete_requested.emit(entity_id))
+        elif item_type == 'tp':
+            menu.addAction("Открыть ТП", lambda: self.tp_double_clicked.emit(entity_id))
+        menu.exec(self._product_tree.viewport().mapToGlobal(pos))
 
-        new_tp = QAction("Создать ТП", self)
-        new_tp.triggered.connect(lambda: self.new_tp_requested.emit(None))
-        menu.addAction(new_tp)
+    def _on_tp_context_menu(self, pos):
+        item = self._tp_tree.itemAt(pos)
+        if item is None:
+            return
+        entity_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if entity_id is None:
+            return
+        menu = QMenu(self)
+        menu.setStyleSheet(self._product_tree.styleSheet())
+        menu.addAction("Открыть ТП", lambda: self.tp_double_clicked.emit(entity_id))
+        menu.exec(self._tp_tree.viewport().mapToGlobal(pos))
 
-        if item:
-            tp_id = item.data(0, Qt.ItemDataRole.UserRole)
-            if isinstance(tp_id, int):
-                open_act = QAction("Открыть ТП", self)
-                open_act.triggered.connect(
-                    lambda checked, tid=tp_id: self.tp_double_clicked.emit(tid))
-                menu.addAction(open_act)
+    def load_data(self, search: str = ""):
+        self._populate_products(search)
+        self._populate_tps(search)
 
-        menu.exec(self.tp_tree.viewport().mapToGlobal(pos))
+    def _populate_products(self, search: str = ""):
+        self._product_tree.clear()
+        try:
+            with self.db_manager.get_session() as s:
+                groups = s.query(ProductGroup).order_by(ProductGroup.name).all()
+                for g in groups:
+                    grp_item = QTreeWidgetItem([f"▸ {g.name}"])
+                    grp_item.setFlags(grp_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+                    grp_item.setData(0, Qt.ItemDataRole.UserRole, None)
+                    self._product_tree.addTopLevelItem(grp_item)
+
+                    q = s.query(Product).filter(
+                        Product.is_deleted == False,
+                        Product.group_id == g.id,
+                    )
+                    if search:
+                        q = q.filter(Product.designation.ilike(f"%{search}%"))
+                    for p in q.order_by(Product.designation).all():
+                        item = QTreeWidgetItem([p.designation])
+                        item.setData(0, Qt.ItemDataRole.UserRole, p.id)
+                        item.setData(0, Qt.ItemDataRole.UserRole + 1, 'product')
+                        item.setToolTip(0, f"{p.designation} — {p.name}")
+                        grp_item.addChild(item)
+        except Exception:
+            pass
+
+    def _populate_tps(self, search: str = ""):
+        self._tp_tree.clear()
+        try:
+            with self.db_manager.get_session() as s:
+                q = s.query(TechProcess).filter(TechProcess.is_deleted == False)
+                if search:
+                    q = q.filter(TechProcess.number.ilike(f"%{search}%"))
+                for tp in q.order_by(TechProcess.number).all():
+                    item = QTreeWidgetItem([f"{tp.number}"])
+                    item.setData(0, Qt.ItemDataRole.UserRole, tp.id)
+                    item.setData(0, Qt.ItemDataRole.UserRole + 1, 'tp')
+                    color, status_text = STATUS_BADGE.get(tp.status, ('#94a3b8', str(tp.status)))
+                    item.setToolTip(0, f"{tp.number} — {tp.product.designation if tp.product else '—'} [{status_text}]")
+                    self._tp_tree.addTopLevelItem(item)
+        except Exception:
+            pass

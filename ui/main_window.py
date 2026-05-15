@@ -63,7 +63,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
         # Navigation panel (left)
-        self.nav_panel = NavigationPanel(self.db_manager)
+        self.nav_panel = NavigationPanel(self.db_manager, user=self.user)
         splitter.addWidget(self.nav_panel)
 
         # Work area (center) — tabbed
@@ -113,6 +113,22 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         nav.new_product_requested.connect(self._new_product)
         nav.new_tp_requested.connect(
             lambda pid: self._new_tech_process(pid if pid else None))
+
+        # Sidebar module buttons → menu actions
+        nav.production_clicked.connect(self._open_production_panel)
+        nav.qa_clicked.connect(self._open_qa_terminal)
+        nav.tooling_clicked.connect(self._open_tooling)
+        nav.orders_clicked.connect(lambda: self._open_production_panel())
+        nav.pdo_clicked.connect(self._open_pdo_dispatcher)
+        nav.dashboard_clicked.connect(self._open_manager_dashboard)
+        nav.references_clicked.connect(self._open_references)
+        nav.documents_clicked.connect(self._open_doc_dialog)
+        nav.users_clicked.connect(self._open_users_dialog)
+        nav.audit_clicked.connect(lambda: self._open_audit_log())
+        nav.batch_clicked.connect(lambda: QMessageBox.information(
+            self, "Batch-операции",
+            "Используйте веб-интерфейс для batch-операций.\n"
+            "Откройте http://localhost:8000 и перейдите на вкладку «⚡ Batch-операции»."))
 
         # Menu
         menu = MainMenu(self.user, self)
