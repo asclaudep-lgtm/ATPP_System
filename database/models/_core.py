@@ -77,6 +77,7 @@ class User(Base):
     email = Column(String(100))
     role = Column(String(20), default='user')  # admin, technologist, engineer, user
     is_active = Column(Boolean, default=True)
+    api_key = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime)
     # D15: при первом входе пользователь обязан сменить пароль.

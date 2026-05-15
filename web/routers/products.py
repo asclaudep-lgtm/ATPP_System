@@ -9,14 +9,18 @@ from database.models import Product
 router = APIRouter(tags=["products"])
 
 
-@router.get("/products/workshops")
+@router.get("/products/workshops",
+    summary="Список цехов",
+    description="Возвращает все производственные цеха для фильтров")
 def list_workshops(db: Session = Depends(get_db), _=Depends(get_current_user)):
     from database.models._production import Workshop
     rows = db.query(Workshop).order_by(Workshop.code).all()
     return [{'id': r.id, 'code': r.code, 'name': r.name} for r in rows]
 
 
-@router.get("/products", response_model=ProductListOut)
+@router.get("/products", response_model=ProductListOut,
+    summary="Список изделий",
+    description="Поиск по обозначению с пагинацией")
 def list_products(
     search: str = Query(""),
     page: int = Query(1, ge=1),

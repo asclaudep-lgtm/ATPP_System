@@ -50,13 +50,20 @@ app.include_router(mobile.router, prefix="/api")
 app.include_router(pdo.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")
 app.include_router(batch.router, prefix="/api")
-@app.post("/api/auth/login")
+
+@app.post("/api/auth/login", tags=["auth"],
+    summary="Вход в систему",
+    description="Логин/пароль или API-ключ (поле api_key)")
 def login(body: LoginRequest):
-    from web.auth import login_user
-    user = login_user(_get_db_manager(), body.username, body.password)
+    from web.auth import login_user, login_user_by_api_key
+    api_key = getattr(body, 'api_key', None)
+    if api_key:
+        user = login_user_by_api_key(_get_db_manager(), api_key)
+    else:
+        user = login_user(_get_db_manager(), body.username, body.password)
     if user is None:
         from fastapi import HTTPException
-        raise HTTPException(401, "Invalid username or password")
+        raise HTTPException(401, "Invalid credentials")
     return {
         "access_token": user["access_token"],
         "token_type": "bearer",
@@ -69,7 +76,21 @@ def login(body: LoginRequest):
     }
 
 
-@app.get("/api/health")
+@app.post("/api/auth/reset-password", tags=["auth"],
+    summary="Сброс пароля",
+    description="Отправляет новый пароль для указанного логина/email")
+def reset_password(body: dict):
+    from web.auth import reset_user_password
+    pwd = reset_user_password(_get_db_manager(), body.get("login", ""))
+    if pwd is None:
+        from fastapi import HTTPException
+        raise HTTPException(404, "User not found")
+    return {"message": f"Новый пароль: {pwd}", "new_password": pwd}
+
+
+@app.get("/api/health", tags=["system"],
+    summary="Проверка здоровья сервера",
+    description="Возвращает статус сервера и БД")
 def health():
     db_status = "ok"
     try:

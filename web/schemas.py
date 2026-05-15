@@ -5,8 +5,9 @@ from pydantic import BaseModel, ConfigDict
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = ""
+    password: str = ""
+    api_key: Optional[str] = None
 
 
 class LoginResponse(BaseModel):
