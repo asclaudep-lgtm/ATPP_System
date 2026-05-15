@@ -13,6 +13,7 @@ class MainToolBar(QToolBar):
     refresh = pyqtSignal()
     open_users = pyqtSignal()
     open_global_search = pyqtSignal()
+    open_pdo_dispatcher = pyqtSignal()
     toggle_theme = pyqtSignal()
     cycle_font_size = pyqtSignal()
 
@@ -40,6 +41,17 @@ class MainToolBar(QToolBar):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.addWidget(spacer)
+
+        # PDO quick access
+        pdo_btn = QPushButton('📋 ПДО')
+        pdo_btn.setFixedHeight(28)
+        pdo_btn.setToolTip('Диспетчер ПДО — производственные заказы')
+        pdo_btn.setStyleSheet(
+            "QPushButton { background-color: #8e44ad; color: white; "
+            "border: none; padding: 2px 10px; border-radius: 3px; } "
+            "QPushButton:hover { background-color: #7d3c98; }")
+        pdo_btn.clicked.connect(self.open_pdo_dispatcher)
+        self.addWidget(pdo_btn)
 
         # Global search button
         search_btn = QPushButton('🔎  Ctrl+P')

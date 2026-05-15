@@ -45,7 +45,7 @@ PRIORITY_STARS = {1: '🔴🔴🔴', 2: '🟠🟠', 3: '🟡', 4: '⚪', 5: '—
 
 
 class PDOOrderCard(QFrame):
-    """Rich order card for Kanban column."""
+    """Rich order card for Kanban column — draggable between columns."""
 
     clicked = pyqtSignal(int)
 
@@ -54,7 +54,9 @@ class PDOOrderCard(QFrame):
         self.order_id = order_data['id']
         self._data = order_data
         self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self._drag_start = None
+        self.setMouseTracking(True)
         self.setToolTip(
             f"№{order_data['number']} | {order_data['product']}\n"
             f"Статус: {order_data['status']} | Срок: {order_data.get('due_date', '—')}")
@@ -164,12 +166,37 @@ class PDOOrderCard(QFrame):
             f'PDOOrderCard:hover {{ background: #f0f4ff; }}')
 
     def mousePressEvent(self, ev):
+        if ev.button() == Qt.MouseButton.LeftButton:
+            self._drag_start = ev.position().toPoint()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
         self.clicked.emit(self.order_id)
         super().mousePressEvent(ev)
 
+    def mouseMoveEvent(self, ev):
+        if self._drag_start and (
+            (ev.position().toPoint() - self._drag_start).manhattanLength() > 10
+        ):
+            from PyQt6.QtCore import QMimeData
+            from PyQt6.QtGui import QDrag
+            drag = QDrag(self)
+            mime = QMimeData()
+            mime.setText(str(self.order_id))
+            drag.setMimeData(mime)
+            drag.exec(Qt.DropAction.MoveAction)
+            self._drag_start = None
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
+        super().mouseMoveEvent(ev)
+
+    def mouseReleaseEvent(self, ev):
+        self._drag_start = None
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+        super().mouseReleaseEvent(ev)
+
 
 class PDOKanbanColumn(QGroupBox):
-    """Scrollable column of order cards for one status."""
+    """Scrollable column of order cards — accepts drops from other columns."""
+
+    order_dropped = pyqtSignal(int, object)  # order_id, new_status
 
     def __init__(self, status: PDOStatus, parent=None):
         super().__init__(parent)
@@ -177,6 +204,7 @@ class PDOKanbanColumn(QGroupBox):
         color = STATUS_COLORS.get(status, '#999')
         title = f'{status.value}  '
         self.setTitle(title)
+        self.setAcceptDrops(True)
         self.setStyleSheet(
             f'PDOKanbanColumn {{ '
             f'border-top: 3px solid {color}; '
@@ -200,6 +228,31 @@ class PDOKanbanColumn(QGroupBox):
         self._card_layout.addStretch()
         self._scroll.setWidget(self._container)
         layout.addWidget(self._scroll)
+
+    def dragEnterEvent(self, ev):
+        if ev.mimeData().hasText():
+            ev.acceptProposedAction()
+            self.setStyleSheet(self.styleSheet().replace(
+                'background: #f8f9fa', 'background: #e3f2fd'))
+        super().dragEnterEvent(ev)
+
+    def dragLeaveEvent(self, ev):
+        color = STATUS_COLORS.get(self.status, '#999')
+        self.setStyleSheet(
+            f'PDOKanbanColumn {{ border-top: 3px solid {color}; '
+            f'background: #f8f9fa; border-radius: 6px; padding-top: 12px; }}')
+        super().dragLeaveEvent(ev)
+
+    def dropEvent(self, ev):
+        if ev.mimeData().hasText():
+            try:
+                order_id = int(ev.mimeData().text())
+                self.order_dropped.emit(order_id, self.status)
+                ev.acceptProposedAction()
+            except ValueError:
+                pass
+        self.dragLeaveEvent(ev)
+        super().dropEvent(ev)
 
     def clear_cards(self):
         while self._card_layout.count() > 1:
@@ -290,6 +343,7 @@ class PDODispatcherWidget(QWidget):
         self._columns = {}
         for st in KANBAN_COLUMNS:
             col = PDOKanbanColumn(st)
+            col.order_dropped.connect(self._on_order_dropped)
             self._kanban_layout.addWidget(col)
             self._columns[st] = col
 
@@ -771,6 +825,23 @@ class PDODispatcherWidget(QWidget):
             wb.save(str(path))
 
         QMessageBox.information(self, 'Готово', f'Карта заказа сохранена:\n{path}')
+
+    def _on_order_dropped(self, order_id, new_status):
+        with self.db_manager.get_session() as s:
+            from database.models import ProductionOrder
+            order = s.query(ProductionOrder).get(order_id)
+            if order and order.status != new_status:
+                old_status = order.status
+                order.status = new_status
+                # Create a handoff record for the move
+                handoff = PDOHandoff(
+                    order_id=order_id,
+                    from_dept=old_status.value if old_status else '?',
+                    to_dept=new_status.value,
+                    comment=f'Перемещено drag-and-drop',
+                )
+                s.add(handoff)
+        self.refresh()
 
     def _batch_move(self):
         target = self._batch_combo.currentData()

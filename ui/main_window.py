@@ -219,6 +219,8 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         if self.user.get('role') == 'admin':
             tb.open_users.connect(self._open_users_dialog)
         tb.open_global_search.connect(self._open_quick_search)
+        if hasattr(tb, 'open_pdo_dispatcher'):
+            tb.open_pdo_dispatcher.connect(self._open_pdo_dispatcher)
         tb.toggle_theme.connect(self._toggle_theme)
         tb.cycle_font_size.connect(self._cycle_font_size)
 
