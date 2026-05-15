@@ -248,6 +248,13 @@ class NavigationPanel(QWidget):
         self._search_edit.textChanged.connect(self._on_search)
         layout.addWidget(self._search_edit)
 
+        # Legacy public names for external access
+        self.products_tree = self._product_tree
+
+    def focus_search(self):
+        self._search_edit.setFocus()
+        self._search_edit.selectAll()
+
     def _add_section_label(self, layout, text):
         lbl = QLabel(text)
         lbl.setStyleSheet(
