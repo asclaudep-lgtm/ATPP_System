@@ -411,12 +411,7 @@ def apply_theme(app: QApplication, *, theme: str = "light", font_size: int = 9) 
     theme: 'light' | 'dark'
     font_size: base font size in points (9 = ~12px on Windows)
     """
-    if theme == "dark":
-        app.setStyleSheet(DARK_QSS)
-    else:
-        app.setStyleSheet(LIGHT_QSS)
-
-    # Apply qfluentwidgets native theme
+    # 1. qfluentwidgets native theme FIRST (so our QSS overrides it)
     try:
         from ui.fluent_compat import apply_qfluent_accent, apply_qfluent_theme
         apply_qfluent_theme(theme)
@@ -424,10 +419,20 @@ def apply_theme(app: QApplication, *, theme: str = "light", font_size: int = 9) 
     except Exception:
         pass
 
+    # 2. Our QSS AFTER — overrides any global styles qfluentwidgets set
+    if theme == "dark":
+        app.setStyleSheet(DARK_QSS)
+    else:
+        app.setStyleSheet(LIGHT_QSS)
+
+    # 3. Font
     f: QFont = app.font()
     if font_size and font_size > 0:
         f.setPointSize(int(font_size))
         app.setFont(f)
+
+    # 4. Force repaint — ensures all widgets pick up new stylesheet
+    app.processEvents()
 
 
 def current_accent() -> str:
