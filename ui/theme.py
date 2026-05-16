@@ -1,14 +1,31 @@
-"""
-ATPP theme — web-style QSS, единый для светлой и тёмной тем.
+"""ATPP theme — web-style QSS в оранжевой гамме + Fluent-runtime.
 
-Использует property-селекторы Qt (например QPushButton[primary="true"])
-вместо inline-стилей. При смене темы достаточно вызвать apply_theme() —
-все виджеты обновятся автоматически.
+«Оранжевый web-style» задаётся QSS-блоками ниже (их же видит веб-SPA
+на Vue+Tailwind: tabular UI, тёмный sidebar, оранжевый акцент #f97316).
+Используются property-селекторы Qt (QPushButton[primary="true"]) —
+ничего не разводим в inline-стилях.
+
+Дополнительно в apply_theme() подключается Fluent-runtime
+(qfluentwidgets.setTheme + setThemeColor) — это даёт тот же оранжевый
+акцент внутри Fluent-виджетов (PrimaryPushButton, LineEdit, FluentIcon
+и т.п.). Если qfluentwidgets не установлен — graceful fallback,
+приложение работает и выглядит тем же QSS (без Fluent-рюшечек).
+
+Дизайн-токены (единственный источник правды):
+- ACCENT_DEFAULT  = "#f97316" (orange-500)
+- ACCENT_HOVER    = "#ea580c" (orange-600)
+- ACCENT_TINT_LIGHT = rgba(249,115,22,0.10)
+- ACCENT_TINT_DARK  = rgba(249,115,22,0.20)
 """
+
 from __future__ import annotations
 
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import QApplication
+
+ACCENT_DEFAULT = "#f97316"
+ACCENT_HOVER = "#ea580c"
+ACCENT_FG = "#ffffff"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Светлая тема (web-style: sidebar тёмный, workspace светлый)
@@ -19,6 +36,11 @@ LIGHT_QSS = """
 QWidget { color: #334155; }
 QMainWindow { background: #f1f5f9; }
 QDialog { background: #ffffff; }
+
+/* Явные правила для QLabel/QCheckBox/QRadioButton — иначе
+   в некоторых версиях Qt они не подхватывают color из QWidget. */
+QLabel { color: #334155; background: transparent; }
+QCheckBox, QRadioButton { color: #334155; background: transparent; }
 
 /* ── Toolbar ── */
 QToolBar {
@@ -156,6 +178,11 @@ QWidget { color: #e2e8f0; }
 QMainWindow { background: #0f172a; }
 QDialog { background: #1e293b; }
 
+/* Явные правила для QLabel/QCheckBox/QRadioButton — иначе
+   в некоторых версиях Qt они не подхватывают color из QWidget. */
+QLabel { color: #e2e8f0; background: transparent; }
+QCheckBox, QRadioButton { color: #e2e8f0; background: transparent; }
+
 QToolBar { background: #1e293b; border-bottom: 1px solid #334155; spacing: 6px; padding: 4px 8px; }
 QToolBar QPushButton {
     background: transparent; color: #94a3b8; border: 1px solid #334155;
@@ -243,12 +270,43 @@ QWidget#nav_panel, QTreeWidget#nav_panel, QListWidget#nav_panel {
 """
 
 
-def apply_theme(app: QApplication, *, theme: str = 'light', font_size: int = 9) -> None:
+def _apply_fluent_runtime(theme: str, accent_color: str) -> None:
+    """Подключить qfluentwidgets.setTheme/setThemeColor, если доступно.
+
+    Безопасно выполняется при любом отсутствии модуля — это просто
+    раскраска Fluent-виджетов; QSS ниже в любом случае даст верную
+    оранжевую тему.
+    """
+    try:
+        from qfluentwidgets import Theme, setTheme, setThemeColor
+    except Exception:
+        return
+    try:
+        setTheme(Theme.DARK if theme == "dark" else Theme.LIGHT)
+        setThemeColor(QColor(accent_color))
+    except Exception:
+        # Никогда не падаем из-за темы — это лишь косметика.
+        pass
+
+
+def apply_theme(
+    app: QApplication,
+    *,
+    theme: str = "light",
+    font_size: int = 9,
+    accent_color: str = ACCENT_DEFAULT,
+) -> None:
     """Применить тему и базовый шрифт.
 
-    theme: 'light' | 'dark'
+    Аргументы:
+        theme: 'light' или 'dark' — выбор QSS-блока и Fluent-режима.
+        font_size: базовый кегль в pt (дефолт 9 — стандарт Win11).
+        accent_color: HEX-цвет акцента (дефолт ACCENT_DEFAULT = #f97316).
+
+    Сигнатура совместима с существующими вызовами в launcher.py и других
+    местах — accent_color добавлен как keyword-only с дефолтом.
     """
-    if theme == 'dark':
+    if theme == "dark":
         app.setStyleSheet(DARK_QSS)
     else:
         app.setStyleSheet(LIGHT_QSS)
@@ -257,3 +315,15 @@ def apply_theme(app: QApplication, *, theme: str = 'light', font_size: int = 9) 
     if font_size and font_size > 0:
         f.setPointSize(int(font_size))
         app.setFont(f)
+
+    _apply_fluent_runtime(theme, accent_color)
+
+
+__all__ = [
+    "ACCENT_DEFAULT",
+    "ACCENT_HOVER",
+    "ACCENT_FG",
+    "LIGHT_QSS",
+    "DARK_QSS",
+    "apply_theme",
+]

@@ -1,6 +1,14 @@
 # GUI
 PyQt6>=6.6.0
 PyQt6-Qt6>=6.6.0
+# Fluent Design widgets (Win11-style buttons, icons, dialogs).
+# Используется как drop-in замена стандартных QPushButton/QLineEdit и т.д.
+# (см. ui/fluent_compat.py, ui/theme.py).
+# Если пакет недоступен на target-машине, ui/fluent_compat.py
+# падает в graceful fallback на стандартные PyQt6-виджеты — приложение работает.
+PyQt6-Fluent-Widgets>=1.6.0
+# Резервная база тёмной/светлой темы (если qfluentwidgets недоступен).
+pyqtdarktheme>=2.1.0
 
 # Database
 SQLAlchemy>=2.0.0
