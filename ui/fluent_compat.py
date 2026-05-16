@@ -245,6 +245,7 @@ except Exception as e:  # pragma: no cover - fallback path
 
 #: True, если qfluentwidgets реально доступен в окружении.
 FLUENT_AVAILABLE = _FLUENT_AVAILABLE
+QFLUENT_AVAILABLE = _FLUENT_AVAILABLE  # alias for compat with older code
 
 
 __all__ = [

@@ -33,6 +33,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         super().__init__()
         self.db_manager = db_manager
         self.user = user
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self.setWindowTitle(
             "УЗГА-Инжиниринг АТПП- Система автоматизации "
@@ -54,6 +55,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
 
     def _init_ui(self):
         central = QWidget()
+        central.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setCentralWidget(central)
 
         main_layout = QVBoxLayout(central)
@@ -75,7 +77,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
 
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-        splitter.setSizes([270, WINDOW_WIDTH - 270])
+        splitter.setSizes([230, WINDOW_WIDTH - 230])
         splitter.setHandleWidth(2)
         self._main_splitter = splitter
         try:
@@ -216,8 +218,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         # Toolbar
         from modules import settings as _us
         cur_theme = _us.get('theme', 'light')
-        cur_font = int(_us.get('font_size', 9) or 9)
-        self._toolbar = MainToolBar(self.user, cur_theme, cur_font)
+        self._toolbar = MainToolBar(self.user, cur_theme)
         self.addToolBar(self._toolbar)
 
         tb = self._toolbar
@@ -233,7 +234,6 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         if hasattr(tb, 'open_pdo_dispatcher'):
             tb.open_pdo_dispatcher.connect(self._open_pdo_dispatcher)
         tb.toggle_theme.connect(self._toggle_theme)
-        tb.cycle_font_size.connect(self._cycle_font_size)
 
         # StatusBar
         self._statusbar = MainStatusBar(self.user)
@@ -556,28 +556,8 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
                 font_size=int(user_settings.get('font_size', 9) or 9),
             )
         if hasattr(self, '_toolbar'):
+            self._toolbar.setStyleSheet("")
             self._toolbar.update_theme(new)
-
-    def _cycle_font_size(self):
-        from modules import settings as user_settings
-        from ui.theme import apply_theme
-        from PyQt6.QtWidgets import QApplication
-        cur = int(user_settings.get('font_size', 9) or 9)
-        sizes = [9, 11, 13, 15]
-        try:
-            idx = sizes.index(cur)
-            new = sizes[(idx + 1) % len(sizes)]
-        except ValueError:
-            new = 11
-        user_settings.set('font_size', new)
-        app = QApplication.instance()
-        if app is not None:
-            apply_theme(
-                app, theme=user_settings.get('theme', 'light'),
-                font_size=new,
-            )
-        if hasattr(self, '_toolbar'):
-            self._toolbar.update_font_button(new)
 
     # ═══════════════════════════════════════════════════════════════
     # Navigation data (delegates)

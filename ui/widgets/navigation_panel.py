@@ -1,6 +1,8 @@
-"""Sidebar navigation panel — module buttons + product/TP tree.
+"""
+Sidebar navigation panel — Fluent Design, dark sidebar.
 
-Web-style sidebar: dark bg, orange accent, module sections.
+All styling lives in ui/theme.py (via #nav_panel QSS selectors).
+This file contains NO inline setStyleSheet calls.
 """
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTreeWidget,
@@ -8,38 +10,32 @@ from PyQt6.QtWidgets import (
     QLabel, QFrame, QSizePolicy, QScrollArea,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
-from PyQt6.QtGui import QAction, QFont, QColor, QIcon
+from PyQt6.QtGui import QAction, QFont
 
 from database.models import (
     Product, ProductGroup, TechProcess, TPStatus,
 )
+from ui.fluent_compat import LineEdit, PushButton, QFLUENT_AVAILABLE
 
 STATUS_BADGE = {
-    TPStatus.DRAFT:    ('#f97316', 'Черновик'),
-    TPStatus.REVIEW:   ('#8b5cf6', 'Согласование'),
-    TPStatus.REWORK:   ('#ef4444', 'Доработка'),
-    TPStatus.APPROVED: ('#22c55e', 'Утверждён'),
-    TPStatus.ARCHIVED: ('#94a3b8', 'Архив'),
+    TPStatus.DRAFT:    ("#f97316", "Черновик"),
+    TPStatus.REVIEW:   ("#8b5cf6", "Согласование"),
+    TPStatus.REWORK:   ("#ef4444", "Доработка"),
+    TPStatus.APPROVED: ("#22c55e", "Утверждён"),
+    TPStatus.ARCHIVED: ("#94a3b8", "Архив"),
 }
 
 
 class ModuleButton(QPushButton):
-    """Clickable module button with icon + label + optional counter."""
+    """Clickable module button — styled by theme QSS."""
+
     def __init__(self, icon: str, label: str, parent=None):
         super().__init__(parent)
-        self.setText(f"{icon}  {label}")
-        self.setFixedHeight(36)
+        self.setText(f"  {icon}  {label}")
+        self.setFixedHeight(40)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFlat(True)
-        self.setStyleSheet("""
-            QPushButton {
-                text-align: left; padding: 0 16px; border: none;
-                border-left: 3px solid transparent; border-radius: 0;
-                font-size: 13px; color: #94a3b8; background: transparent;
-            }
-            QPushButton:hover { background: #1e293b; color: #e2e8f0; }
-            QPushButton:checked { background: rgba(249,115,22,0.12); color: #fb923c; border-left: 3px solid #f97316; }
-        """)
+        self.setProperty("module_btn", True)
 
 
 class NavigationPanel(QWidget):
@@ -50,7 +46,6 @@ class NavigationPanel(QWidget):
     new_product_requested = pyqtSignal()
     new_tp_requested = pyqtSignal(object)
 
-    # Module signals
     production_clicked = pyqtSignal()
     qa_clicked = pyqtSignal()
     tooling_clicked = pyqtSignal()
@@ -68,9 +63,11 @@ class NavigationPanel(QWidget):
         self.db_manager = db_manager
         self.user = user or {}
         self.setObjectName("nav_panel")
-        self.setMinimumWidth(260)
+        self.setMinimumWidth(200)
         self.setMaximumWidth(360)
-        self.setStyleSheet("QWidget#nav_panel { background: #0f172a; }")
+        self.setStyleSheet(
+            "QWidget#nav_panel { background-color: #0F172A; }"
+        )
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -78,43 +75,41 @@ class NavigationPanel(QWidget):
 
         # ── Header ──
         header = QFrame()
+        header.setObjectName("nav_header")
         header.setFixedHeight(52)
-        header.setStyleSheet(
-            "QFrame { background: #0f172a; border-bottom: 1px solid #1e293b; }")
         h_layout = QHBoxLayout(header)
         h_layout.setContentsMargins(16, 8, 16, 8)
+
         icon_lbl = QLabel("A")
+        icon_lbl.setObjectName("nav_logo")
         icon_lbl.setFixedSize(28, 28)
         icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_lbl.setStyleSheet(
-            "QLabel { background: #f97316; color: white; border-radius: 6px; font-weight: bold; font-size: 14px; }")
         h_layout.addWidget(icon_lbl)
+
         title_lbl = QLabel("ATPP System")
-        title_lbl.setStyleSheet("QLabel { color: white; font-weight: 600; font-size: 14px; }")
+        title_lbl.setObjectName("nav_title")
         h_layout.addWidget(title_lbl)
         h_layout.addStretch()
         layout.addWidget(header)
 
         # ── Quick actions ──
         actions_frame = QFrame()
-        actions_frame.setStyleSheet("QFrame { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 8px 12px; }")
+        actions_frame.setObjectName("nav_actions")
         al = QHBoxLayout(actions_frame)
-        al.setContentsMargins(4, 4, 4, 4)
-        al.setSpacing(6)
+        al.setContentsMargins(12, 8, 12, 8)
+        al.setSpacing(8)
 
         new_prod_btn = QPushButton("＋ Изделие")
+        new_prod_btn.setObjectName("nav_action_btn")
+        new_prod_btn.setProperty("accent", "orange")
         new_prod_btn.setFixedHeight(32)
-        new_prod_btn.setStyleSheet(
-            "QPushButton { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); border-radius: 6px; padding: 0 12px; font-size: 12px; font-weight: 500; }"
-            "QPushButton:hover { background: rgba(249,115,22,0.25); }")
         new_prod_btn.clicked.connect(self.new_product_requested)
         al.addWidget(new_prod_btn)
 
         new_tp_btn = QPushButton("＋ ТП")
+        new_tp_btn.setObjectName("nav_action_btn")
+        new_tp_btn.setProperty("accent", "purple")
         new_tp_btn.setFixedHeight(32)
-        new_tp_btn.setStyleSheet(
-            "QPushButton { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); border-radius: 6px; padding: 0 12px; font-size: 12px; font-weight: 500; }"
-            "QPushButton:hover { background: rgba(139,92,246,0.25); }")
         new_tp_btn.clicked.connect(lambda: self.new_tp_requested.emit(None))
         al.addWidget(new_tp_btn)
         al.addStretch()
@@ -122,15 +117,12 @@ class NavigationPanel(QWidget):
 
         # ── Module buttons ──
         modules_scroll = QScrollArea()
+        modules_scroll.setObjectName("nav_modules_scroll")
         modules_scroll.setWidgetResizable(True)
         modules_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        modules_scroll.setStyleSheet(
-            "QScrollArea { background: #0f172a; border: none; } "
-            "QScrollBar:vertical { width: 4px; background: transparent; } "
-            "QScrollBar::handle:vertical { background: #334155; border-radius: 2px; }")
 
         modules_widget = QWidget()
-        modules_widget.setStyleSheet("background: #0f172a;")
+        modules_widget.setObjectName("nav_modules_widget")
         mod_layout = QVBoxLayout(modules_widget)
         mod_layout.setContentsMargins(0, 8, 0, 8)
         mod_layout.setSpacing(1)
@@ -168,7 +160,7 @@ class NavigationPanel(QWidget):
         mod_layout.addWidget(self._mod_docs)
 
         # Section: System (admin only)
-        if self.user.get('role') == 'admin':
+        if self.user.get("role") == "admin":
             self._add_section_label(mod_layout, "СИСТЕМА")
             self._mod_users = ModuleButton("👤", "Пользователи")
             self._mod_users.clicked.connect(self.users_clicked)
@@ -186,33 +178,22 @@ class NavigationPanel(QWidget):
         modules_scroll.setWidget(modules_widget)
         layout.addWidget(modules_scroll)
 
-        # ── Tree view (compact, below modules) ──
+        # ── Tree view ──
         self._tab_widget = QTabWidget()
-        self._tab_widget.setStyleSheet("""
-            QTabWidget::pane { border: none; background: #0f172a; }
-            QTabBar::tab { background: #1e293b; color: #94a3b8; padding: 4px 12px; border: none; font-size: 11px; }
-            QTabBar::tab:selected { background: #0f172a; color: #fb923c; }
-        """)
+        self._tab_widget.setObjectName("nav_tabs")
+
         self._product_tree = QTreeWidget()
+        self._product_tree.setObjectName("nav_tree")
         self._product_tree.setHeaderHidden(True)
         self._product_tree.setIndentation(16)
-        self._product_tree.setStyleSheet("""
-            QTreeWidget { background: #0f172a; color: #cbd5e1; border: none; font-size: 12px; }
-            QTreeWidget::item:hover { background: #1e293b; }
-            QTreeWidget::item:selected { background: rgba(249,115,22,0.12); color: #fb923c; }
-        """)
         self._product_tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._product_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._product_tree.customContextMenuRequested.connect(self._on_context_menu)
 
         self._tp_tree = QTreeWidget()
+        self._tp_tree.setObjectName("nav_tree")
         self._tp_tree.setHeaderHidden(True)
         self._tp_tree.setIndentation(16)
-        self._tp_tree.setStyleSheet("""
-            QTreeWidget { background: #0f172a; color: #cbd5e1; border: none; font-size: 12px; }
-            QTreeWidget::item:hover { background: #1e293b; }
-            QTreeWidget::item:selected { background: rgba(249,115,22,0.12); color: #fb923c; }
-        """)
         self._tp_tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._tp_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tp_tree.customContextMenuRequested.connect(self._on_tp_context_menu)
@@ -223,32 +204,34 @@ class NavigationPanel(QWidget):
 
         # ── User footer ──
         footer = QFrame()
+        footer.setObjectName("nav_footer")
         footer.setFixedHeight(52)
-        footer.setStyleSheet("QFrame { background: #0f172a; border-top: 1px solid #1e293b; }")
         f_layout = QHBoxLayout(footer)
         f_layout.setContentsMargins(16, 8, 16, 8)
-        avatar = QLabel((self.user.get('full_name') or self.user.get('username') or '?')[0].upper())
+
+        initial = (self.user.get("full_name") or self.user.get("username") or "?")[0].upper()
+        avatar = QLabel(initial)
+        avatar.setObjectName("nav_avatar")
         avatar.setFixedSize(32, 32)
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        avatar.setStyleSheet(
-            "QLabel { background: #334155; color: #e2e8f0; border-radius: 16px; font-weight: 600; font-size: 13px; }")
         f_layout.addWidget(avatar)
-        user_info = QLabel(f"{self.user.get('full_name') or self.user.get('username')}\n{self.user.get('role') or ''}")
-        user_info.setStyleSheet("QLabel { color: #cbd5e1; font-size: 11px; }")
+
+        user_name = self.user.get("full_name") or self.user.get("username")
+        user_role = self.user.get("role") or ""
+        user_info = QLabel(f"{user_name}\n{user_role}")
+        user_info.setObjectName("nav_user_info")
         f_layout.addWidget(user_info)
         f_layout.addStretch()
         layout.addWidget(footer)
 
-        # Search
-        self._search_edit = QLineEdit()
+        # ── Search ──
+        self._search_edit = LineEdit()
+        self._search_edit.setObjectName("nav_search")
         self._search_edit.setPlaceholderText("🔎 Поиск...")
-        self._search_edit.setStyleSheet(
-            "QLineEdit { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 6px 12px; margin: 8px 12px; font-size: 12px; }"
-            "QLineEdit:focus { border-color: #f97316; }")
         self._search_edit.textChanged.connect(self._on_search)
         layout.addWidget(self._search_edit)
 
-        # Legacy public names for external access
+        # Legacy public names
         self.products_tree = self._product_tree
 
     def focus_search(self):
@@ -257,8 +240,7 @@ class NavigationPanel(QWidget):
 
     def _add_section_label(self, layout, text):
         lbl = QLabel(text)
-        lbl.setStyleSheet(
-            "QLabel { color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 8px 16px 4px 16px; }")
+        lbl.setObjectName("nav_section_label")
         layout.addWidget(lbl)
 
     def _on_search(self, text):
@@ -269,9 +251,9 @@ class NavigationPanel(QWidget):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if entity_id is None:
             return
-        if item_type == 'product':
+        if item_type == "product":
             self.product_double_clicked.emit(entity_id)
-        elif item_type == 'tp':
+        elif item_type == "tp":
             self.tp_double_clicked.emit(entity_id)
 
     def _on_context_menu(self, pos):
@@ -283,16 +265,11 @@ class NavigationPanel(QWidget):
         if entity_id is None:
             return
         menu = QMenu(self)
-        menu.setStyleSheet("""
-            QMenu { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 4px; }
-            QMenu::item { padding: 6px 16px; border-radius: 4px; }
-            QMenu::item:selected { background: rgba(249,115,22,0.15); }
-        """)
-        if item_type == 'product':
+        if item_type == "product":
             menu.addAction("✎ Редактировать", lambda: self.product_edit_requested.emit(entity_id))
             menu.addAction("＋ Новый ТП", lambda: self.new_tp_requested.emit(entity_id))
             menu.addAction("🗑 Удалить", lambda: self.product_delete_requested.emit(entity_id))
-        elif item_type == 'tp':
+        elif item_type == "tp":
             menu.addAction("Открыть ТП", lambda: self.tp_double_clicked.emit(entity_id))
         menu.exec(self._product_tree.viewport().mapToGlobal(pos))
 
@@ -304,7 +281,6 @@ class NavigationPanel(QWidget):
         if entity_id is None:
             return
         menu = QMenu(self)
-        menu.setStyleSheet(self._product_tree.styleSheet())
         menu.addAction("Открыть ТП", lambda: self.tp_double_clicked.emit(entity_id))
         menu.exec(self._tp_tree.viewport().mapToGlobal(pos))
 
@@ -332,7 +308,7 @@ class NavigationPanel(QWidget):
                     for p in q.order_by(Product.designation).all():
                         item = QTreeWidgetItem([p.designation])
                         item.setData(0, Qt.ItemDataRole.UserRole, p.id)
-                        item.setData(0, Qt.ItemDataRole.UserRole + 1, 'product')
+                        item.setData(0, Qt.ItemDataRole.UserRole + 1, "product")
                         item.setToolTip(0, f"{p.designation} — {p.name}")
                         grp_item.addChild(item)
         except Exception:
@@ -348,8 +324,8 @@ class NavigationPanel(QWidget):
                 for tp in q.order_by(TechProcess.number).all():
                     item = QTreeWidgetItem([f"{tp.number}"])
                     item.setData(0, Qt.ItemDataRole.UserRole, tp.id)
-                    item.setData(0, Qt.ItemDataRole.UserRole + 1, 'tp')
-                    color, status_text = STATUS_BADGE.get(tp.status, ('#94a3b8', str(tp.status)))
+                    item.setData(0, Qt.ItemDataRole.UserRole + 1, "tp")
+                    color, status_text = STATUS_BADGE.get(tp.status, ("#94a3b8", str(tp.status)))
                     item.setToolTip(0, f"{tp.number} — {tp.product.designation if tp.product else '—'} [{status_text}]")
                     self._tp_tree.addTopLevelItem(item)
         except Exception:
