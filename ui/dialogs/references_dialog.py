@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
+from ui.fluent_compat import PrimaryPushButton, PushButton
 from database.models import Material, Equipment, Tool, Profession
 
 
@@ -99,7 +100,7 @@ class ReferencesDialog(QDialog):
         layout.addWidget(form_frame)
 
         btn_layout = QHBoxLayout()
-        self.mat_add_btn = QPushButton("Добавить")
+        self.mat_add_btn = PrimaryPushButton("Добавить")
         self.mat_add_btn.clicked.connect(self._add_material)
         self.mat_edit_btn = QPushButton("Изменить")
         self.mat_edit_btn.clicked.connect(self._edit_material)
@@ -257,7 +258,7 @@ class ReferencesDialog(QDialog):
         layout.addWidget(form_frame)
 
         btn_layout = QHBoxLayout()
-        self.eq_add_btn = QPushButton("Добавить")
+        self.eq_add_btn = PrimaryPushButton("Добавить")
         self.eq_add_btn.clicked.connect(self._add_equipment)
         self.eq_edit_btn = QPushButton("Изменить")
         self.eq_edit_btn.clicked.connect(self._edit_equipment)
@@ -405,7 +406,7 @@ class ReferencesDialog(QDialog):
         layout.addWidget(form_frame)
 
         btn_layout = QHBoxLayout()
-        self.tool_add_btn = QPushButton("Добавить")
+        self.tool_add_btn = PrimaryPushButton("Добавить")
         self.tool_add_btn.clicked.connect(self._add_tool)
         self.tool_edit_btn = QPushButton("Изменить")
         self.tool_edit_btn.clicked.connect(self._edit_tool)
@@ -532,7 +533,7 @@ class ReferencesDialog(QDialog):
         layout.addWidget(form_frame)
 
         btn_layout = QHBoxLayout()
-        self.prof_add_btn = QPushButton("Добавить")
+        self.prof_add_btn = PrimaryPushButton("Добавить")
         self.prof_add_btn.clicked.connect(self._add_profession)
         self.prof_edit_btn = QPushButton("Изменить")
         self.prof_edit_btn.clicked.connect(self._edit_profession)

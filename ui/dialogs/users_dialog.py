@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
+from ui.fluent_compat import PrimaryPushButton, PushButton
 from database.models import User
 
 
@@ -103,10 +104,10 @@ class UsersDialog(QDialog):
         # Кнопки
         btn_layout = QHBoxLayout()
 
-        self.add_btn = QPushButton("Добавить")
+        self.add_btn = PrimaryPushButton("Добавить")
         self.add_btn.clicked.connect(self._add_user)
 
-        self.edit_btn = QPushButton("Сохранить изменения")
+        self.edit_btn = PrimaryPushButton("Сохранить изменения")
         self.edit_btn.clicked.connect(self._edit_user)
 
         self.reset_pw_btn = QPushButton("Сбросить пароль")

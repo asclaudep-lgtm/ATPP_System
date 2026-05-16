@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 
+from ui.fluent_compat import PrimaryPushButton
+
 from database.models import Material, Equipment, Tool, Profession
 
 
@@ -130,7 +132,7 @@ class ReferenceEditorWidget(QWidget):
         self._table.selectionModel().selectionChanged.connect(self._on_select)
         ll.addWidget(self._table)
 
-        add_btn = QPushButton("+ Добавить")
+        add_btn = PrimaryPushButton("+ Добавить")
         add_btn.clicked.connect(self._add)
         ll.addWidget(add_btn)
         splitter.addWidget(left)
@@ -149,7 +151,7 @@ class ReferenceEditorWidget(QWidget):
         rl.addLayout(self._form_layout)
 
         btn_row = QHBoxLayout()
-        save_btn = QPushButton("Сохранить")
+        save_btn = PrimaryPushButton("Сохранить")
         save_btn.clicked.connect(self._save)
         btn_row.addWidget(save_btn)
 

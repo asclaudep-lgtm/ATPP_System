@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
+from ui.fluent_compat import PrimaryPushButton, PushButton
 from database.models import Material
 
 
@@ -138,7 +139,7 @@ class ProductDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        save_btn = QPushButton("  Сохранить  ")
+        save_btn = PrimaryPushButton("  Сохранить  ")
         save_btn.setDefault(True)
         save_btn.clicked.connect(self._on_save)
 

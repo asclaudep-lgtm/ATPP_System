@@ -9,6 +9,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap
 
+from ui.fluent_compat import PrimaryPushButton
+
 from database.models import Product, Material, TechProcess
 
 
@@ -80,7 +82,7 @@ class ProductEditorWidget(QWidget):
         header.addWidget(title)
         header.addStretch()
 
-        save_btn = QPushButton("Сохранить")
+        save_btn = PrimaryPushButton("Сохранить")
         save_btn.clicked.connect(self._save)
         header.addWidget(save_btn)
         layout.addLayout(header)

@@ -8,6 +8,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 
+from ui.fluent_compat import PrimaryPushButton
+
 from database.models import (
     TechProcess, Product, Operation, TPStatus, TPType, TechnologyType,
 )
@@ -93,7 +95,7 @@ class TPEditorWidget(QWidget):
             f" [{d['status'].value if hasattr(d['status'], 'value') else str(d['status'])}]")
         hdr.addWidget(status_lbl)
 
-        save_btn = QPushButton("Сохранить")
+        save_btn = PrimaryPushButton("Сохранить")
         save_btn.clicked.connect(self._save)
         hdr.addWidget(save_btn)
         layout.addLayout(hdr)

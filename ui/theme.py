@@ -153,6 +153,45 @@ QComboBox QAbstractItemView {{
     selection-background-color: {ACCENT_10}; selection-color: {pal['text']};
 }}
 
+/* ── Checkboxes ── */
+QCheckBox {{
+    spacing: 8px; color: {pal['text']};
+}}
+QCheckBox::indicator {{
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    border: 2px solid {pal['border_strong']};
+    background: {pal['input_bg']};
+}}
+QCheckBox::indicator:hover {{
+    border-color: {ACCENT};
+}}
+QCheckBox::indicator:checked {{
+    background: {ACCENT}; border-color: {ACCENT};
+}}
+QCheckBox::indicator:disabled {{
+    background: {pal['border']}; border-color: {pal['border']};
+}}
+
+/* ── Date edits ── */
+QDateEdit, QTimeEdit, QDateTimeEdit {{
+    background: {pal['input_bg']}; color: {pal['text']};
+    border: 1px solid {pal['border']};
+    border-radius: 6px; padding: 8px 12px;
+}}
+QDateEdit:focus, QTimeEdit:focus, QDateTimeEdit:focus {{
+    border-color: {ACCENT}; border-width: 2px; padding: 7px 11px;
+}}
+QDateEdit::drop-down, QTimeEdit::drop-down {{
+    border: none; width: 28px;
+}}
+QCalendarWidget {{
+    background: {pal['surface']}; color: {pal['text']};
+}}
+QCalendarWidget QAbstractItemView {{
+    selection-background-color: {ACCENT_10};
+}}
+
 /* ── Tables & Trees ── */
 QTableWidget, QTreeWidget, QListWidget, QTableView, QTreeView, QListView {{
     background: {pal['surface']}; color: {pal['text']};

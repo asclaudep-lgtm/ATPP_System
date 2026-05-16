@@ -4,7 +4,7 @@
 
 - [x] `ui/theme.py` — переписан: Fluent QSS (оранжевый акцент #f97316), тёмная/светлая темы
 - [x] `ui/fluent_compat.py` — создан: drop-in Fluent-виджеты с fallback на PyQt6
-- [x] `requirements.txt` — добавлены PyQt6-Fluent-Widgets и pyqtdarktheme
+- [x] `requirements.txt` — добавлен PyQt6-Fluent-Widgets
 - [x] `ui/auth_dialog.py` — эталонная Fluent-миграция (PrimaryPushButton, LineEdit, TitleLabel, etc.)
 - [x] `ui/widgets/navigation_panel.py` — убраны все inline setStyleSheet, стилизация через #nav_panel/QSS
 - [x] `CLAUDE.md` — обновлён с Fluent-правилами

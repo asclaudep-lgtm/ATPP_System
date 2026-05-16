@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
+from ui.fluent_compat import PrimaryPushButton, PushButton
 from database.models import Equipment, Profession
 
 
@@ -182,9 +183,8 @@ class OperationDialog(QDialog):
         time_form.addRow("Тпз  (подг.-закл.):", self.t_setup_spin)
 
         # Авторасчёт Тшт
-        calc_btn = QPushButton("Рассчитать Тшт автоматически")
+        calc_btn = PrimaryPushButton("Рассчитать Тшт автоматически")
         calc_btn.clicked.connect(self._auto_calc_piece_time)
-        calc_btn.setStyleSheet("QPushButton { padding: 5px 12px; }")
         time_form.addRow("", calc_btn)
 
         time_layout.addWidget(time_group)
@@ -216,7 +216,7 @@ class OperationDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        save_btn = QPushButton("  Сохранить  ")
+        save_btn = PrimaryPushButton("  Сохранить  ")
         save_btn.setDefault(True)
         save_btn.clicked.connect(self._on_save)
 
