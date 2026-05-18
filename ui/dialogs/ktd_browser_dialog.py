@@ -8,7 +8,8 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QHeaderView, QAbstractItemView, QGroupBox, QMessageBox, QFrame
+    QHeaderView, QAbstractItemView, QGroupBox, QMessageBox, QFrame,
+    QFileDialog,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QColor
@@ -104,9 +105,14 @@ class KTDBrowserDialog(QDialog):
         open_btn = QPushButton("Открыть в Word")
         open_btn.clicked.connect(self._open_ktd_template)
         open_btn.setStyleSheet("QPushButton { background-color: #2980b9; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
+        import_btn = QPushButton("📥  Импорт шаблона...")
+        import_btn.clicked.connect(self._import_ktd_template)
+        import_btn.setStyleSheet("QPushButton { background-color: #f97316; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
+        import_btn.setToolTip("Добавить свой шаблон .doc/.docx в библиотеку КТД")
         open_folder_btn = QPushButton("Открыть папку")
         open_folder_btn.clicked.connect(self._open_ktd_folder)
         btn_layout.addWidget(open_btn)
+        btn_layout.addWidget(import_btn)
         btn_layout.addWidget(open_folder_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
@@ -146,9 +152,14 @@ class KTDBrowserDialog(QDialog):
         open_btn = QPushButton("Открыть в Excel")
         open_btn.clicked.connect(self._open_report_template)
         open_btn.setStyleSheet("QPushButton { background-color: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
+        import_btn = QPushButton("📥  Импорт шаблона...")
+        import_btn.clicked.connect(self._import_report_template)
+        import_btn.setStyleSheet("QPushButton { background-color: #f97316; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
+        import_btn.setToolTip("Добавить свой шаблон .xls/.xlsx в библиотеку отчётов")
         open_folder_btn = QPushButton("Открыть папку")
         open_folder_btn.clicked.connect(self._open_reports_folder)
         btn_layout.addWidget(open_btn)
+        btn_layout.addWidget(import_btn)
         btn_layout.addWidget(open_folder_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
@@ -224,3 +235,51 @@ class KTDBrowserDialog(QDialog):
         folder = Path(__file__).parent.parent.parent / 'resources' / 'templates' / 'reports'
         if folder.exists():
             subprocess.Popen(f'explorer "{folder}"')
+
+    def _import_ktd_template(self):
+        """Импортировать .doc/.docx файл в библиотеку КТД."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Импорт шаблона КТД", "",
+            "Шаблоны Word (*.doc *.docx *.dot);;Все файлы (*.*)")
+        if not path:
+            return
+        src = Path(path)
+        dst_dir = Path(__file__).parent.parent.parent / 'resources' / 'templates' / 'ktd'
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        dst = dst_dir / src.name
+        if dst.exists():
+            ans = QMessageBox.question(
+                self, "Файл существует",
+                f"Файл '{src.name}' уже есть в библиотеке. Заменить?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if ans != QMessageBox.StandardButton.Yes:
+                return
+        import shutil
+        shutil.copy2(str(src), str(dst))
+        self._load_data()
+        QMessageBox.information(self, "Готово",
+                               f"Шаблон '{src.name}' добавлен в библиотеку КТД")
+
+    def _import_report_template(self):
+        """Импортировать .xls/.xlsx файл в библиотеку отчётов."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Импорт шаблона отчёта", "",
+            "Книги Excel (*.xls *.xlsx);;Все файлы (*.*)")
+        if not path:
+            return
+        src = Path(path)
+        dst_dir = Path(__file__).parent.parent.parent / 'resources' / 'templates' / 'reports'
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        dst = dst_dir / src.name
+        if dst.exists():
+            ans = QMessageBox.question(
+                self, "Файл существует",
+                f"Файл '{src.name}' уже есть в библиотеке. Заменить?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if ans != QMessageBox.StandardButton.Yes:
+                return
+        import shutil
+        shutil.copy2(str(src), str(dst))
+        self._load_data()
+        QMessageBox.information(self, "Готово",
+                               f"Шаблон '{src.name}' добавлен в библиотеку отчётов")

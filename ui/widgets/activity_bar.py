@@ -55,9 +55,12 @@ class ActivityBar(QWidget):
         ("users",      "Пользователи",          "☸", "PEOPLE"),
     ]
     BOTTOM = [
+        ("web",       "Открыть веб-интерфейс", "🌐", "BROWSER"),
         ("settings",  "Настройки",  "⛭", "SETTING"),
         ("profile",   "Профиль",    "◉", "PEOPLE"),
     ]
+
+    web_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -84,6 +87,8 @@ class ActivityBar(QWidget):
                 btn.clicked.connect(self.settings_clicked)
             elif key == "profile":
                 btn.clicked.connect(self.profile_clicked)
+            elif key == "web":
+                btn.clicked.connect(self.web_clicked)
             btn.setCheckable(False)
             layout.addWidget(btn)
 

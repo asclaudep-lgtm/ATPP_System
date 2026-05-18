@@ -29,8 +29,10 @@ class NavigationPanel(QWidget):
     tp_double_clicked = pyqtSignal(int)
     product_edit_requested = pyqtSignal(int)
     product_delete_requested = pyqtSignal(int)
-    new_product_requested = pyqtSignal()
+    new_product_requested = pyqtSignal(object)   # group_id or None
     new_tp_requested = pyqtSignal(object)
+    new_subgroup_requested = pyqtSignal(int)       # parent_group_id
+    move_product_requested = pyqtSignal(int, int)  # product_id, target_group_id
 
     # ── Legacy module signals (no-op shims for test compatibility) ──
     production_clicked = pyqtSignal()
@@ -74,7 +76,7 @@ class NavigationPanel(QWidget):
 
         add_btn = QPushButton("+")
         add_btn.setToolTip("Новое изделие")
-        add_btn.clicked.connect(self.new_product_requested)
+        add_btn.clicked.connect(lambda: self.new_product_requested.emit(None))
         sh_layout.addWidget(add_btn)
         layout.addWidget(section_hdr)
 
@@ -117,7 +119,7 @@ class NavigationPanel(QWidget):
         ql.setSpacing(8)
 
         new_prod_btn = QPushButton("+ Изделие")
-        new_prod_btn.clicked.connect(self.new_product_requested)
+        new_prod_btn.clicked.connect(lambda: self.new_product_requested.emit(None))
         ql.addWidget(new_prod_btn)
 
         new_tp_btn = QPushButton("+ ТП")
@@ -184,20 +186,121 @@ class NavigationPanel(QWidget):
             return
         entity_id = item.data(0, Qt.ItemDataRole.UserRole)
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if entity_id is None:
-            return
+
         menu = QMenu(self)
-        if item_type == "product":
-            menu.addAction("✎ Редактировать",
-                          lambda: self.product_edit_requested.emit(entity_id))
-            menu.addAction("＋ Новый ТП",
-                          lambda: self.new_tp_requested.emit(entity_id))
-            menu.addAction("🗑 Удалить",
-                          lambda: self.product_delete_requested.emit(entity_id))
-        elif item_type == "tp":
-            menu.addAction("Открыть ТП",
-                          lambda: self.tp_double_clicked.emit(entity_id))
+
+        if item_type == "group":
+            if entity_id is not None and entity_id >= 0:
+                a = menu.addAction("＋ Новое изделие")
+                a.triggered.connect(
+                    lambda checked=False, gid=entity_id:
+                        self.new_product_requested.emit(gid))
+            a = menu.addAction("＋ Новая подгруппа")
+            a.triggered.connect(
+                lambda checked=False, gid=entity_id:
+                    self.new_subgroup_requested.emit(gid))
+            menu.addSeparator()
+            if entity_id is not None and entity_id >= 0:
+                a = menu.addAction("✎ Редактировать группу")
+                a.triggered.connect(
+                    lambda checked=False, gid=entity_id: self._edit_group(gid))
+                a = menu.addAction("🗑 Удалить группу")
+                a.triggered.connect(
+                    lambda checked=False, gid=entity_id: self._delete_group(gid))
+            menu.addSeparator()
+            a = menu.addAction("♻ Обновить")
+            a.triggered.connect(
+                lambda: self._populate_products(self._search_edit.text()))
+
+        elif item_type == "product":
+            a = menu.addAction("✎ Редактировать")
+            a.triggered.connect(
+                lambda: self.product_edit_requested.emit(entity_id))
+            a = menu.addAction("＋ Новый ТП")
+            a.triggered.connect(
+                lambda: self.new_tp_requested.emit(entity_id))
+            # Подменю: переместить в группу
+            move_menu = menu.addMenu("Переместить в группу")
+            self._build_move_menu(move_menu, entity_id)
+            menu.addSeparator()
+            a = menu.addAction("🗑 Удалить")
+            a.triggered.connect(
+                lambda: self.product_delete_requested.emit(entity_id))
+
         menu.exec(self._product_tree.viewport().mapToGlobal(pos))
+
+    def _build_move_menu(self, menu, product_id):
+        """Построить подменю выбора группы для перемещения изделия."""
+        try:
+            with self.db_manager.get_session() as s:
+                groups = s.query(ProductGroup).order_by(ProductGroup.name).all()
+                for g in groups:
+                    a = menu.addAction(g.name)
+                    a.triggered.connect(
+                        lambda checked=False, gid=g.id, pid=product_id:
+                            self._move_product(pid, gid))
+                menu.addSeparator()
+                a = menu.addAction("Без группы")
+                a.triggered.connect(
+                    lambda checked=False, pid=product_id:
+                        self._move_product(pid, None))
+        except Exception:
+            pass
+
+    def _move_product(self, product_id, group_id):
+        """Переместить изделие в другую группу."""
+        try:
+            with self.db_manager.get_session() as s:
+                p = s.get(Product, product_id)
+                if p:
+                    p.group_id = group_id
+                    s.commit()
+            self._populate_products(self._search_edit.text())
+            self._product_tree.update()
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось переместить: {e}")
+
+    def _edit_group(self, group_id):
+        """Редактировать название группы."""
+        try:
+            with self.db_manager.get_session() as s:
+                g = s.get(ProductGroup, group_id)
+                if g is None:
+                    return
+                from PyQt6.QtWidgets import QInputDialog
+                new_name, ok = QInputDialog.getText(
+                    self, "Редактировать группу",
+                    "Название группы:", text=g.name)
+                if ok and new_name.strip():
+                    g.name = new_name.strip()
+                    s.commit()
+            self._populate_products(self._search_edit.text())
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось: {e}")
+
+    def _delete_group(self, group_id):
+        """Удалить группу (изделия переходят в «Без группы»)."""
+        try:
+            with self.db_manager.get_session() as s:
+                g = s.get(ProductGroup, group_id)
+                if g is None:
+                    return
+                ans = QMessageBox.question(
+                    self, "Удалить группу",
+                    f"Удалить группу «{g.name}»?\n"
+                    "Изделия из этой группы останутся и перейдут в «Без группы».",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                if ans != QMessageBox.StandardButton.Yes:
+                    return
+                # Unlink products
+                s.query(Product).filter(
+                    Product.group_id == group_id).update(
+                    {Product.group_id: None})
+                s.delete(g)
+                s.commit()
+            self._populate_products(self._search_edit.text())
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось удалить группу: {e}")
 
     def _on_tp_context_menu(self, pos):
         item = self._tp_tree.itemAt(pos)
@@ -222,9 +325,9 @@ class NavigationPanel(QWidget):
                 groups = s.query(ProductGroup).order_by(ProductGroup.name).all()
                 for g in groups:
                     grp_item = QTreeWidgetItem([f"{g.name}"])
-                    grp_item.setFlags(
-                        grp_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
-                    grp_item.setData(0, Qt.ItemDataRole.UserRole, None)
+                    grp_item.setData(0, Qt.ItemDataRole.UserRole, g.id)
+                    grp_item.setData(0, Qt.ItemDataRole.UserRole + 1, "group")
+                    grp_item.setToolTip(0, f"Группа: {g.name}")
                     self._product_tree.addTopLevelItem(grp_item)
 
                     q = s.query(Product).filter(
@@ -235,6 +338,28 @@ class NavigationPanel(QWidget):
                         q = q.filter(
                             Product.designation.ilike(f"%{search}%"))
                     for p in q.order_by(Product.designation).all():
+                        item = QTreeWidgetItem([p.designation])
+                        item.setData(0, Qt.ItemDataRole.UserRole, p.id)
+                        item.setData(0, Qt.ItemDataRole.UserRole + 1, "product")
+                        item.setToolTip(0, f"{p.designation} — {p.name}")
+                        grp_item.addChild(item)
+
+                # Изделия без группы
+                q = s.query(Product).filter(
+                    Product.is_deleted == False,
+                    Product.group_id.is_(None),
+                )
+                if search:
+                    q = q.filter(
+                        Product.designation.ilike(f"%{search}%"))
+                ungrouped = q.order_by(Product.designation).all()
+                if ungrouped:
+                    grp_item = QTreeWidgetItem(["Без группы"])
+                    grp_item.setData(0, Qt.ItemDataRole.UserRole, -1)
+                    grp_item.setData(0, Qt.ItemDataRole.UserRole + 1, "group")
+                    grp_item.setToolTip(0, "Изделия без группы")
+                    self._product_tree.addTopLevelItem(grp_item)
+                    for p in ungrouped:
                         item = QTreeWidgetItem([p.designation])
                         item.setData(0, Qt.ItemDataRole.UserRole, p.id)
                         item.setData(0, Qt.ItemDataRole.UserRole + 1, "product")

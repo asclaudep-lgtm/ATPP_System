@@ -216,57 +216,210 @@ class DocumentGenerator:
         return output_path
     
     def _generate_route_card_word(self, tp: TechProcess) -> Path:
-        """Генерация маршрутной карты в Word"""
+        """Генерация маршрутной карты в Word с использованием шаблона."""
+        template_path = TEMPLATES_DIR / 'ktd_docx' / 'route_card_template.docx'
+
+        if template_path.exists():
+            return self._generate_from_template(tp, template_path, 'MK')
+
+        # Fallback: legacy программная генерация
         doc = Document()
-        
-        # Заголовок
         heading = doc.add_heading('МАРШРУТНАЯ КАРТА', level=1)
-        heading.alignment = 1  # Центр
-        
-        # Информация о детали
+        heading.alignment = 1
+
         doc.add_paragraph(f"Обозначение: {tp.product.designation}")
         doc.add_paragraph(f"Наименование: {tp.product.name}")
         doc.add_paragraph(f"Материал: {tp.product.material.name if tp.product.material else ''}")
         doc.add_paragraph(f"ТП №: {tp.number}")
         doc.add_paragraph("")
-        
-        # Таблица операций
+
         table = doc.add_table(rows=1, cols=6)
         table.style = 'Table Grid'
-        
-        # Заголовки
-        headers = ["№ оп.", "Наименование операции", "Оборудование", "Профессия", "Тшт, мин", "Тпз, мин"]
+        headers = ["№ оп.", "Наименование операции", "Оборудование",
+                   "Профессия", "Тшт, мин", "Тпз, мин"]
         for i, header in enumerate(headers):
             table.rows[0].cells[i].text = header
             table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
-        
-        # Операции
+
         for operation in self._mtp_operations(tp):
             row = table.add_row()
             row.cells[0].text = operation.number
             row.cells[1].text = operation.name
             row.cells[2].text = operation.equipment.name if operation.equipment else ""
-            
             profession_text = ""
             if operation.profession:
                 profession_text = f"{operation.profession.name}"
                 if operation.grade:
                     profession_text += f" р.{operation.grade}"
             row.cells[3].text = profession_text
-            
             row.cells[4].text = str(operation.t_piece)
             row.cells[5].text = str(operation.t_setup)
-        
-        # Подписи
+
         doc.add_paragraph("")
         doc.add_paragraph(f"Разработал: {tp.author.full_name if tp.author else ''}")
         doc.add_paragraph(f"Дата: {datetime.now().strftime('%d.%m.%Y')}")
-        
-        # Сохранение
+
         filename = f"{self._mk_basename(tp)}.docx"
         output_path = product_export_dir(tp.product) / filename
         doc.save(output_path)
-        
+        return output_path
+
+    def _generate_from_template(self, tp: TechProcess, template_path: Path,
+                                doc_type: str = 'MK') -> Path:
+        """Заполнить шаблон .docx данными ТП (титульный лист или МК)."""
+        doc = Document(str(template_path))
+
+        product = tp.product
+        material = product.material
+        author = tp.author
+        now = datetime.now()
+
+        replacements = {
+            '{{company}}': 'АО «УЗГА»',
+            '{{designation}}': product.designation or '—',
+            '{{name}}': product.name or '—',
+            '{{material}}': f'{material.name} {material.grade}'
+                            if material else '—',
+            '{{hardness}}': '',
+            '{{mass}}': str(product.mass) if product.mass else '—',
+            '{{tp_number}}': tp.number or '—',
+            '{{technology_type}}': tp.technology_type.value
+                                   if hasattr(tp.technology_type, 'value')
+                                   else str(tp.technology_type or ''),
+            '{{date}}': now.strftime('%d.%m.%Y'),
+            '{{author}}': author.full_name if author else '___________',
+            '{{checker}}': '___________',
+            '{{normer}}': '___________',
+            '{{approver}}': '___________',
+        }
+
+        self._replace_in_doc(doc, replacements)
+
+        # Для МК: заполнить таблицу операций
+        if doc_type == 'MK':
+            self._fill_operations_table(doc, tp)
+
+        tag = 'MK' if doc_type == 'MK' else 'title'
+        suffix = 'route_card' if doc_type == 'MK' else 'title_page'
+        filename = f'{suffix}_{tp.number or "TP"}_{now.strftime("%Y%m%d_%H%M")}.docx'
+        output_path = product_export_dir(tp.product) / filename
+        doc.save(str(output_path))
+        return output_path
+
+    def _replace_in_doc(self, doc, replacements: dict):
+        """Заменить плейсхолдеры во всех параграфах и таблицах документа."""
+        for paragraph in doc.paragraphs:
+            for key, value in replacements.items():
+                if key in paragraph.text:
+                    for run in paragraph.runs:
+                        if key in run.text:
+                            run.text = run.text.replace(key, value)
+
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        for key, value in replacements.items():
+                            if key in paragraph.text:
+                                for run in paragraph.runs:
+                                    if key in run.text:
+                                        run.text = run.text.replace(key, value)
+
+    def _fill_operations_table(self, doc, tp: TechProcess):
+        """Заполнить таблицу операций в шаблоне МК."""
+        operations = self._mtp_operations(tp)
+        if not operations:
+            return
+
+        total_piece = 0.0
+        total_setup = 0.0
+
+        # Найти таблицу с заголовком "№ оп."
+        target_table = None
+        for table in doc.tables:
+            for row in table.rows:
+                first_cell_text = row.cells[0].text if row.cells else ''
+                if '№ оп.' in first_cell_text:
+                    target_table = table
+                    break
+            if target_table:
+                break
+
+        if target_table is None:
+            return
+
+        # Удалить строки-плейсхолдеры (содержащие {{op_number}})
+        rows_to_remove = []
+        for i, row in enumerate(target_table.rows):
+            first_cell_text = row.cells[0].text if row.cells else ''
+            if '{{op_number}}' in first_cell_text:
+                rows_to_remove.append(i)
+        for idx in reversed(rows_to_remove):
+            tr = target_table.rows[idx]._tr
+            target_table._tbl.remove(tr)
+
+        # Добавить строки с данными операций
+        for op in operations:
+            row = target_table.add_row()
+            row.cells[0].text = op.number or ''
+            row.cells[1].text = op.name or ''
+            row.cells[2].text = op.equipment.name if op.equipment else ''
+            row.cells[3].text = op.profession.name if op.profession else ''
+            row.cells[4].text = str(op.grade) if op.grade else ''
+            row.cells[5].text = str(op.t_piece or 0)
+            row.cells[6].text = str(op.t_setup or 0)
+            row.cells[7].text = str(op.t_main or 0)
+            row.cells[8].text = str(op.t_auxiliary or 0)
+            row.cells[9].text = op.shop or ''
+            total_piece += op.t_piece or 0
+            total_setup += op.t_setup or 0
+
+        # Заменить итоги
+        totals_replacements = {
+            '{{total_t_piece}}': str(round(total_piece, 2)),
+            '{{total_t_setup}}': str(round(total_setup, 2)),
+        }
+        self._replace_in_doc(doc, totals_replacements)
+
+    def generate_title_page(self, tp_id: int) -> Path:
+        """Сгенерировать титульный лист ТП."""
+        tp = self.session.get(TechProcess, tp_id)
+        if tp is None:
+            raise ValueError(f'TechProcess {tp_id} not found')
+
+        template_path = TEMPLATES_DIR / 'ktd_docx' / 'title_page_template.docx'
+        if not template_path.exists():
+            # Fallback: создать простой титульный лист
+            return self._generate_title_page_simple(tp)
+
+        return self._generate_from_template(tp, template_path, 'title')
+
+    def _generate_title_page_simple(self, tp: TechProcess) -> Path:
+        """Запасной генератор титульного листа без шаблона."""
+        doc = Document()
+        for _ in range(8):
+            doc.add_paragraph('')
+
+        p = doc.add_paragraph()
+        p.alignment = 1
+        run = p.add_run('ТЕХНОЛОГИЧЕСКИЙ ПРОЦЕСС')
+        run.font.size = Pt(16)
+        run.font.bold = True
+
+        p = doc.add_paragraph()
+        p.alignment = 1
+        run = p.add_run(tp.number or '')
+        run.font.size = Pt(14)
+
+        doc.add_paragraph('')
+        doc.add_paragraph(f'Обозначение: {tp.product.designation}')
+        doc.add_paragraph(f'Изделие: {tp.product.name}')
+        doc.add_paragraph(f'Материал: {tp.product.material.name if tp.product.material else "—"}')
+        doc.add_paragraph(f'Дата: {datetime.now().strftime("%d.%m.%Y")}')
+
+        filename = f'title_page_{tp.number or "TP"}.docx'
+        output_path = product_export_dir(tp.product) / filename
+        doc.save(str(output_path))
         return output_path
     
     def _generate_route_card_pdf(self, tp: TechProcess) -> Path:
@@ -720,7 +873,7 @@ class DocumentGenerator:
     # ──────────────────────────────────────────────────────────────
 
     def generate_document_pack(self, tech_process_id: int) -> List[Path]:
-        """Generate complete document pack: MK, OK (all ops), sketch card,
+        """Generate complete document pack: title page, MK, OK, sketch card,
         tooling list, material list.  Returns list of file paths.
         """
         import zipfile
@@ -730,6 +883,12 @@ class DocumentGenerator:
 
         out_dir = product_export_dir(tp)
         files: List[Path] = []
+
+        # 0. Title page (титульный лист)
+        try:
+            files.append(self.generate_title_page(tech_process_id))
+        except Exception:
+            pass
 
         # 1. Route card (MK)
         files.append(self._generate_route_card_excel(tp))

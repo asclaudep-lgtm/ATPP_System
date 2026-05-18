@@ -959,6 +959,24 @@ class ReportGenerator:
                     'doc_type': doc_type,
                     'size_kb': round(f.stat().st_size / 1024),
                 })
+
+        # Also scan ktd_docx templates (new .docx fillable templates)
+        ktd_docx_dir = ktd_dir.parent / 'ktd_docx'
+        if ktd_docx_dir.exists():
+            for f in sorted(ktd_docx_dir.iterdir()):
+                if f.suffix.lower() == '.docx':
+                    doc_type = {
+                        'title_page_template.docx': 'Титульный лист ТП',
+                        'route_card_template.docx': 'Маршрутная карта (МК)',
+                    }.get(f.name, 'Шаблон .docx')
+                    result.append({
+                        'name': f.name,
+                        'path': str(f),
+                        'gost': 'template',
+                        'doc_type': doc_type,
+                        'size_kb': round(f.stat().st_size / 1024),
+                    })
+
         return result
 
     @staticmethod

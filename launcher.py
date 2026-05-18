@@ -96,6 +96,25 @@ def launch() -> int:
         QMessageBox.critical(None, "Ошибка базы данных", f"Не удалось инициализировать базу данных:\n{str(e)}")
         return 1
 
+    # Start web server in background thread
+    try:
+        import threading
+        import uvicorn
+        def _run_web():
+            try:
+                uvicorn.run(
+                    "web.server:app",
+                    host="0.0.0.0", port=8000,
+                    log_level="warning",
+                )
+            except Exception as e:
+                log.debug("Web server already running or failed: %s", e)
+        web_thread = threading.Thread(target=_run_web, daemon=True)
+        web_thread.start()
+        log.info("Web server started on http://localhost:8000")
+    except Exception as e:
+        log.info("Web server not available (uvicorn missing?): %s", e)
+
     # Daily auto-backup (silent, non-blocking on errors)
     try:
         from modules import backup as _backup

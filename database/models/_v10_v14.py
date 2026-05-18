@@ -196,3 +196,69 @@ class ServiceMemo(Base):
     pdf_path = Column(String(500))
 
     order = relationship("ProductionOrder", foreign_keys=[order_id])
+
+
+# ==================== v15: APS — SHIFT CALENDARS ====================
+
+
+class ShiftType(enum.Enum):
+    DAY = "Дневная"
+    NIGHT = "Ночная"
+    WEEKEND = "Выходной"
+    HOLIDAY = "Праздник"
+
+
+class ShiftSlot(Base):
+    """Временной слот смены для оборудования."""
+    __tablename__ = 'shift_slots'
+
+    id = Column(Integer, primary_key=True)
+    equipment_id = Column(Integer, ForeignKey('equipment.id'),
+                          nullable=True, index=True)
+    workshop = Column(String(100), nullable=True)
+    shift_type = Column(SQLEnum(ShiftType), default=ShiftType.DAY,
+                        nullable=False)
+    day_of_week = Column(Integer, nullable=False)  # 0=Mon..6=Sun
+    start_time = Column(String(5), nullable=False, default='08:00')
+    end_time = Column(String(5), nullable=False, default='17:00')
+    lunch_start = Column(String(5), nullable=True)
+    lunch_end = Column(String(5), nullable=True)
+    max_hours = Column(Float, default=8.0)
+    is_active = Column(Boolean, default=True)
+
+    equipment = relationship("Equipment", foreign_keys=[equipment_id])
+
+
+class CalendarException(Base):
+    """Исключение календаря — выходной, праздник, ремонт."""
+    __tablename__ = 'calendar_exceptions'
+
+    id = Column(Integer, primary_key=True)
+    equipment_id = Column(Integer, ForeignKey('equipment.id'),
+                          nullable=True, index=True)
+    exception_date = Column(Date, nullable=False)
+    reason = Column(String(200))
+    is_working = Column(Boolean, default=False)
+    start_time = Column(String(5), nullable=True)
+    end_time = Column(String(5), nullable=True)
+
+    equipment = relationship("Equipment", foreign_keys=[equipment_id])
+
+
+class SetupMatrix(Base):
+    """Матрица времени переналадок между типами изделий."""
+    __tablename__ = 'setup_matrix'
+
+    id = Column(Integer, primary_key=True)
+    equipment_id = Column(Integer, ForeignKey('equipment.id'),
+                          nullable=True, index=True)
+    from_group = Column(String(100), nullable=False)
+    to_group = Column(String(100), nullable=False)
+    setup_minutes = Column(Float, default=15.0)
+
+    equipment = relationship("Equipment", foreign_keys=[equipment_id])
+
+    __table_args__ = (
+        UniqueConstraint('equipment_id', 'from_group', 'to_group',
+                         name='uq_setup_matrix'),
+    )

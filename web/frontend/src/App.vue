@@ -82,6 +82,11 @@
         <OrdersPage v-if="page==='orders'" :key="'ord-'+token" :api="api" :showError="showError" />
         <AuditPage v-if="page==='audit'" :key="'audit-'+token" :api="api" :showError="showError" />
         <BatchOpsPage v-if="page==='batch'" :key="'batch-'+token" :api="api" :showError="showError" />
+        <EditorPage v-if="page==='editor'" :key="'editor-'+token" :api="api" :showError="showError" />
+        <DocumentsPage v-if="page==='documents'" :key="'docs-'+token" :api="api" :showError="showError" />
+        <ECNPage v-if="page==='ecn'" :key="'ecn-'+token" :api="api" :showError="showError" />
+        <CostPage v-if="page==='cost'" :key="'cost-'+token" :api="api" :showError="showError" />
+        <MaterialPage v-if="page==='materials'" :key="'mat-'+token" :api="api" :showError="showError" />
       </div>
     </main>
   </div>
@@ -98,10 +103,15 @@ import ToolingPage from './components/ToolingPage.vue'
 import OrdersPage from './components/OrdersPage.vue'
 import AuditPage from './components/AuditPage.vue'
 import BatchOpsPage from './components/BatchOpsPage.vue'
+import EditorPage from './components/EditorPage.vue'
+import DocumentsPage from './components/DocumentsPage.vue'
+import ECNPage from './components/ECNPage.vue'
+import CostPage from './components/CostPage.vue'
+import MaterialPage from './components/MaterialPage.vue'
 
 export default {
   name: 'App',
-  components: { DashboardPage, ProductsPage, TPsPage, PDOPage, ProductionPage, QAPage, ToolingPage, OrdersPage, AuditPage, BatchOpsPage },
+  components: { DashboardPage, ProductsPage, TPsPage, PDOPage, ProductionPage, QAPage, ToolingPage, OrdersPage, AuditPage, BatchOpsPage, EditorPage, DocumentsPage, ECNPage, CostPage, MaterialPage },
   data() {
     return {
       token: localStorage.getItem('atpp_token'),
@@ -120,12 +130,17 @@ export default {
         { id: 'pdo', label: 'Заказы ПДО', icon: '📋' },
         { id: 'audit', label: 'Аудит', icon: '📋' },
         { id: 'batch', label: 'Batch-операции', icon: '⚡' },
+        { id: 'editor', label: 'Редактор', icon: '✏️' },
+        { id: 'documents', label: 'ГОСТ-документы', icon: '📄' },
+        { id: 'ecn', label: 'ECN / Извещения', icon: '🔁' },
+        { id: 'cost', label: 'Себестоимость', icon: '💰' },
+        { id: 'materials', label: 'Нормирование', icon: '📐' },
       ],
     }
   },
   computed: {
     currentTitle() {
-      const m = { dashboard:'Дашборд', orders:'Производственные заказы', production:'Маршрутный лист', qa:'QA-терминал', tooling:'Оснастка и инструмент', products:'Изделия и ТП', pdo:'Заказы ПДО', tps:'Техпроцессы', audit:'Аудит', batch:'Batch-операции' }
+      const m = { dashboard:'Дашборд', orders:'Производственные заказы', production:'Маршрутный лист', qa:'QA-терминал', tooling:'Оснастка и инструмент', products:'Изделия и ТП', pdo:'Заказы ПДО', tps:'Техпроцессы', audit:'Аудит', batch:'Batch-операции', editor:'Редактор', documents:'ГОСТ-документы', ecn:'ECN / Извещения', cost:'Себестоимость', materials:'Нормирование' }
       return m[this.page] || ''
     },
   },

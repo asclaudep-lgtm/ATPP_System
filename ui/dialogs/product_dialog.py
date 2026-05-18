@@ -15,28 +15,46 @@ from database.models import Material
 class ProductDialog(QDialog):
     """Диалог создания и редактирования изделия"""
 
-    def __init__(self, db_manager, product_data=None, parent=None):
+    def __init__(self, db_manager, product_data=None, parent=None,
+                 default_group_id=None):
         super().__init__(parent)
         self.db_manager = db_manager
         self.product_data = product_data  # dict или None
         self.is_edit = product_data is not None
         self.result_data = None
+        self.default_group_id = default_group_id
 
         self.setWindowTitle("Редактирование изделия" if self.is_edit else "Новое изделие")
         self.setMinimumWidth(520)
         self.setModal(True)
 
         self._load_materials()
+        self._load_groups()
         self._init_ui()
 
         if self.is_edit:
             self._fill_form()
+        elif self.default_group_id:
+            # Предвыбрать группу из контекста
+            for i in range(self.group_combo.count()):
+                if self.group_combo.itemData(i) == self.default_group_id:
+                    self.group_combo.setCurrentIndex(i)
+                    break
 
     def _load_materials(self):
         session = self.db_manager.Session()
         try:
             mats = session.query(Material).order_by(Material.name).all()
             self._materials = [(m.id, f"{m.name} {m.grade or ''}".strip(), m.gost or '') for m in mats]
+        finally:
+            session.close()
+
+    def _load_groups(self):
+        from database.models import ProductGroup
+        session = self.db_manager.Session()
+        try:
+            grps = session.query(ProductGroup).order_by(ProductGroup.name).all()
+            self._groups = [(g.id, g.name) for g in grps]
         finally:
             session.close()
 
@@ -70,6 +88,14 @@ class ProductDialog(QDialog):
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText("Наименование детали или сборки")
         form.addRow("Наименование *:", self.name_edit)
+
+        # Группа
+        self.group_combo = QComboBox()
+        self.group_combo.setMinimumWidth(280)
+        self.group_combo.addItem("— без группы —", None)
+        for grp_id, grp_name in self._groups:
+            self.group_combo.addItem(grp_name, grp_id)
+        form.addRow("Группа:", self.group_combo)
 
         # Материал
         self.material_combo = QComboBox()
@@ -170,6 +196,14 @@ class ProductDialog(QDialog):
         self.designation_edit.setText(p.get('designation', '') or '')
         self.name_edit.setText(p.get('name', '') or '')
 
+        # Группа
+        grp_id = p.get('group_id')
+        if grp_id:
+            for i in range(self.group_combo.count()):
+                if self.group_combo.itemData(i) == grp_id:
+                    self.group_combo.setCurrentIndex(i)
+                    break
+
         mat_id = p.get('material_id')
         if mat_id:
             for i in range(self.material_combo.count()):
@@ -206,6 +240,7 @@ class ProductDialog(QDialog):
         self.result_data = {
             'designation': designation,
             'name': name,
+            'group_id': self.group_combo.currentData(),
             'material_id': self.material_combo.currentData(),
             'mass': self.mass_spin.value() if self.mass_spin.value() > 0 else None,
             'dimensions': self.dimensions_edit.text().strip() or None,

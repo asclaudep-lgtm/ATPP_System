@@ -149,9 +149,11 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         nav.tp_double_clicked.connect(self._open_tp_editor)
         nav.product_edit_requested.connect(self._open_product_editor)
         nav.product_delete_requested.connect(self._delete_product)
-        nav.new_product_requested.connect(self._new_product)
+        nav.new_product_requested.connect(
+            lambda gid=None: self._new_product(gid))
         nav.new_tp_requested.connect(
             lambda pid: self._new_tech_process(pid if pid else None))
+        nav.new_subgroup_requested.connect(self._new_subgroup)
 
         # Legacy module signals → actions (from sidebar, no-op shims)
         nav.production_clicked.connect(self._open_production_panel)
@@ -173,6 +175,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         self.activity_bar.module_selected.connect(self._on_module_selected)
         self.activity_bar.settings_clicked.connect(self._open_appearance_settings)
         self.activity_bar.profile_clicked.connect(self._open_change_password_self)
+        self.activity_bar.web_clicked.connect(self._open_web_interface)
 
         # Welcome screen buttons
         self.welcome.search_clicked.connect(
@@ -622,6 +625,23 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             f"<p><b>Компания:</b> УЗГА</p>"
             f"<p style='color:#95a5a6;'>© 2026 УЗГА. Все права защищены.</p>"
         )
+
+    def _open_web_interface(self):
+        """Открыть веб-интерфейс в браузере."""
+        import webbrowser
+        import subprocess
+        url = "http://localhost:8000"
+        try:
+            # Попытка открыть браузер
+            webbrowser.open(url)
+        except Exception:
+            # Fallback: использовать системную команду
+            try:
+                subprocess.Popen(['start', url], shell=True)
+            except Exception:
+                QMessageBox.information(
+                    self, "Веб-интерфейс",
+                    f"Откройте браузер и перейдите по адресу:\n{url}")
 
     def closeEvent(self, event):
         reply = QMessageBox.question(

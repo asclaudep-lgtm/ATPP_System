@@ -4,6 +4,7 @@ All endpoints return {items, total, page, page_size} for list operations.
 """
 
 from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -228,3 +229,116 @@ def mobile_equipment(
          'type': e.type, 'power': e.power, 'cost_per_hour': e.cost_per_hour}
         for e in items
     ], total, page, page_size)
+
+
+# ——— V12: Mobile production floor actions —————————————————————————
+
+
+@router.get("/mobile/barcode/{code}",
+    summary="Сканировать штрихкод",
+    description="Возвращает информацию о партии/наряде по штрихкоду")
+def scan_barcode(code: str,
+                 db: Session = Depends(get_db),
+                 user=Depends(get_current_user)):
+    """Поиск по штрихкоду WorkOrderItem."""
+    from database.models import WorkOrderItem
+    woi = db.query(WorkOrderItem).filter(
+        WorkOrderItem.barcode == code,
+    ).first()
+
+    if not woi:
+        raise HTTPException(404, f"Barcode not found: {code}")
+
+    wo = woi.work_order
+    product = wo.product if wo else None
+    tp = wo.tech_process if wo else None
+
+    # Найти текущую операцию
+    current_op = None
+    if woi.current_operation_id:
+        op = db.get(Operation, woi.current_operation_id)
+        if op:
+            current_op = {
+                'id': op.id, 'number': op.number, 'name': op.name,
+                't_setup': op.t_setup, 't_piece': op.t_piece,
+            }
+
+    return {
+        'barcode': code,
+        'work_order_item_id': woi.id,
+        'work_order_id': wo.id if wo else None,
+        'work_order_number': wo.number if wo else None,
+        'product': product.designation if product else None,
+        'qty_total': woi.qty,
+        'qty_good': woi.qty_good,
+        'qty_scrap': woi.qty_scrap,
+        'status': woi.status.value if woi.status else None,
+        'current_operation': current_op,
+    }
+
+
+class MobileActionRequest(BaseModel):
+    barcode: str
+    action: str  # 'start', 'complete', 'scrap'
+    qty: int = 1
+    note: Optional[str] = None
+
+
+@router.post("/mobile/action",
+    summary="Действие на участке",
+    description="start, complete или scrap для партии по штрихкоду")
+def mobile_action(body: MobileActionRequest,
+                  db: Session = Depends(get_db),
+                  user=Depends(get_current_user)):
+    from database.models import WorkOrderItem, WorkOrderItemStatus
+    from database.models._production import RouteStep, RouteStepStatus
+    from datetime import datetime as dt
+
+    woi = db.query(WorkOrderItem).filter(
+        WorkOrderItem.barcode == body.barcode,
+    ).first()
+    if not woi:
+        raise HTTPException(404, f"Barcode not found: {body.barcode}")
+
+    if body.action == 'start':
+        woi.status = WorkOrderItemStatus.IN_PROGRESS
+        # Найти первый PENDING RouteStep
+        step = db.query(RouteStep).filter(
+            RouteStep.work_order_item_id == woi.id,
+            RouteStep.status == RouteStepStatus.PENDING,
+        ).order_by(RouteStep.seq).first()
+        if step:
+            step.status = RouteStepStatus.IN_PROGRESS
+            step.started_at = dt.now()
+            step.worker_user_id = user.id if hasattr(user, 'id') else None
+            woi.current_operation_id = step.operation_id
+        db.commit()
+        return {'action': 'start', 'status': 'ok'}
+
+    elif body.action == 'complete':
+        step = db.query(RouteStep).filter(
+            RouteStep.work_order_item_id == woi.id,
+            RouteStep.status == RouteStepStatus.IN_PROGRESS,
+        ).order_by(RouteStep.seq).first()
+        if step:
+            step.status = RouteStepStatus.DONE
+            step.finished_at = dt.now()
+            step.qty_good = body.qty
+        woi.qty_good += body.qty
+        db.commit()
+        return {'action': 'complete', 'status': 'ok', 'qty_good': woi.qty_good}
+
+    elif body.action == 'scrap':
+        step = db.query(RouteStep).filter(
+            RouteStep.work_order_item_id == woi.id,
+            RouteStep.status == RouteStepStatus.IN_PROGRESS,
+        ).order_by(RouteStep.seq).first()
+        if step:
+            step.qty_scrap = (step.qty_scrap or 0) + body.qty
+        woi.qty_scrap += body.qty
+        db.commit()
+        return {'action': 'scrap', 'status': 'ok', 'qty_scrap': woi.qty_scrap}
+
+    raise HTTPException(400, f"Unknown action: {body.action}")
+
+

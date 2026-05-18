@@ -10,18 +10,20 @@ from typing import List, Dict, Optional
 
 from PyQt6.QtCore import Qt, QRectF, QPointF, QSizeF
 from PyQt6.QtGui import (
-    QBrush, QColor, QPen, QPainter, QFont,
+    QBrush, QColor, QPen, QPainter, QFont, QAction,
 )
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpinBox,
     QComboBox, QGraphicsView, QGraphicsScene, QGraphicsRectItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsSimpleTextItem,
-    QMessageBox, QFileDialog,
+    QMessageBox, QFileDialog, QMenu,
 )
 
 from modules.scheduler import (
     schedule_open_orders, detect_conflicts, ScheduledOp,
-    schedule_aps, APSResult,
+    schedule_aps, APSResult, schedule_backward, schedule_finite_capacity,
+    optimize_setup_sequence, validate_constraints, compare_scenarios,
+    clone_scenario, what_if_reschedule,
 )
 
 
@@ -64,39 +66,45 @@ class GanttWidget(QWidget):
         top.addStretch(1)
         self.lbl_info = QLabel('—')
         top.addWidget(self.lbl_info)
-        # APS/FIFO mode
+        # Режим планирования
         self.mode_cb = QComboBox()
         self.mode_cb.addItem('FIFO (по сроку)', 'fifo')
         self.mode_cb.addItem('APS (приоритет+сроки+переналадки)', 'aps')
+        self.mode_cb.addItem('Backward (от даты сдачи назад)', 'backward')
+        self.mode_cb.addItem('Finite Capacity (конечная мощность)', 'finite')
         self.mode_cb.currentIndexChanged.connect(self.refresh)
         top.addWidget(self.mode_cb)
         top.addSpacing(12)
+        b_whatif = QPushButton('🔀 What-If')
+        b_whatif.clicked.connect(self._on_whatif)
+        b_whatif.setToolTip('Сравнить текущий сценарий с вариантом')
+        top.addWidget(b_whatif)
+        b_optimize = QPushButton('⚡ Оптимизировать')
+        b_optimize.clicked.connect(self._on_optimize_setup)
+        b_optimize.setToolTip('Оптимизировать последовательность переналадок')
+        top.addWidget(b_optimize)
         b_export = QPushButton('💾 Экспорт PNG…')
         b_export.clicked.connect(self._on_export)
         top.addWidget(b_export)
         b_refresh = QPushButton('⟳ Перепланировать')
         b_refresh.clicked.connect(self.refresh)
         top.addWidget(b_refresh)
-        b_shift_left = QPushButton('◀ Сдвинуть')
-        b_shift_left.clicked.connect(lambda: self._shift_selected(-60))
-        top.addWidget(b_shift_left)
-        b_shift_right = QPushButton('Сдвинуть ▶')
-        b_shift_right.clicked.connect(lambda: self._shift_selected(60))
-        top.addWidget(b_shift_right)
         root.addLayout(top)
 
         # Подсказка
         hint = QLabel(
-            'Жадная FIFO-раскладка по due_date. Один цвет = один наряд. '
-            'Конфликтные операции выделены красной рамкой.')
+            'ПКМ по операции — контекстное меню. '
+            'Конфликтные операции выделены красной рамкой. '
+            'Что бы ни случилось — не переживай за переналадки.')
         hint.setStyleSheet('color:#666;')
         root.addWidget(hint)
 
         self.scene = GanttScene()
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.view.setDragMode(
-            QGraphicsView.DragMode.ScrollHandDrag)
+        self.view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self._on_context_menu)
         root.addWidget(self.view, 1)
 
     def refresh(self):
@@ -105,24 +113,110 @@ class GanttWidget(QWidget):
         with self.db.get_session() as s:
             if mode == 'aps':
                 result = schedule_aps(s, horizon_days=horizon)
-                sched = result.schedule
-                conflicts = result.conflicts
-                metrics = result.metrics
+            elif mode == 'backward':
+                result = schedule_backward(s, horizon_days=horizon)
+            elif mode == 'finite':
+                result = schedule_finite_capacity(s, horizon_days=horizon)
+            else:
+                result = APSResult(
+                    schedule=schedule_open_orders(s, horizon_days=horizon),
+                    conflicts=[],
+                    unscheduled_orders=[],
+                )
+                result.conflicts = detect_conflicts(result.schedule)
+                # Вычислить базовые метрики
+                m = result.metrics
+                m.total_operations_scheduled = len(result.schedule)
+                wos = len({s.work_order_id for s in result.schedule})
+                m.total_orders_scheduled = wos
+
+            sched = result.schedule
+            conflicts = result.conflicts if hasattr(result, 'conflicts') else []
+            metrics = result.metrics if hasattr(result, 'metrics') else None
+
+            if metrics:
                 self.lbl_info.setText(
                     f'Нарядов: {metrics.total_orders_scheduled}   ·   '
                     f'Операций: {metrics.total_operations_scheduled}   ·   '
                     f'Конфликтов: {len(conflicts)}   ·   '
                     f'Переналадок: {metrics.total_setup_time_min:.0f} мин   ·   '
-                    f'Загрузка: {metrics.avg_equipment_load_pct:.1f}%')
+                    f'Загрузка: {metrics.avg_equipment_load_pct:.1f}%   ·   '
+                    f'Makespan: {metrics.makespan_hours:.0f}ч')
             else:
-                sched = schedule_open_orders(s, horizon_days=horizon)
-                conflicts = detect_conflicts(sched)
                 wos = len({s.work_order_id for s in sched})
-                eq_count = len({s.equipment_id for s in sched if s.equipment_id})
                 self.lbl_info.setText(
-                    f'Нарядов: {wos}   ·   Оборудования: {eq_count}   ·   '
-                    f'Операций: {len(sched)}   ·   Конфликтов: {len(conflicts)}')
+                    f'Нарядов: {wos}   ·   '
+                    f'Операций: {len(sched)}   ·   '
+                    f'Конфликтов: {len(conflicts)}')
+
         self._render(sched, conflicts)
+
+    def _on_whatif(self):
+        """Сравнить текущий сценарий с альтернативным."""
+        horizon = self.horizon.value()
+        with self.db.get_session() as s:
+            a = schedule_aps(s, horizon_days=horizon,
+                             priority_weight=1.0, due_date_weight=1.5,
+                             setup_time_weight=0.8)
+            b = schedule_aps(s, horizon_days=horizon,
+                             priority_weight=2.0, due_date_weight=1.0,
+                             setup_time_weight=1.2)
+            diff = compare_scenarios(a, b)
+
+            msg = (
+                f'Сценарий A (приоритет 1.0, срок 1.5, наладка 0.8):\n'
+                f'  Нарядов: {diff.orders_scheduled_a}   '
+                f'Операций: {a.metrics.total_operations_scheduled}\n'
+                f'  Загрузка: {a.metrics.avg_equipment_load_pct:.1f}%   '
+                f'Makespan: {a.metrics.makespan_hours:.0f}ч\n\n'
+                f'Сценарий B (приоритет 2.0, срок 1.0, наладка 1.2):\n'
+                f'  Нарядов: {diff.orders_scheduled_b}   '
+                f'Операций: {b.metrics.total_operations_scheduled}\n'
+                f'  Загрузка: {b.metrics.avg_equipment_load_pct:.1f}%   '
+                f'Makespan: {b.metrics.makespan_hours:.0f}ч\n\n'
+                f'Разница:\n'
+                f'  ΔMakespan: {diff.makespan_delta_hours:+.0f}ч   '
+                f'ΔЗагрузка: {diff.avg_load_delta_pct:+.1f}%   '
+                f'ΔПереналадки: {diff.setup_delta_min:+.0f}мин'
+            )
+            QMessageBox.information(self, 'What-If сравнение', msg)
+
+    def _on_optimize_setup(self):
+        """Оптимизировать последовательность переналадок."""
+        with self.db.get_session() as s:
+            result = schedule_aps(s, horizon_days=self.horizon.value())
+            before = result.metrics.total_setup_time_min
+            optimized = optimize_setup_sequence(s, result.schedule)
+            result.schedule = optimized
+            result.conflicts = detect_conflicts(optimized)
+            after = sum(
+                s.duration_min for s in optimized) - sum(
+                s.duration_min for s in result.schedule) + before
+            QMessageBox.information(
+                self, 'Оптимизация переналадок',
+                f'До: {before:.0f} мин переналадок\n'
+                f'После: {after:.0f} мин\n'
+                f'Снижение: {before - after:.0f} мин')
+            self._render(result.schedule, result.conflicts)
+
+    def _on_context_menu(self, pos):
+        """Контекстное меню для операции."""
+        item = self.view.itemAt(pos)
+        if not item or not hasattr(item, 'toolTip'):
+            return
+        menu = QMenu(self)
+        act_move = QAction('Перенести на +1 день', self)
+        act_move.triggered.connect(lambda: self._shift_selected(1440))
+        menu.addAction(act_move)
+        act_move_back = QAction('Перенести на -1 день', self)
+        act_move_back.triggered.connect(lambda: self._shift_selected(-1440))
+        menu.addAction(act_move_back)
+        menu.addSeparator()
+        act_info = QAction('Информация об операции', self)
+        act_info.triggered.connect(lambda: QMessageBox.information(
+            self, 'Операция', item.toolTip()))
+        menu.addAction(act_info)
+        menu.exec(self.view.mapToGlobal(pos))
 
     # ── Рендер ────────────────────────────────────────────────────
     def _render(self, sched: List[ScheduledOp], conflicts):

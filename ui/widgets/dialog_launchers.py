@@ -620,9 +620,10 @@ class DialogLaunchersMixin:
     # Product CRUD
     # ═══════════════════════════════════════════════════════════════
 
-    def _new_product(self):
+    def _new_product(self, group_id=None):
         from ui.dialogs.product_dialog import ProductDialog
-        dlg = ProductDialog(self.db_manager, parent=self)
+        dlg = ProductDialog(self.db_manager, parent=self,
+                           default_group_id=group_id)
         if dlg.exec() == dlg.DialogCode.Accepted:
             data = dlg.get_data()
             try:
@@ -640,6 +641,7 @@ class DialogLaunchersMixin:
                         quantity_in_assembly=data.get('quantity_in_assembly', 1),
                         description=data.get('description'),
                         author_id=self.user.get('id'),
+                        group_id=data.get('group_id'),
                     )
                     session.add(prod)
                     session.flush()
@@ -656,6 +658,28 @@ class DialogLaunchersMixin:
                 )
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка", f"Не удалось создать изделие:\n{e}")
+
+    def _new_subgroup(self, parent_group_id=None):
+        """Создать новую подгруппу."""
+        from PyQt6.QtWidgets import QInputDialog
+        name, ok = QInputDialog.getText(
+            self, "Новая подгруппа",
+            "Название подгруппы:")
+        if not ok or not name.strip():
+            return
+        try:
+            with self.db_manager.get_session() as s:
+                from database.models import ProductGroup
+                grp = ProductGroup(
+                    name=name.strip(),
+                    parent_id=parent_group_id if parent_group_id and parent_group_id >= 0 else None,
+                )
+                s.add(grp)
+                s.commit()
+            self.load_navigation_data()
+            self._log_message(f"Группа «{name.strip()}» создана")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось создать группу:\n{e}")
 
     def _edit_selected_product(self):
         item = self.nav_panel.products_tree.currentItem()
