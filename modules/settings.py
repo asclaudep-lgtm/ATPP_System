@@ -23,7 +23,7 @@ _SETTINGS_PATH = DATA_DIR / "settings.json"
 _LOCK = threading.Lock()
 
 _DEFAULTS: Dict[str, Any] = {
-    "theme": "light",          # light / dark
+    "theme": "light",          # always light
     "font_size": 9,            # базовый размер шрифта приложения, pt
     "language": "ru",          # ru / en
     "op_number_step": 5,       # шаг автоинкремента номеров операций

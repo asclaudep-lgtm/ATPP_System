@@ -61,46 +61,92 @@ class ProductEditorWidget(QWidget):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         if self._original_data is None:
             layout.addWidget(QLabel("Изделие не найдено или удалено."))
             return
 
-        # Header
-        header = QHBoxLayout()
-        title = QLabel(
-            f"Изделие: {self._original_data['designation']} — "
-            f"{self._original_data['name']}"
+        d = self._original_data
+
+        # ── Breadcrumb ──
+        bc = QLabel(
+            f"Изделия › {d.get('group_name', 'Группа')} › "
+            f"{d['designation']} — {d['name']}"
         )
+        bc.setObjectName("editor_breadcrumb")
+        bc.setStyleSheet(
+            "color: #94a3b8; font-size: 11px; padding: 8px 16px 0 16px; "
+            "background: transparent;")
+        layout.addWidget(bc)
+
+        # ── Title + actions ──
+        header = QHBoxLayout()
+        header.setContentsMargins(16, 0, 16, 0)
+
+        title_col = QVBoxLayout()
+        title_col.setSpacing(2)
+        title = QLabel(f"{d['designation']} — {d['name']}")
         title_font = QFont()
-        title_font.setPointSize(13)
+        title_font.setPointSize(14)
         title_font.setBold(True)
         title.setFont(title_font)
-        header.addWidget(title)
+        title.setStyleSheet("color: inherit; background: transparent;")
+        title_col.addWidget(title)
+
+        subtitle = QLabel("Изделие · черновик")
+        subtitle.setStyleSheet(
+            "color: #94a3b8; font-size: 11px; background: transparent;")
+        title_col.addWidget(subtitle)
+        header.addLayout(title_col)
         header.addStretch()
 
         save_btn = QPushButton("Сохранить")
-        save_btn.setStyleSheet(
-            "QPushButton { background-color: #27ae60; color: white; "
-            "border: none; padding: 6px 16px; border-radius: 4px; }"
-        )
+        save_btn.setProperty("primary", "true")
         save_btn.clicked.connect(self._save)
         header.addWidget(save_btn)
+
+        delete_btn = QPushButton("Удалить")
+        delete_btn.setProperty("danger", "true")
+        delete_btn.clicked.connect(self._request_delete)
+        header.addWidget(delete_btn)
         layout.addLayout(header)
 
-        # Tabs
+        # ── Form card ──
+        form_card = QFrame()
+        form_card.setProperty("role", "form-card")
+
+        # ── Inner tabs ──
         tabs = QTabWidget()
-        tabs.addTab(self._build_general_tab(), "Общие")
+        tabs.setObjectName("editor_inner_tabs")
+        tabs.addTab(self._build_general_tab(), "● Общие")
         tabs.addTab(self._build_tp_tab(), "Связанные ТП")
         tabs.addTab(self._build_docs_tab(), "Документы")
+        tabs.addTab(self._build_history_tab(), "История")
         layout.addWidget(tabs)
 
-    def _build_general_tab(self):
+    def _request_delete(self):
+        mw = self.window()
+        if hasattr(mw, '_delete_product'):
+            mw._delete_product(self.product_id)
+
+    def _build_history_tab(self):
         w = QWidget()
-        form = QFormLayout(w)
-        form.setSpacing(8)
+        lay = QVBoxLayout(w)
+        lay.addWidget(QLabel("История изменений изделия. Будет расширено."))
+        lay.addStretch()
+        return w
+
+    def _build_general_tab(self):
+        form_card = QFrame()
+        form_card.setProperty("role", "form-card")
+        form = QFormLayout(form_card)
+        form.setSpacing(12)
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form.setHorizontalSpacing(24)
+        form.setVerticalSpacing(12)
+        form.setContentsMargins(24, 24, 24, 24)
 
         d = self._original_data
 
@@ -162,10 +208,9 @@ class ProductEditorWidget(QWidget):
         sketch_row = QHBoxLayout()
         self._sketch_label = QLabel()
         self._sketch_label.setFixedSize(200, 150)
-        self._sketch_label.setStyleSheet(
-            "border: 1px dashed #bdc3c7; background: #f8f9fa;")
         self._sketch_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._sketch_label.setText("Эскиз\n(нет)")
+        self._sketch_label.setProperty("role", "sketch-placeholder")
         sketch_row.addWidget(self._sketch_label)
 
         sketch_btns = QVBoxLayout()
@@ -176,7 +221,7 @@ class ProductEditorWidget(QWidget):
         sketch_row.addLayout(sketch_btns)
         form.addRow("Эскиз:", sketch_row)
 
-        return w
+        return form_card
 
     def _build_tp_tab(self):
         w = QWidget()

@@ -1,16 +1,17 @@
-"""
-Главное окно приложения АТПП — координатор виджетов.
+"""Main window — VSCode-style layout.
 
-Связывает MainMenu, MainToolBar, MainStatusBar, NavigationPanel и
-DialogLaunchersMixin через Qt signals/slots.
+Layout:
+  TitleBar (30px)
+  Body: ActivityBar (52px) + Splitter(Sidebar, EditorStack)
+  StatusBar (24px, orange)
 """
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter, QTabWidget,
-    QTreeWidgetItem, QLabel, QPushButton, QTextEdit, QDockWidget,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QStackedWidget,
+    QTabWidget, QTreeWidgetItem, QLabel, QPushButton, QTextEdit, QDockWidget,
     QMenu, QMessageBox,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
-from PyQt6.QtGui import QAction, QKeySequence, QColor
+from PyQt6.QtGui import QAction, QKeySequence
 
 from utils.logger import get_logger
 _log = get_logger(__name__)
@@ -22,22 +23,25 @@ from ui.widgets.main_menu import MainMenu
 from ui.widgets.main_toolbar import MainToolBar
 from ui.widgets.main_statusbar import MainStatusBar
 from ui.widgets.navigation_panel import NavigationPanel
+from ui.widgets.activity_bar import ActivityBar
+from ui.widgets.title_bar import TitleBar
+from ui.widgets.welcome_widget import WelcomeWidget
 from ui.widgets.dialog_launchers import DialogLaunchersMixin
 
 
 class MainWindow(DialogLaunchersMixin, QMainWindow):
-    """Главное окно системы АТПП — композиция виджетов + сигналы."""
+    """VSCode-style main window."""
 
     def __init__(self, db_manager, user):
         _log.debug("Loading MainWindow from: %s", __file__)
         super().__init__()
         self.db_manager = db_manager
         self.user = user
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self.setWindowTitle(
             "УЗГА-Инжиниринг АТПП- Система автоматизации "
             "технологической подготовки производства")
-        _log.debug("Window title: %s", self.windowTitle())
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self._open_tp_tabs = {}
@@ -54,29 +58,56 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
 
     def _init_ui(self):
         central = QWidget()
+        central.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setCentralWidget(central)
 
-        main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
+        # 1. Title bar (top)
+        self.title_bar = TitleBar()
+        root.addWidget(self.title_bar)
+
+        # 2. Body: activity bar + sidebar + editor
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(0)
+
+        # 2a. Activity bar (left)
+        self.activity_bar = ActivityBar()
+        body.addWidget(self.activity_bar)
+
+        # 2b. Splitter: sidebar + editor
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setObjectName("main_splitter")
 
-        # Navigation panel (left)
         self.nav_panel = NavigationPanel(self.db_manager, user=self.user)
         splitter.addWidget(self.nav_panel)
 
-        # Work area (center) — tabbed
+        # Editor stack: welcome vs work_area
+        self._editor_stack = QStackedWidget()
+
+        self.welcome = WelcomeWidget()
+
         self.work_area = QTabWidget()
+        self.work_area.setObjectName("editor_tabs")
         self.work_area.setTabsClosable(True)
         self.work_area.setMovable(True)
+        self.work_area.setDocumentMode(True)
         self.work_area.tabCloseRequested.connect(self._close_tab)
-        splitter.addWidget(self.work_area)
+        self.work_area.currentChanged.connect(self._update_editor_stack)
+        self.work_area.currentChanged.connect(self._update_title_bar_page)
 
+        self._editor_stack.addWidget(self.welcome)
+        self._editor_stack.addWidget(self.work_area)
+
+        splitter.addWidget(self._editor_stack)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-        splitter.setSizes([270, WINDOW_WIDTH - 270])
-        splitter.setHandleWidth(2)
+        splitter.setSizes([290, WINDOW_WIDTH - 290 - 52])
+        splitter.setHandleWidth(1)
+
         self._main_splitter = splitter
         try:
             settings = QSettings(
@@ -88,13 +119,26 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             pass
         splitter.splitterMoved.connect(self._save_splitter_state)
 
-        main_layout.addWidget(splitter)
+        body.addWidget(splitter, stretch=1)
+        root.addLayout(body)
 
-        # Messages dock (bottom)
+        # 3. Status bar
+        self._statusbar = MainStatusBar(self.user)
+        self._statusbar.setObjectName("main_statusbar")
+        self.setStatusBar(self._statusbar)
+
+        # 4. Messages dock (hidden)
         self._messages_dock = self._make_messages_dock()
         self.addDockWidget(
             Qt.DockWidgetArea.BottomDockWidgetArea, self._messages_dock)
         self._messages_dock.hide()
+
+        # 5. Hide classic menu bar (kept functional for Alt-key / tests)
+        self.menuBar().setVisible(False)
+
+        # 6. Legacy toolbar — kept as shim (hidden)
+        self._toolbar = MainToolBar(self.user, parent=self)
+        self._toolbar.hide()
 
     def _connect_signals(self):
         """Wire all widget signals to MainWindow slots."""
@@ -109,7 +153,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         nav.new_tp_requested.connect(
             lambda pid: self._new_tech_process(pid if pid else None))
 
-        # Sidebar module buttons → menu actions
+        # Legacy module signals → actions (from sidebar, no-op shims)
         nav.production_clicked.connect(self._open_production_panel)
         nav.qa_clicked.connect(self._open_qa_terminal)
         nav.tooling_clicked.connect(self._open_tooling)
@@ -125,7 +169,27 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             "Используйте веб-интерфейс для batch-операций.\n"
             "Откройте http://localhost:8000 и перейдите на вкладку «⚡ Batch-операции»."))
 
-        # Menu
+        # ActivityBar → module switching
+        self.activity_bar.module_selected.connect(self._on_module_selected)
+        self.activity_bar.settings_clicked.connect(self._open_appearance_settings)
+        self.activity_bar.profile_clicked.connect(self._open_change_password_self)
+
+        # Welcome screen buttons
+        self.welcome.search_clicked.connect(
+            lambda: (self.title_bar.search.setFocus(),
+                     self.title_bar.search.selectAll()))
+        self.welcome.new_product_clicked.connect(self._new_product)
+        self.welcome.new_tp_clicked.connect(
+            lambda: self._new_tech_process(None))
+        self.welcome.open_dashboard_clicked.connect(
+            self._open_manager_dashboard)
+
+        # TitleBar search
+        self.title_bar.search_requested.connect(self._handle_title_search)
+        self._menu_key_bindings()
+
+    def _menu_key_bindings(self):
+        """Wire classic menu actions (available via Alt+key even when hidden)."""
         menu = MainMenu(self.user, self)
         self.setMenuBar(menu)
         self._menu = menu
@@ -213,37 +277,55 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             menu.act_hotkeys.triggered.connect(self._show_hotkeys)
         menu.act_about.triggered.connect(self._show_about)
 
-        # Toolbar
-        from modules import settings as _us
-        cur_theme = _us.get('theme', 'light')
-        cur_font = int(_us.get('font_size', 9) or 9)
-        self._toolbar = MainToolBar(self.user, cur_theme, cur_font)
-        self.addToolBar(self._toolbar)
-
-        tb = self._toolbar
-        tb.new_product.connect(self._new_product)
-        tb.new_tp.connect(self._new_tech_process)
-        tb.open_references.connect(self._open_references)
-        tb.open_documents.connect(self._open_doc_dialog)
-        tb.open_ktd_browser.connect(self._open_ktd_browser)
-        tb.refresh.connect(self.nav_panel.load_data)
-        if self.user.get('role') == 'admin':
-            tb.open_users.connect(self._open_users_dialog)
-        tb.open_global_search.connect(self._open_quick_search)
-        if hasattr(tb, 'open_pdo_dispatcher'):
-            tb.open_pdo_dispatcher.connect(self._open_pdo_dispatcher)
-        tb.toggle_theme.connect(self._toggle_theme)
-        tb.cycle_font_size.connect(self._cycle_font_size)
-
-        # StatusBar
-        self._statusbar = MainStatusBar(self.user)
-        self.setStatusBar(self._statusbar)
+        # Hide after wiring (keep functional for Alt shortcuts + tests)
+        self.menuBar().setVisible(False)
 
         # Context menu for products tree
         self.nav_panel.products_tree.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu)
         self.nav_panel.products_tree.customContextMenuRequested.connect(
             self._product_context_menu)
+
+    # ═══════════════════════════════════════════════════════════════
+    # VSCode-style methods
+    # ═══════════════════════════════════════════════════════════════
+
+    def _on_module_selected(self, key: str):
+        """Handle activity bar module selection."""
+        mapping = {
+            "products":    self.nav_panel.load_data,  # sidebar already shows products
+            "dashboard":   self._open_manager_dashboard,
+            "orders":      self._open_production_panel,
+            "pdo":         self._open_pdo_dispatcher,
+            "qa":          self._open_qa_terminal,
+            "tooling":     self._open_tooling,
+            "references":  self._open_references,
+            "documents":   self._open_doc_dialog,
+            "users":       self._open_users_dialog,
+        }
+        action = mapping.get(key)
+        if action:
+            action()
+
+    def _update_editor_stack(self):
+        """Show welcome screen when no tabs, editor when tabs exist."""
+        self._editor_stack.setCurrentIndex(
+            1 if self.work_area.count() > 0 else 0)
+
+    def _update_title_bar_page(self):
+        """Update title bar page title from active tab."""
+        idx = self.work_area.currentIndex()
+        if idx >= 0:
+            text = self.work_area.tabText(idx)
+            self.title_bar.set_page_title(text)
+        else:
+            self.title_bar.set_page_title("Главная")
+
+    def _handle_title_search(self, text: str):
+        """Handle search from title bar."""
+        if text.strip():
+            self._open_global_search()
+        self.nav_panel.load_data(text)
 
     # ═══════════════════════════════════════════════════════════════
     # Messages dock
@@ -271,7 +353,6 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
     # ═══════════════════════════════════════════════════════════════
 
     def _open_product_ktp(self, product_id: int):
-        """Legacy KTP widget — kept for backward compatibility."""
         if product_id in self._open_ktp_tabs:
             idx = self._open_ktp_tabs[product_id]
             if idx < self.work_area.count():
@@ -290,7 +371,6 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         self._log_message(f"Открыт КТП: {title}")
 
     def _open_product_editor(self, product_id: int):
-        """v11: Open the new ProductEditorWidget for a product."""
         for i in range(self.work_area.count()):
             w = self.work_area.widget(i)
             if (hasattr(w, 'product_id') and w.product_id == product_id
@@ -310,7 +390,6 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         self._log_message(f"Открыт редактор: {title}")
 
     def _open_reference_editors(self):
-        """v11: Open tabbed reference editors (materials, equipment, etc.)."""
         from ui.editors.reference_editor import ReferenceEditorWidget
 
         tabs = QTabWidget()
@@ -363,7 +442,6 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         self.nav_panel.load_data()
 
     def _close_tab(self, index):
-        # Clean up TP tab tracking
         for tp_id, idx in list(self._open_tp_tabs.items()):
             if idx == index:
                 del self._open_tp_tabs[tp_id]
@@ -372,7 +450,6 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
                     for tid, i in self._open_tp_tabs.items()
                 }
                 break
-        # Clean up KTP tab tracking
         for pid, idx in list(self._open_ktp_tabs.items()):
             if idx == index:
                 del self._open_ktp_tabs[pid]
@@ -409,50 +486,35 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
                 edit_act = QAction("Редактировать изделие", self)
                 edit_act.triggered.connect(lambda: self._edit_product(data))
                 menu.addAction(edit_act)
-
                 add_tp_act = QAction("Создать ТП для этого изделия", self)
                 add_tp_act.triggered.connect(
                     lambda: self._new_tech_process(product_id=data))
                 menu.addAction(add_tp_act)
-
                 menu.addSeparator()
                 del_act = QAction("Удалить изделие", self)
                 del_act.triggered.connect(lambda: self._delete_product(data))
                 menu.addAction(del_act)
-
             elif isinstance(data, tuple) and data[0] == 'tp':
                 tp_id = data[1]
                 open_act = QAction("Открыть ТП", self)
-                open_act.triggered.connect(
-                    lambda: self._open_tp_editor(tp_id))
+                open_act.triggered.connect(lambda: self._open_tp_editor(tp_id))
                 menu.addAction(open_act)
-
                 menu.addSeparator()
                 variant_act = QAction("Создать вариант исполнения ТП…", self)
-                variant_act.triggered.connect(
-                    lambda: self._copy_tp(tp_id))
+                variant_act.triggered.connect(lambda: self._copy_tp(tp_id))
                 menu.addAction(variant_act)
-
                 copy_act = QAction("Копировать ТП…", self)
-                copy_act.triggered.connect(
-                    lambda: self._copy_tp(tp_id))
+                copy_act.triggered.connect(lambda: self._copy_tp(tp_id))
                 menu.addAction(copy_act)
-
                 snap_act = QAction("Сохранить снимок версии…", self)
-                snap_act.triggered.connect(
-                    lambda: self._snapshot_tp(tp_id))
+                snap_act.triggered.connect(lambda: self._snapshot_tp(tp_id))
                 menu.addAction(snap_act)
-
                 hist_act = QAction("История версий…", self)
-                hist_act.triggered.connect(
-                    lambda: self._show_tp_history(tp_id))
+                hist_act.triggered.connect(lambda: self._show_tp_history(tp_id))
                 menu.addAction(hist_act)
-
                 arch_act = QAction("Архивировать ТП", self)
-                arch_act.triggered.connect(
-                    lambda: self._archive_tp(tp_id))
+                arch_act.triggered.connect(lambda: self._archive_tp(tp_id))
                 menu.addAction(arch_act)
-
                 del_act = QAction("Удалить ТП", self)
                 del_act.triggered.connect(lambda: self._delete_tp(tp_id))
                 menu.addAction(del_act)
@@ -534,50 +596,10 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         try:
             settings = QSettings(
                 'ATPP', f"main_window_{self.user.get('username', 'default')}")
-            settings.setValue('splitter_state', self._main_splitter.saveState())
+            settings.setValue('splitter_state',
+                            self._main_splitter.saveState())
         except Exception:
             pass
-
-    # ═══════════════════════════════════════════════════════════════
-    # Theme / Font
-    # ═══════════════════════════════════════════════════════════════
-
-    def _toggle_theme(self):
-        from modules import settings as user_settings
-        from ui.theme import apply_theme
-        from PyQt6.QtWidgets import QApplication
-        cur = user_settings.get('theme', 'light')
-        new = 'dark' if cur == 'light' else 'light'
-        user_settings.set('theme', new)
-        app = QApplication.instance()
-        if app is not None:
-            apply_theme(
-                app, theme=new,
-                font_size=int(user_settings.get('font_size', 9) or 9),
-            )
-        if hasattr(self, '_toolbar'):
-            self._toolbar.update_theme(new)
-
-    def _cycle_font_size(self):
-        from modules import settings as user_settings
-        from ui.theme import apply_theme
-        from PyQt6.QtWidgets import QApplication
-        cur = int(user_settings.get('font_size', 9) or 9)
-        sizes = [9, 11, 13, 15]
-        try:
-            idx = sizes.index(cur)
-            new = sizes[(idx + 1) % len(sizes)]
-        except ValueError:
-            new = 11
-        user_settings.set('font_size', new)
-        app = QApplication.instance()
-        if app is not None:
-            apply_theme(
-                app, theme=user_settings.get('theme', 'light'),
-                font_size=new,
-            )
-        if hasattr(self, '_toolbar'):
-            self._toolbar.update_font_button(new)
 
     # ═══════════════════════════════════════════════════════════════
     # Navigation data (delegates)

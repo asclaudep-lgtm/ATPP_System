@@ -2,7 +2,6 @@
 Диалог настроек внешнего вида и общих параметров приложения.
 
 Поддерживает:
-  - Тему (light / dark)
   - Базовый размер шрифта
   - Шаг автоинкремента номеров операций и pad-формат
   - Язык интерфейса (ru / en) — сохраняется, применяется при перезапуске
@@ -26,15 +25,6 @@ class AppearanceDialog(QDialog):
 
         lay = QVBoxLayout(self)
         form = QFormLayout()
-
-        self.theme_cmb = QComboBox()
-        self.theme_cmb.addItem("Светлая", "light")
-        self.theme_cmb.addItem("Тёмная", "dark")
-        cur_theme = settings.get('theme', 'light')
-        idx = self.theme_cmb.findData(cur_theme)
-        if idx >= 0:
-            self.theme_cmb.setCurrentIndex(idx)
-        form.addRow("Тема:", self.theme_cmb)
 
         self.font_spin = QSpinBox()
         self.font_spin.setRange(7, 18)
@@ -65,7 +55,7 @@ class AppearanceDialog(QDialog):
         lay.addLayout(form)
 
         hint = QLabel(
-            "Тема и размер шрифта применяются сразу.\n"
+            "Размер шрифта применяется сразу.\n"
             "Смена языка вступает в силу после перезапуска приложения."
         )
         hint.setStyleSheet("color: #7f8c8d; font-style: italic;")
@@ -80,13 +70,11 @@ class AppearanceDialog(QDialog):
         lay.addWidget(buttons)
 
     def _on_accept(self):
-        theme = self.theme_cmb.currentData()
         font_size = int(self.font_spin.value())
         lang = self.lang_cmb.currentData()
         step = int(self.step_spin.value())
         pad = int(self.pad_spin.value())
 
-        settings.set('theme', theme)
         settings.set('font_size', font_size)
         settings.set('language', lang)
         settings.set('op_number_step', step)
@@ -96,7 +84,7 @@ class AppearanceDialog(QDialog):
             from PyQt6.QtWidgets import QApplication
             app = QApplication.instance()
             if app is not None:
-                apply_theme(app, theme=theme, font_size=font_size)
+                apply_theme(app, font_size=font_size)
         except Exception:
             pass
 

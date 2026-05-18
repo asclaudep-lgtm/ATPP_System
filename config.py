@@ -43,7 +43,7 @@ COMPANY_NAME = "УЗГА"
 # Настройки интерфейса
 WINDOW_WIDTH = 1400
 WINDOW_HEIGHT = 900
-THEME = "light"  # light / dark
+THEME = "light"  # always light
 
 # Настройки безопасности
 PASSWORD_MIN_LENGTH = 6
