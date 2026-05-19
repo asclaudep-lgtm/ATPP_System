@@ -100,7 +100,6 @@ def collect_opcua(session: Session, *,
             r = simulate_opcua_read(eq_id)
             readings.append(r)
             store_machine_reading(session, r)
-    session.commit()
     return readings
 
 
@@ -277,7 +276,7 @@ def increment_tool_cycles(session: Session, *,
     remaining = 100.0 - tool.wear_percent
     remaining_pct = remaining
 
-    session.commit()
+    session.flush()
 
     return ToolLifeStatus(
         tool_id=tool.id,

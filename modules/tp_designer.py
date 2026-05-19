@@ -383,9 +383,7 @@ class TPDesigner:
 
             # Добавляем типовые переходы на основе типа операции
             self._add_typical_transitions(operation, op_data['name'])
-        
-        self.session.commit()
-        
+
         return tp
     
     def validate_tech_process(self, tech_process_id: int) -> Dict:
@@ -539,7 +537,5 @@ class TPDesigner:
                 )
                 
                 self.session.add(new_trans)
-        
-        self.session.commit()
-        
+
         return new_tp
