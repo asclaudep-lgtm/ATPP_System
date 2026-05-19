@@ -23,6 +23,9 @@ from PyQt6.QtWidgets import (
     QFormLayout, QTextEdit, QMessageBox, QDialogButtonBox,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 from database.models import TransitionTemplate
 
 
@@ -75,7 +78,7 @@ class TransitionTemplatesDialog(QDialog):
         try:
             _seed_if_empty(self.db)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
         self._build_ui()
         self._reload()

@@ -16,6 +16,9 @@ from PyQt6.QtWidgets import (
     QInputDialog, QFileIconProvider, QMenu,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 from config import SKETCHES_DIR
 from database.models import Sketch, Operation, Transition
 
@@ -44,7 +47,7 @@ def _open_path(path: str):
         else:
             subprocess.Popen(['xdg-open', path])
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
 
 class SketchesPanel(QWidget):
@@ -477,7 +480,7 @@ class SketchesPanel(QWidget):
                 if full.exists():
                     full.unlink()
             except OSError:
-                pass
+                _logger.exception("Failed to delete sketch file")
             s.delete(sk)
         self.refresh()
 

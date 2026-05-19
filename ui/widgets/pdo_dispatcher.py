@@ -8,6 +8,9 @@ from PyQt6.QtWidgets import (
     QLineEdit, QFormLayout, QTableWidget, QTableWidgetItem, QDialog,
     QComboBox,
 )
+
+import logging
+_logger = logging.getLogger(__name__)
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
 from PyQt6.QtGui import QFont, QColor, QPalette
 from PyQt6.QtWidgets import QCompleter
@@ -139,7 +142,7 @@ class PDOOrderCard(QFrame):
                     due_lbl.setStyleSheet(
                         'color: #e67e22; font-weight: bold; font-size: 10px;')
             except ValueError:
-                pass
+                _logger.exception("Invalid due date format")
         bot.addWidget(due_lbl)
         layout.addLayout(bot)
 
@@ -251,7 +254,7 @@ class PDOKanbanColumn(QGroupBox):
                 self.order_dropped.emit(order_id, self.status)
                 ev.acceptProposedAction()
             except ValueError:
-                pass
+                _logger.exception("Invalid order ID in drop event")
         self.dragLeaveEvent(ev)
         super().dropEvent(ev)
 

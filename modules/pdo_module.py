@@ -9,6 +9,9 @@ from database.models import (
     TechProcess, Product, TPStatus, User,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 
 # ═══════════════════════════════════════════════════════════════════
 # Order lifecycle
@@ -451,4 +454,4 @@ def _send_push(target: str, title: str, message: str):
         from web.server import send_push_alert
         send_push_alert(target, title, message)
     except Exception:
-        pass
+        _logger.exception("Unhandled error")

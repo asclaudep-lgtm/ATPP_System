@@ -166,7 +166,7 @@ class AuthDialog(QDialog):
                 self.login_btn.setIcon(FluentIcon.ACCEPT)
                 cancel_btn.setIcon(FluentIcon.CANCEL)
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
 
         buttons_row.addWidget(self.login_btn)
         buttons_row.addWidget(cancel_btn)

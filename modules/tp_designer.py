@@ -7,6 +7,9 @@ from database.models import (
     TPType, TPStatus, TechnologyType, Equipment, Profession,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 
 class TPDesigner:
     """Класс для проектирования технологических процессов"""
@@ -223,7 +226,7 @@ class TPDesigner:
             try:
                 accuracy = int(product.accuracy_class.replace('IT', ''))
             except ValueError:
-                pass
+                _logger.exception("Invalid accuracy class value")
 
         material_name = product.material.name.lower() if product.material and product.material.name else ''
         detail_name = product.name.lower() if product.name else ''

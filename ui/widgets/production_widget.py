@@ -21,6 +21,9 @@ from database.models import (
     IssueStatus, ProductionIssue, RouteStepStatus, Workshop,
     WorkOrder, WorkOrderItem, WorkOrderStatus,
 )
+
+import logging
+_logger = logging.getLogger(__name__)
 from modules import production
 
 
@@ -1068,7 +1071,7 @@ class ProductionWidget(QWidget):
             try:
                 w.refresh()
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
 
     def refresh(self):
         for i in range(self.tabs.count()):
@@ -1077,4 +1080,4 @@ class ProductionWidget(QWidget):
                 try:
                     w.refresh()
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")

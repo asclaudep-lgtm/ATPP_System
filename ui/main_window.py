@@ -5,6 +5,8 @@ Layout:
   Body: ActivityBar (52px) + Splitter(Sidebar, EditorStack)
   StatusBar (24px, orange)
 """
+import logging
+
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QStackedWidget,
     QTabWidget, QTreeWidgetItem, QLabel, QPushButton, QTextEdit, QDockWidget,
@@ -12,6 +14,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QAction, QKeySequence
+
+_logger = logging.getLogger(__name__)
 
 from utils.logger import get_logger
 _log = get_logger(__name__)
@@ -116,7 +120,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             if state is not None:
                 splitter.restoreState(state)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         splitter.splitterMoved.connect(self._save_splitter_state)
 
         body.addWidget(splitter, stretch=1)
@@ -549,7 +553,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         try:
             self.nav_panel.focus_search()
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _close_current_tab(self):
         idx = self.work_area.currentIndex()
@@ -602,7 +606,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             settings.setValue('splitter_state',
                             self._main_splitter.saveState())
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # ═══════════════════════════════════════════════════════════════
     # Navigation data (delegates)
@@ -629,15 +633,13 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
     def _open_web_interface(self):
         """Открыть веб-интерфейс в браузере."""
         import webbrowser
-        import subprocess
+        import os
         url = "http://localhost:8000"
         try:
-            # Попытка открыть браузер
             webbrowser.open(url)
         except Exception:
-            # Fallback: использовать системную команду
             try:
-                subprocess.Popen(['start', url], shell=True)
+                os.startfile(url)
             except Exception:
                 QMessageBox.information(
                     self, "Веб-интерфейс",

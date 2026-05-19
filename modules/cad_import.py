@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session
 from database.models import Product, Material
 
 
+import logging
+_logger = logging.getLogger(__name__)
 @dataclass
 class CadGeometry:
     mass_kg: Optional[float] = None
@@ -134,14 +136,14 @@ def _read_cdw_strings(data: bytes, min_len: int = 4) -> List[str]:
                     s = bytes(current).decode('windows-1251', errors='ignore')
                     result.append(s)
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")
             current = []
     if len(current) >= min_len:
         try:
             s = bytes(current).decode('windows-1251', errors='ignore')
             result.append(s)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
     return result
 
 
@@ -169,7 +171,7 @@ def parse_cdw(file_path: Path) -> Optional[CadGeometry]:
             try:
                 geom.mass_kg = float(mass_match.group(1).replace(',', '.'))
             except ValueError:
-                pass
+                _logger.exception("Invalid mass value in CAD file")
             break
 
     # Габариты

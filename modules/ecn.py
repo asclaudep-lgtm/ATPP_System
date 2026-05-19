@@ -17,6 +17,9 @@ from database.models import (
     TechProcess, Product,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 
 DEFAULT_ROUTE = [
     SignerRole.CHIEF_TECH.value,
@@ -36,7 +39,7 @@ def next_ecn_number(session) -> str:
         try:
             nums.append(int(str(n).rsplit('-', 1)[-1]))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
     nxt = (max(nums) if nums else 0) + 1
     return f'{base}{nxt:03d}'
 

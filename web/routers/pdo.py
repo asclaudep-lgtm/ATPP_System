@@ -1,5 +1,8 @@
 """PDO API v3 — real workflow with OMTS, Tech Dept, Deputy approval."""
 
+import logging
+_logger = logging.getLogger(__name__)
+
 from datetime import date
 from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.orm import Session
@@ -23,6 +26,7 @@ def list_orders(
         try:
             st = PDOStatus[status]
         except KeyError:
+            _logger.exception("Invalid PDO status: %s", status)
             pass
     orders = pdo_module.list_orders_by_status(db, st)
     return [pdo_module.get_order_detail(db, o.id) for o in orders]

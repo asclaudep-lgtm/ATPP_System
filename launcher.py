@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from utils.logger import setup_logging, get_logger
 
+import logging
+_logger = logging.getLogger(__name__)
 log = get_logger(__name__)
 
 try:
@@ -91,7 +93,7 @@ def launch() -> int:
             summary = db_manager.summarize_data()
             log.debug("DB seed summary: %s", summary)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
     except Exception as e:
         QMessageBox.critical(None, "Ошибка базы данных", f"Не удалось инициализировать базу данных:\n{str(e)}")
         return 1

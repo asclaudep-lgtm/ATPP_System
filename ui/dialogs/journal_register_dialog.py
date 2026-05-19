@@ -19,6 +19,9 @@ from PyQt6.QtWidgets import (
     QComboBox,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 
 class JournalRegisterDialog(QDialog):
     """Диалог подтверждения регистрации в журнале.
@@ -203,7 +206,7 @@ class JournalRegisterDialog(QDialog):
         try:
             self.tp_in.textChanged.disconnect(self._sync_mtp)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         if on:
             self.tp_in.textChanged.connect(self._sync_mtp)
 
@@ -220,7 +223,7 @@ class JournalRegisterDialog(QDialog):
             if self.same_chk.isChecked():
                 self.mtp_in.setText(nx)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # ------------------------------------------------------------------
     # Buttons

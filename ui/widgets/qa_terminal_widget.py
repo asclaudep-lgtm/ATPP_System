@@ -21,6 +21,9 @@ from database.models import (
     WorkOrder, WorkOrderItem, WorkOrderStatus, RouteStep, RouteStepStatus,
     ScrapReason, ScrapDecision, Operation,
 )
+
+import logging
+_logger = logging.getLogger(__name__)
 from modules import scrap_journal as sj
 
 
@@ -251,7 +254,7 @@ class QATerminalWidget(QWidget):
                     sj.attach_photo(s, scrap_id=rec.id, src_path=f,
                                     uploaded_by=self.user_id)
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")
             sj.decide(s, scrap_id=rec.id, decision=ScrapDecision.SCRAP,
                       resolution='Решение ОТК: в брак',
                       decided_by=self.user_id)

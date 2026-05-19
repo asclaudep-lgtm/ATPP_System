@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from utils.logger import get_logger
 
+import logging
+_logger = logging.getLogger(__name__)
 _log = get_logger(__name__)
 
 import gzip
@@ -160,7 +162,7 @@ def _mirror_target() -> Optional[Path]:
                         val = line
                         break
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
     if not val:
         return None
     return Path(val)
@@ -247,7 +249,7 @@ def _pg_tool(name: str) -> Optional[str]:
                         if os.path.isfile(cand):
                             candidates.append(cand)
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
         if candidates:
             return candidates[0]
     return None
@@ -290,7 +292,7 @@ def _make_backup_postgresql() -> Optional[Path]:
             try:
                 dst.unlink(missing_ok=True)
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
             return None
         return dst
     except Exception:
@@ -298,7 +300,7 @@ def _make_backup_postgresql() -> Optional[Path]:
         try:
             dst.unlink(missing_ok=True)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         return None
 
 
@@ -525,7 +527,7 @@ def rotate():
         try:
             os.remove(p)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
 
 def daily_backup_if_needed() -> Optional[Path]:
@@ -576,7 +578,7 @@ class BackupScheduler:
                         interval = int(line.split('=', 1)[1])
                         break
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
         return cls(interval_minutes=interval)
 
     @property

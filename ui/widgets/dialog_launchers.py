@@ -10,6 +10,9 @@ from PyQt6.QtWidgets import (
     QMessageBox, QFileDialog, QPlainTextEdit, QSplitter,
     QPushButton, QWidget, QTabWidget,
 )
+
+import logging
+_logger = logging.getLogger(__name__)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
 
@@ -421,7 +424,7 @@ class DialogLaunchersMixin:
         try:
             w.tp_open.connect(self._open_tp_editor)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         self._add_or_focus_tab(w, 'Поиск')
 
     def _open_quick_search(self):
@@ -430,7 +433,7 @@ class DialogLaunchersMixin:
         try:
             dlg.tp_open.connect(self._open_tp_editor)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         dlg.exec()
 
     def _open_analytics(self):
@@ -473,7 +476,7 @@ class DialogLaunchersMixin:
         try:
             w.open_tp.connect(self._open_tp_editor)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         self._add_or_focus_tab(w, 'Журнал регистрации')
 
     def _open_op_templates(self):
@@ -880,7 +883,7 @@ class DialogLaunchersMixin:
                                      action='soft_delete',
                                      description=f'ТП «{number}» перемещён в корзину')
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")
                 self.load_navigation_data()
                 self._log_message(f"ТП «{number}» перемещён в корзину")
             except Exception as e:
@@ -1246,7 +1249,7 @@ class DialogLaunchersMixin:
                                      f'МТП={data["mtp_number"]}'),
                     )
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")
             self._log_message(
                 f'Зарегистрировано в журнале: ТП {data["tp_number"]}, '
                 f'МТП {data["mtp_number"]}'

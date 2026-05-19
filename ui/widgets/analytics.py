@@ -24,6 +24,9 @@ from database.models import (
     TechProcess, Operation, Equipment, Profession, MaterialNorm, Material,
     Product,
 )
+
+import logging
+_logger = logging.getLogger(__name__)
 from config import EXPORT_DIR
 
 
@@ -207,7 +210,7 @@ class AnalyticsWidget(QWidget):
         try:
             default_dir.mkdir(parents=True, exist_ok=True)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         path_str, _ = QFileDialog.getSaveFileName(
             self, 'Сохранить отчёт',
             str(default_dir / f'Аналитика_{title}_{ts}.xlsx'),

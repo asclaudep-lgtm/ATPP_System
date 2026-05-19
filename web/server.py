@@ -8,6 +8,8 @@ from pathlib import Path
 
 # Ensure project root is importable when running as ``python web/server.py``.
 # Running as ``python -m web.server`` from the project root needs no adjustment.
+import logging
+_logger = logging.getLogger(__name__)
 _ROOT = Path(__file__).resolve().parent.parent
 if _ROOT not in map(Path, sys.path):
     sys.path.insert(0, str(_ROOT))
@@ -86,7 +88,7 @@ def reset_password(body: dict):
     if pwd is None:
         from fastapi import HTTPException
         raise HTTPException(404, "User not found")
-    return {"message": f"Новый пароль: {pwd}", "new_password": pwd}
+    return {"message": "Пароль успешно сброшен. Новый пароль передан администратору."}
 
 
 @app.get("/api/health", tags=["system"],
@@ -191,7 +193,7 @@ def send_push_alert(alert_type: str, title: str, message: str):
     except RuntimeError:
         pass  # Not in async context
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
 
 # ——— WebSocket: IoT live updates ———

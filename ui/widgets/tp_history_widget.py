@@ -19,6 +19,9 @@ from modules.tp_versioning import (
     list_versions, load_snapshot, diff_snapshots, diff_human,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 
 class TPHistoryWidget(QWidget):
     """История версий конкретного ТП."""
@@ -115,7 +118,7 @@ class TPHistoryWidget(QWidget):
             if int(a.version_number) > int(b.version_number):
                 sa, sb = sb, sa
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         d = diff_snapshots(sa, sb)
         self.diff_table.setRowCount(len(d) if d else 1)
         if not d:

@@ -30,6 +30,9 @@ from openpyxl.styles import Font, Alignment
 from database.models import (
     TechProcess, Product, MaterialNorm, Material, Sketch, BOMItem,
 )
+
+import logging
+_logger = logging.getLogger(__name__)
 from config import EXPORT_DIR, SKETCHES_DIR, _sanitize_designation
 
 
@@ -70,7 +73,7 @@ def export_specification_xls(
             try:
                 norm_total += float(n.norm_consumption or 0)
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
         ws.append([
             i,
             getattr(product, 'designation', '') or '',

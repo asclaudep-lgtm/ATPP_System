@@ -26,6 +26,8 @@ from modules.iot_collector import MachineTelemetry, store_telemetry
 # ──────────────────────────────────────────────────────────────
 
 
+import logging
+_logger = logging.getLogger(__name__)
 class SimulatedMachine:
     """Один симулированный станок."""
 
@@ -167,13 +169,13 @@ class TelemetrySimulator:
                     with self.db.get_session() as s:
                         store_telemetry(s, telemetry=telemetry)
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")
 
                 # Callback (напр. для UI-обновления)
                 if self.on_telemetry:
                     try:
                         self.on_telemetry(telemetry)
                     except Exception:
-                        pass
+                        _logger.exception("Unhandled error")
 
             time.sleep(max(interval, 0.1))

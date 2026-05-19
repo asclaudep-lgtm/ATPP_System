@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 
 # Базовые пути
+import logging
+_logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 RESOURCES_DIR = BASE_DIR / "resources"
@@ -29,7 +31,7 @@ def _load_database_url() -> str:
                 if line and not line.startswith("#"):
                     return line
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
     return f"sqlite:///{DATA_DIR / 'atpp.db'}"
 
 

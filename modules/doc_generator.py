@@ -15,6 +15,8 @@ from database.models import TechProcess, Operation, Transition
 from config import TEMPLATES_DIR, EXPORT_DIR, product_export_dir
 
 
+import logging
+_logger = logging.getLogger(__name__)
 class DocumentGenerator:
     """Класс для генерации технологической документации."""
 
@@ -888,7 +890,7 @@ class DocumentGenerator:
         try:
             files.append(self.generate_title_page(tech_process_id))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
         # 1. Route card (MK)
         files.append(self._generate_route_card_excel(tp))
@@ -902,13 +904,13 @@ class DocumentGenerator:
         try:
             files.append(self.generate_sketch_card(tech_process_id))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
         # 4. Tooling list (ВО)
         try:
             files.append(self.generate_tooling_list(tech_process_id))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
         # 5. Material list (ВМ)
         if tp.material_norms:
@@ -916,7 +918,7 @@ class DocumentGenerator:
                 files.append(self.generate_material_specification(
                     tech_process_id))
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
 
         # 6. ZIP archive
         zip_name = self._mk_basename(tp) + '_pack.zip'

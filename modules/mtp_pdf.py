@@ -30,6 +30,8 @@ from typing import Iterable, Optional, Union, List
 from modules.mtp_excel import _apply_op_filters, _generate_barcode_png
 
 
+import logging
+_logger = logging.getLogger(__name__)
 FONT_DIR = Path(__file__).resolve().parent.parent / 'resources' / 'fonts'
 FONT_REGULAR = FONT_DIR / 'DejaVuSans.ttf'
 FONT_BOLD = FONT_DIR / 'DejaVuSans-Bold.ttf'
@@ -101,7 +103,7 @@ def _load_data(session, tech_process_id: int,
                 mat_name = mat.name or ''
                 mat_desig = mat.designation or ''
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # Подготавливаем строки таблицы операций.
     op_rows: List[List[str]] = []
@@ -115,7 +117,7 @@ def _load_data(session, tech_process_id: int,
                     if eq.model:
                         eq_label = f'{eq_label} ({eq.model})'
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
         op_text = op.name or ''
         if eq_label:
             op_text = f'{op_text}\n{eq_label}'
@@ -166,7 +168,7 @@ def _build_document(data, story, styles):
                 story.append(img)
                 story.append(Spacer(1, 2 * mm))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # ── Блок «Изделие» ───────────────────────────────────────────
     prod_rows = [

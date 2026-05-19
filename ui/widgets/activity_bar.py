@@ -6,6 +6,9 @@ Width fixed at 52px. Active module = orange left bar + tinted bg.
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QFrame,
 )
+
+import logging
+_logger = logging.getLogger(__name__)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QIcon
 
@@ -99,7 +102,7 @@ class ActivityBar(QWidget):
             try:
                 return getattr(FIF, ficon).icon()
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
         return symbol
 
     def _on_module(self, key: str):

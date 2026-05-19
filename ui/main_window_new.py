@@ -1,4 +1,4 @@
-﻿"""
+"""
 Главное окно приложения
 """
 from PyQt6.QtWidgets import (

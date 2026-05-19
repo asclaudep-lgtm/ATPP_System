@@ -68,6 +68,6 @@ def reset_user_password(db, login: str) -> Optional[str]:
         if user is None:
             return None
         new_pw = secrets.token_urlsafe(8)
-        user.set_password(new_pw)
+        user.password_hash = db._hash_password(new_pw)
         s.commit()
         return new_pw

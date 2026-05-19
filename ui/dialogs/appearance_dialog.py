@@ -13,6 +13,9 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QDialogButtonBox, QMessageBox
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 from modules import settings
 from ui.theme import apply_theme
 
@@ -86,7 +89,7 @@ class AppearanceDialog(QDialog):
             if app is not None:
                 apply_theme(app, font_size=font_size)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
         if lang != settings.get('language'):
             QMessageBox.information(self, "Язык интерфейса",

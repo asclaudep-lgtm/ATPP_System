@@ -14,6 +14,9 @@ from database.models import (
     Product, ProductGroup, TechProcess, TPStatus,
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 STATUS_BADGE = {
     TPStatus.DRAFT:    ("#f97316", "Черновик"),
     TPStatus.REVIEW:   ("#8b5cf6", "Согласование"),
@@ -245,7 +248,7 @@ class NavigationPanel(QWidget):
                     lambda checked=False, pid=product_id:
                         self._move_product(pid, None))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _move_product(self, product_id, group_id):
         """Переместить изделие в другую группу."""
@@ -366,7 +369,7 @@ class NavigationPanel(QWidget):
                         item.setToolTip(0, f"{p.designation} — {p.name}")
                         grp_item.addChild(item)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _populate_tps(self, search: str = ""):
         self._tp_tree.clear()
@@ -385,4 +388,4 @@ class NavigationPanel(QWidget):
                         f"{tp.product.designation if tp.product else '—'}")
                     self._tp_tree.addTopLevelItem(item)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")

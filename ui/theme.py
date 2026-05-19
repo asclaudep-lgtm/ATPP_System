@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import QApplication
 # ═══════════════════════════════════════════════════════════════════════════
 # Brand
 # ═══════════════════════════════════════════════════════════════════════════
+import logging
+_logger = logging.getLogger(__name__)
 ACCENT_DEFAULT    = "#f97316"   # orange-500
 ACCENT_HOVER      = "#ea580c"   # orange-600
 ACCENT_PRESSED    = "#c2410c"   # orange-700
@@ -469,7 +471,7 @@ def _apply_fluent_runtime(accent_color: str) -> None:
         setTheme(Theme.LIGHT)
         setThemeColor(QColor(accent_color))
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
 
 def apply_theme(
@@ -513,6 +515,7 @@ def apply_theme(
             w.style().unpolish(w)
             w.style().polish(w)
         except RuntimeError:
+            _logger.exception("Failed to polish widget style")
             pass
 
 

@@ -27,6 +27,9 @@ from database.models import (
     RegistrationJournal, Product, TechProcess
 )
 
+import logging
+_logger = logging.getLogger(__name__)
+
 
 # ---------- Назначение номеров ----------
 
@@ -400,7 +403,7 @@ def export_to_excel(session, entries: Iterable[RegistrationJournal],
         ws.page_setup.fitToHeight = 0
         ws.sheet_properties.pageSetUpPr.fitToPage = True
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
     wb.save(out_path)
     return out_path
