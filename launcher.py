@@ -19,10 +19,10 @@ log = get_logger(__name__)
 
 try:
     from ATPP_System.ui import MainWindow, AuthDialog
-except Exception:
+except ImportError:
     try:
         from ui import MainWindow, AuthDialog
-    except Exception:
+    except ImportError:
         MainWindow = None
         AuthDialog = None
 
@@ -92,8 +92,8 @@ def launch() -> int:
         try:
             summary = db_manager.summarize_data()
             log.debug("DB seed summary: %s", summary)
-        except Exception:
-            _logger.exception("Unhandled error")
+        except ImportError:
+            _logger.exception("DB init failed")
     except Exception as e:
         QMessageBox.critical(None, "Ошибка базы данных", f"Не удалось инициализировать базу данных:\n{str(e)}")
         return 1
@@ -137,7 +137,7 @@ def launch() -> int:
     ret = auth_dialog.exec()
     try:
         accepted = AuthDialog.DialogCode.Accepted
-    except Exception:
+    except (ValueError, AttributeError):
         accepted = 1
     if ret != accepted:
         return 0
@@ -156,7 +156,7 @@ def launch() -> int:
                 'role': getattr(user, 'role', 'user'),
                 'is_active': getattr(user, 'is_active', True),
             }
-        except Exception:
+        except (ValueError, TypeError):
             user = None
     if not user:
         return 0

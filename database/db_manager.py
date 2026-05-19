@@ -56,8 +56,10 @@ class DatabaseManager:
                 cfg.set_main_option('sqlalchemy.url', self.database_url)
                 # Только дополняем существующую схему
                 command.upgrade(cfg, 'head')
-        except Exception:
+        except (ImportError, RuntimeError, OSError):
             log.debug('Alembic upgrade skipped (no new migrations or DB unavailable)')
+        except Exception:
+            log.warning('Alembic upgrade failed — DB may need manual migration', exc_info=True)
 
         # v14: гарантировать новые колонки (даже если Alembic не сработал)
         self._ensure_v14_columns()
@@ -94,7 +96,7 @@ class DatabaseManager:
                             conn.execute(text(sql))
                             conn.commit()
                             log.info('Added column %s.%s', table_name, col.name)
-                        except Exception as e:
+                        except (sqlalchemy.exc.OperationalError, AttributeError) as e:
                             log.debug('Skip %s.%s: %s', table_name, col.name, e)
     
     def _ensure_primary_keys(self):
@@ -127,8 +129,8 @@ class DatabaseManager:
 
                 # Fix: rebuild table
                 self._rebuild_table_with_pk(table_name, cols)
-            except Exception:
-                pass  # Non-critical — don't block startup
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.InvalidRequestError):
+                pass  # Non-critical — best-effort migration — don't block startup
 
     def _rebuild_table_with_pk(self, table_name: str, columns: list):
         """Rebuild a table with INTEGER PRIMARY KEY AUTOINCREMENT."""
@@ -177,7 +179,7 @@ class DatabaseManager:
                     # Базовый формат — номер наряда (он уже уникальный).
                     # Code128 принимает любой ASCII-текст.
                     wo.barcode = wo.number or f'WO-{wo.id}'
-        except Exception as e:
+        except (ImportError, ValueError) as e:
             log.warning('fill barcodes skipped: %s', e)
 
     def _ensure_index(self, table: str, name: str, columns: list[str]):
@@ -194,7 +196,7 @@ class DatabaseManager:
             ddl = f'CREATE INDEX {name} ON {table} ({cols})'
             with self.engine.begin() as conn:
                 conn.execute(text(ddl))
-        except Exception as e:
+        except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
             log.warning('index %s on %s skipped: %s', name, table, e)
 
     def _create_initial_data(self):
@@ -386,7 +388,7 @@ class DatabaseManager:
                 # отдельной операцией, чтобы её провал не ронял аутентификацию.
                 try:
                     self._log_login(user_id)
-                except Exception as e:
+                except (sqlalchemy.exc.OperationalError, TypeError) as e:
                     log.warning('log_login skipped: %s', e)
 
                 # Возвращаем словарь с сохранёнными данными
@@ -439,12 +441,12 @@ class DatabaseManager:
         import socket
         try:
             host = socket.gethostname()
-        except Exception:
+        except OSError:
             host = None
         try:
             from config import APP_VERSION
             ver = APP_VERSION
-        except Exception:
+        except ImportError:
             ver = None
         with self.get_session() as s:
             us = UserSession(user_id=user_id, hostname=host, app_version=ver)
@@ -462,7 +464,7 @@ class DatabaseManager:
                                 UserSession.ended_at.is_(None)).all())
                 for row in rows:
                     row.ended_at = datetime.now()
-        except Exception as e:
+        except (sqlalchemy.exc.OperationalError, AttributeError) as e:
             log.warning('end_user_session skipped: %s', e)
 
     def change_user_password(self, user_id: int, new_password: str,

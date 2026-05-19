@@ -161,8 +161,8 @@ def _mirror_target() -> Optional[Path]:
                     if line and not line.startswith('#'):
                         val = line
                         break
-            except Exception:
-                _logger.exception("Unhandled error")
+            except (FileNotFoundError, OSError, ValueError):
+                _logger.exception("Failed to read backup config")
     if not val:
         return None
     return Path(val)
@@ -179,7 +179,7 @@ def _mirror_to(path: Path) -> Optional[Path]:
         dest = dest_dir / path.name
         shutil.copy2(path, dest)
         return dest
-    except Exception as e:
+    except (FileNotFoundError, OSError, shutil.SameFileError) as e:
         _log.warning('mirror error: %s', e)
         return None
 
@@ -198,7 +198,7 @@ def _make_backup_sqlite() -> Optional[Path]:
             with gzip.open(dst, 'wb', compresslevel=6) as fout:
                 shutil.copyfileobj(fin, fout)
     except Exception:
-        _log.exception('Backup operation failed')
+        _log.exception("Daily backup failed")
         return None
     return dst
 
@@ -218,7 +218,7 @@ def _restore_backup_sqlite(backup_path: Path) -> bool:
                 shutil.copyfileobj(fin, fout)
         return True
     except Exception:
-        _log.exception('Backup operation failed')
+        _log.exception("Restore failed")
         return False
 
 
@@ -249,7 +249,7 @@ def _pg_tool(name: str) -> Optional[str]:
                         if os.path.isfile(cand):
                             candidates.append(cand)
             except Exception:
-                _logger.exception("Unhandled error")
+                _logger.debug("pg tool not found")
         if candidates:
             return candidates[0]
     return None
@@ -292,15 +292,15 @@ def _make_backup_postgresql() -> Optional[Path]:
             try:
                 dst.unlink(missing_ok=True)
             except Exception:
-                _logger.exception("Unhandled error")
+                _logger.debug("pg tool not found")
             return None
         return dst
     except Exception:
-        _log.exception('Backup operation failed')
+        _log.exception("Backup failed, cleaning up")
         try:
             dst.unlink(missing_ok=True)
         except Exception:
-            _logger.exception("Unhandled error")
+            _logger.debug("Cleanup unlink failed")  # best-effort cleanup
         return None
 
 
@@ -337,7 +337,7 @@ def _restore_backup_postgresql(backup_path: Path) -> bool:
             return False
         return True
     except Exception:
-        _log.exception('Backup operation failed')
+        _log.exception("Restore failed")
         return False
 
 
@@ -486,6 +486,7 @@ def verify_backup_integrity(backup_path: Path) -> dict:
         else:
             info['error'] = f'Неизвестное расширение: {backup_path.suffix}'
     except Exception as e:
+        # Generic catch: verification can fail for many reasons (OS, DB, subprocess)
         info['ok'] = False
         info['error'] = f'{type(e).__name__}: {e}'
     return info
@@ -527,7 +528,7 @@ def rotate():
         try:
             os.remove(p)
         except Exception:
-            _logger.exception("Unhandled error")
+            _logger.debug("Cleanup unlink failed")  # best-effort cleanup
 
 
 def daily_backup_if_needed() -> Optional[Path]:
@@ -539,7 +540,7 @@ def daily_backup_if_needed() -> Optional[Path]:
         rotate()
         return path
     except Exception:
-        _log.exception('Backup operation failed')
+        _log.exception("Daily backup failed")
         return None
 
 
@@ -578,7 +579,7 @@ class BackupScheduler:
                         interval = int(line.split('=', 1)[1])
                         break
             except Exception:
-                _logger.exception("Unhandled error")
+                _logger.debug("pg tool not found")
         return cls(interval_minutes=interval)
 
     @property
@@ -606,7 +607,7 @@ class BackupScheduler:
                     rotate()
                     _log.info('Scheduled backup created: %s', path)
             except Exception:
-                _log.exception('Backup operation failed')
+                _log.exception("Scheduled backup failed")
 
 
 _backup_scheduler: Optional[BackupScheduler] = None
