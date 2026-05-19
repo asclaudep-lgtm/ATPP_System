@@ -208,11 +208,11 @@ class DatabaseManager:
         session = self.Session()
         try:
             admin = None
-            # Проверяем есть ли пользователи
-            if session.query(User).count() == 0:
-                # Создаём администратора. Принудительно требуем сменить
-                # пароль при первом входе (D15) — стандартный admin/admin
-                # не должен «жить вечно».
+            # Upsert admin user (race-condition safe)
+            existing = session.query(User).filter_by(username='admin').first()
+            if existing:
+                admin = existing
+            else:
                 admin = User(
                     username='admin',
                     password_hash=self._hash_password('admin'),
@@ -222,6 +222,7 @@ class DatabaseManager:
                     must_change_password=True,
                 )
                 session.add(admin)
+                session.flush()  # get admin.id for FK references below
                 session.flush()
             
             # Добавляем базовые материалы
