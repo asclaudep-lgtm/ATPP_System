@@ -11,7 +11,8 @@ else:
     WEB_SECRET_KEY = secrets.token_urlsafe(48)
     import sys
     print(
-        f"[WARN] ATPP_WEB_SECRET not set — generated random key: {WEB_SECRET_KEY[:12]}...",
+        "[WARN] ATPP_WEB_SECRET not set — using auto-generated key. "
+        "Set ATPP_WEB_SECRET env var for production!",
         file=sys.stderr,
     )
 JWT_ALGORITHM = "HS256"

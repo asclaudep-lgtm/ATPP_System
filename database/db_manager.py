@@ -4,7 +4,7 @@
 from datetime import datetime
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import StaticPool, NullPool
 import bcrypt
 from contextlib import contextmanager
 
@@ -23,15 +23,17 @@ class DatabaseManager:
     def __init__(self, database_url=None):
         self.database_url = database_url or DATABASE_URL
         
-        # Для SQLite используем StaticPool для многопоточности
         if self.database_url.startswith('sqlite'):
             self.engine = create_engine(
                 self.database_url,
-                connect_args={'check_same_thread': False},
-                poolclass=StaticPool
+                connect_args={'check_same_thread': False, 'timeout': 30},
+                poolclass=NullPool
             )
         else:
-            self.engine = create_engine(self.database_url)
+            self.engine = create_engine(
+                self.database_url,
+                pool_size=5, max_overflow=10
+            )
         
         # Создаём фабрику сессий
         session_factory = sessionmaker(bind=self.engine)
@@ -160,6 +162,8 @@ class DatabaseManager:
             conn.execute(text(
                 f'INSERT INTO "{table_name}_new" ({cols_str}) '
                 f'SELECT {cols_str} FROM "{table_name}"'))
+            if not table_name.replace('_', '').isalnum():
+                raise ValueError(f"Invalid table name for rebuild: {table_name}")
             conn.execute(text(f'DROP TABLE "{table_name}"'))
             conn.execute(text(
                 f'ALTER TABLE "{table_name}_new" RENAME TO "{table_name}"'))
