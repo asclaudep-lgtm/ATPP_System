@@ -9,23 +9,22 @@
 """
 from __future__ import annotations
 
+# ──────────────────────────────────────────────────────────────
+# Simulated Machine
+# ──────────────────────────────────────────────────────────────
+import logging
 import random
 import time
-from datetime import datetime, timedelta, date as date_type
-from typing import Optional, Callable, List
-from threading import Thread, Event
+from datetime import datetime
+from threading import Event, Thread
+from typing import Callable, List, Optional
 
 from sqlalchemy.orm import Session
 
 from database.models import Equipment
 from modules.iot_collector import MachineTelemetry, store_telemetry
 
-
-# ──────────────────────────────────────────────────────────────
-# Simulated Machine
-# ──────────────────────────────────────────────────────────────
-
-
+_logger = logging.getLogger(__name__)
 class SimulatedMachine:
     """Один симулированный станок."""
 
@@ -167,13 +166,13 @@ class TelemetrySimulator:
                     with self.db.get_session() as s:
                         store_telemetry(s, telemetry=telemetry)
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")
 
                 # Callback (напр. для UI-обновления)
                 if self.on_telemetry:
                     try:
                         self.on_telemetry(telemetry)
                     except Exception:
-                        pass
+                        _logger.exception("Unhandled error")
 
             time.sleep(max(interval, 0.1))

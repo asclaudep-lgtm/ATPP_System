@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from utils.logger import get_logger
 
 _log = get_logger(__name__)
 
-from database.models import ChangeLog, TPVersion, TechProcess, Operation, Transition
+from database.models import ChangeLog, TechProcess, TPVersion
 
 
 def log_change(

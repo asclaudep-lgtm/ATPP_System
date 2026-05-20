@@ -10,13 +10,15 @@ v8: Быстрая модалка глобального поиска (Ctrl+P).
 """
 from __future__ import annotations
 
+import logging
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QDialog, QVBoxLayout
 
 from ui.widgets.global_search import GlobalSearchWidget
 
-
+_logger = logging.getLogger(__name__)
 class GlobalSearchDialog(QDialog):
     """Поп-ап глобального поиска (Ctrl+P)."""
 
@@ -45,7 +47,7 @@ class GlobalSearchDialog(QDialog):
             self._widget.q_in.setFocus()
             self._widget.q_in.selectAll()
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _on_tp_open(self, tp_id: int):
         # Эмиттим наружу и закрываем диалог — открытие ТП произойдёт в

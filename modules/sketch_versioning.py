@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from database.models import Sketch
 from config import SKETCHES_DIR
+from database.models import Sketch
 
 
 def add_sketch_version(

@@ -6,11 +6,11 @@
     python scripts/import_doxx.py [--path D:\\тп] [--clear]
 """
 
-import sys
+import argparse
 import os
 import re
+import sys
 import xml.etree.ElementTree as ET
-import argparse
 from pathlib import Path
 
 # Ensure UTF-8 output on Windows console
@@ -26,9 +26,21 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from database.db_manager import DatabaseManager
 from database.models import (
-    Base, Product, ProductGroup, TechProcess, Operation, Transition,
-    OperationTool, Tool, Material, Equipment, Profession, MaterialNorm,
-    TPStatus, TPType, TechnologyType
+    Base,
+    Equipment,
+    Material,
+    MaterialNorm,
+    Operation,
+    OperationTool,
+    Product,
+    ProductGroup,
+    Profession,
+    TechnologyType,
+    TechProcess,
+    Tool,
+    TPStatus,
+    TPType,
+    Transition,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -136,7 +148,7 @@ def parse_doxx(filepath: str) -> dict:
             continue
 
         for sec in secs.findall('Section'):
-            sec_name = sec.get('Name', '')
+            sec.get('Name', '')
             sec_type = sec.get('Type', '')
 
             # Section1 (Type=0) — заголовок документа
@@ -734,7 +746,7 @@ def main():
         print(f"Папка не найдена: {args.path}")
         sys.exit(1)
 
-    print(f"Подключение к базе данных...")
+    print("Подключение к базе данных...")
     db = DatabaseManager()
     session = db.Session()
 

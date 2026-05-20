@@ -3,16 +3,21 @@ v9-6 UI: Дашборд руководителя.
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpinBox,
-    QFrame, QGridLayout, QFileDialog, QMessageBox,
+    QFileDialog,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
 )
 
-from modules.manager_dashboard import kpi_snapshot, export_pdf
+from modules.manager_dashboard import export_pdf, kpi_snapshot
 
 
 class _KPICard(QFrame):
@@ -91,7 +96,7 @@ class ManagerDashboardWidget(QWidget):
 
         # Топы
         bottoms = QHBoxLayout()
-        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
+        from PyQt6.QtWidgets import QTableWidget
         self.t_ops = QTableWidget(0, 2)
         self.t_ops.setHorizontalHeaderLabels(['Операция', 'Минут'])
         self.t_ops.horizontalHeader().setStretchLastSection(True)

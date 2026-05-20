@@ -1,8 +1,6 @@
 """Tests for C12 alerts dispatch."""
 import json
-import os
 
-import pytest
 
 from modules import alerts
 

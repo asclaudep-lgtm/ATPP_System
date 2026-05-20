@@ -14,17 +14,29 @@ v8: Библиотека шаблонов переходов.
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QFormLayout, QTextEdit, QMessageBox, QDialogButtonBox,
+    QAbstractItemView,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
 )
 
-from database.models import TransitionTemplate
+_logger = logging.getLogger(__name__)
 
+from database.models import TransitionTemplate
 
 # Стартовый набор формулировок — добавляется при первом открытии БД без
 # записей. Технолог потом может править и пополнять.
@@ -75,7 +87,7 @@ class TransitionTemplatesDialog(QDialog):
         try:
             _seed_if_empty(self.db)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
         self._build_ui()
         self._reload()

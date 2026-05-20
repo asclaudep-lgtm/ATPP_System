@@ -5,27 +5,47 @@ v9-1 UI: Gantt-доска планирования.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from datetime import timedelta
+from typing import Dict, List, Optional
 
-from PyQt6.QtCore import Qt, QRectF, QPointF, QSizeF
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import (
-    QBrush, QColor, QPen, QPainter, QFont, QAction,
+    QAction,
+    QBrush,
+    QColor,
+    QFont,
+    QPainter,
+    QPen,
 )
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpinBox,
-    QComboBox, QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsTextItem, QGraphicsLineItem, QGraphicsSimpleTextItem,
-    QMessageBox, QFileDialog, QMenu,
+    QComboBox,
+    QFileDialog,
+    QGraphicsLineItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsSimpleTextItem,
+    QGraphicsView,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
 )
 
 from modules.scheduler import (
-    schedule_open_orders, detect_conflicts, ScheduledOp,
-    schedule_aps, APSResult, schedule_backward, schedule_finite_capacity,
-    optimize_setup_sequence, validate_constraints, compare_scenarios,
-    clone_scenario, what_if_reschedule,
+    APSResult,
+    ScheduledOp,
+    compare_scenarios,
+    detect_conflicts,
+    optimize_setup_sequence,
+    schedule_aps,
+    schedule_backward,
+    schedule_finite_capacity,
+    schedule_open_orders,
 )
-
 
 PIXELS_PER_HOUR = 30  # масштаб оси X
 ROW_HEIGHT = 28
@@ -241,7 +261,7 @@ class GanttWidget(QWidget):
         total_hours = max(1, int((t1 - t0).total_seconds() / 3600) + 8)
 
         # Заголовок шкалы времени
-        scale_pen = QPen(QColor(200, 200, 200))
+        QPen(QColor(200, 200, 200))
         scene_w = LEFT_PANEL_WIDTH + total_hours * PIXELS_PER_HOUR
         scene_h = HEADER_HEIGHT + ROW_HEIGHT * len(eq_order) + 20
         self.scene.setSceneRect(0, 0, scene_w, scene_h)

@@ -6,17 +6,34 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QLineEdit,
-    QSpinBox, QComboBox, QTextEdit, QPushButton, QTableWidget,
-    QTableWidgetItem, QFileDialog, QMessageBox, QSplitter, QDialog,
-    QDialogButtonBox, QHeaderView, QAbstractItemView, QGroupBox,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    ScrapRecord, ScrapReason, ScrapDecision, WorkOrder, Operation,
-    User, ScrapPhoto,
+    Operation,
+    ScrapDecision,
+    ScrapReason,
+    ScrapRecord,
+    User,
+    WorkOrder,
 )
 from modules import scrap_journal as sj
 

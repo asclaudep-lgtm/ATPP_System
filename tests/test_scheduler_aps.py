@@ -1,10 +1,8 @@
 """Тесты APS-планировщика."""
-import pytest
 from datetime import date, timedelta
 
 from database.models import (Product, Material, TechProcess, Operation,
-                              WorkOrder, WorkOrderStatus, Equipment,
-                              Workshop)
+                              WorkOrder, WorkOrderStatus, Equipment)
 
 
 class TestSchedulerAPS:

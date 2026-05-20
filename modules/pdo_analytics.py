@@ -1,10 +1,11 @@
 """PDO analytics — bottleneck detection, average time per status, Gantt data."""
 
-from datetime import datetime, date
-from typing import List, Dict
+from datetime import date, datetime
+from typing import List
+
 from sqlalchemy import func
 
-from database.models import ProductionOrder, PDOHandoff, PDOStatus
+from database.models import PDOHandoff, PDOStatus, ProductionOrder
 
 
 def average_time_per_status(session, days: int = 90) -> List[dict]:

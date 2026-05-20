@@ -1,15 +1,23 @@
 """
 Диалог создания и редактирования технологического процесса
 """
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QComboBox, QTextEdit,
-    QPushButton, QMessageBox, QFrame
-)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+)
 
-from database.models import Product, TPType, TPStatus, TechnologyType
+from database.models import Product, TechnologyType, TPType
 
 
 class TPDialog(QDialog):

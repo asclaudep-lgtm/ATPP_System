@@ -5,17 +5,30 @@
 операции (name, code, note), переходы (text, code), материалы (name, brand).
 Двойной клик по строке — пытается открыть соответствующий ТП.
 """
-from typing import List
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
+    QAbstractItemView,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    TechProcess, Product, Operation, Transition, Material, Equipment,
-    WorkOrder, WorkOrderItem,
+    Equipment,
+    Material,
+    Operation,
+    Product,
+    TechProcess,
+    Transition,
+    WorkOrder,
+    WorkOrderItem,
 )
 
 
@@ -76,7 +89,7 @@ class GlobalSearchWidget(QWidget):
                        .filter(TechProcess.number.ilike(like) |
                                TechProcess.version.ilike(like) |
                                TechProcess.execution_variant.ilike(like))
-                       .filter((TechProcess.is_deleted == False) |
+                       .filter((not TechProcess.is_deleted) |
                                (TechProcess.is_deleted.is_(None)))
                        .limit(100).all()):
                 self._add(
@@ -90,7 +103,7 @@ class GlobalSearchWidget(QWidget):
             for p in (s.query(Product)
                       .filter(Product.designation.ilike(like) |
                               Product.name.ilike(like))
-                      .filter((Product.is_deleted == False) |
+                      .filter((not Product.is_deleted) |
                               (Product.is_deleted.is_(None)))
                       .limit(100).all()):
                 tp = s.query(TechProcess).filter_by(product_id=p.id).first()
@@ -102,7 +115,7 @@ class GlobalSearchWidget(QWidget):
                        .filter(Operation.name.ilike(like) |
                                Operation.code.ilike(like) |
                                Operation.note.ilike(like))
-                       .filter((Operation.is_deleted == False) |
+                       .filter((not Operation.is_deleted) |
                                (Operation.is_deleted.is_(None)))
                        .limit(200).all()):
                 tp = op.tech_process

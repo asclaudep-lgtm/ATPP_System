@@ -1,13 +1,21 @@
 """Batch print dialog — select multiple TPs and generate all route cards at once."""
 
 import zipfile
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QProgressBar, QMessageBox, QFileDialog,
-    QCheckBox,
-)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+
+from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
 
 
 class BatchPrintWorker(QThread):
@@ -20,8 +28,8 @@ class BatchPrintWorker(QThread):
         self.tp_ids = tp_ids
 
     def run(self):
-        from modules.doc_generator import DocumentGenerator
         from config import EXPORT_DIR
+        from modules.doc_generator import DocumentGenerator
 
         files = []
         total = len(self.tp_ids)
@@ -106,18 +114,18 @@ class BatchPrintDialog(QDialog):
         layout.addWidget(self._status)
 
     def _load_tps(self):
-        from database.models import TechProcess, Product
+        from database.models import Product, TechProcess
         with self.db_manager.get_session() as s:
             tps = (s.query(TechProcess)
                    .join(Product)
-                   .filter(TechProcess.is_deleted == False)
+                   .filter(not TechProcess.is_deleted)
                    .order_by(TechProcess.number)
                    .limit(500)
                    .all())
             self._table.setRowCount(len(tps))
             for i, tp in enumerate(tps):
                 cb = QCheckBox()
-                w = QTableWidget()
+                QTableWidget()
                 self._table.setCellWidget(i, 0, cb)
                 self._table.setItem(i, 1, QTableWidgetItem(tp.number))
                 prod = tp.product.designation if tp.product else ''

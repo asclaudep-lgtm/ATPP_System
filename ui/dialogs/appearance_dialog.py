@@ -8,10 +8,11 @@
 """
 from __future__ import annotations
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QComboBox, QSpinBox, QPushButton,
-    QHBoxLayout, QLabel, QDialogButtonBox, QMessageBox
-)
+import logging
+
+from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QMessageBox, QSpinBox, QVBoxLayout
+
+_logger = logging.getLogger(__name__)
 
 from modules import settings
 from ui.theme import apply_theme
@@ -86,7 +87,7 @@ class AppearanceDialog(QDialog):
             if app is not None:
                 apply_theme(app, font_size=font_size)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
         if lang != settings.get('language'):
             QMessageBox.information(self, "Язык интерфейса",

@@ -9,16 +9,14 @@
 from __future__ import annotations
 
 import json
-import math
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from sqlalchemy.orm import Session
-from database.models import (Product, Material, TechProcess, Operation,
-                              TPStatus, TechnologyType, Equipment, Profession)
+
 from config import DATA_DIR
+from database.models import Operation, Product, TechProcess, TPStatus
 
 _CACHE_PATH = DATA_DIR / 'ai_feature_cache.json'
 
@@ -145,7 +143,7 @@ def _build_feature_matrix(session: Session) -> Tuple[
     Returns: (matrix M×D, product_ids, metadata_list)
     """
     products = session.query(Product).filter(
-        Product.is_deleted == False).all()
+        not Product.is_deleted).all()
     product_ids: List[int] = []
     vectors: List[np.ndarray] = []
     meta: List[dict] = []
@@ -153,7 +151,7 @@ def _build_feature_matrix(session: Session) -> Tuple[
     for p in products:
         tps = session.query(TechProcess).filter(
             TechProcess.product_id == p.id,
-            TechProcess.is_deleted == False,
+            not TechProcess.is_deleted,
         ).all()
         if not tps:
             continue
@@ -204,7 +202,7 @@ def find_similar_products(session: Session, *,
         # Найти лучший ТП
         best_tp = session.query(TechProcess).filter(
             TechProcess.product_id == pid,
-            TechProcess.is_deleted == False,
+            not TechProcess.is_deleted,
             TechProcess.status == TPStatus.APPROVED,
         ).first()
         results.append(SimilarProduct(
@@ -242,7 +240,7 @@ def suggest_operations(session: Session, *,
             continue
         ops = session.query(Operation).filter(
             Operation.tech_process_id == sp.tp_id,
-            Operation.is_deleted == False,
+            not Operation.is_deleted,
         ).order_by(Operation.sort_order).all()
 
         for op in ops:

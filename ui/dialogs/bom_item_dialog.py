@@ -1,6 +1,6 @@
 """Диалог добавления/редактирования строки БОМ."""
-from PyQt6.QtWidgets import (QDialog, QFormLayout, QComboBox, QSpinBox,
-                              QLineEdit, QDialogButtonBox, QMessageBox)
+from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLineEdit, QMessageBox, QSpinBox
+
 from database.models import AssemblyLevel, Product
 
 
@@ -28,7 +28,7 @@ class BOMItemDialog(QDialog):
         self.product_cb.setEditable(True)
         with self.db_manager.get_session() as s:
             for p in s.query(Product).filter(
-                Product.is_deleted == False
+                not Product.is_deleted
             ).order_by(Product.designation).all():
                 self.product_cb.addItem(
                     f'{p.designation} — {p.name}', p.id)

@@ -9,13 +9,18 @@ v9-8: Извещения об изменениях (Engineering Change Notice).
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime
-from typing import List, Optional, Iterable
+from typing import Iterable, List, Optional
 
 from database.models import (
-    ECN, ECNApproval, ECNStatus, SignerRole,
-    TechProcess, Product,
+    ECN,
+    ECNApproval,
+    ECNStatus,
+    SignerRole,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 DEFAULT_ROUTE = [
@@ -36,7 +41,7 @@ def next_ecn_number(session) -> str:
         try:
             nums.append(int(str(n).rsplit('-', 1)[-1]))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
     nxt = (max(nums) if nums else 0) + 1
     return f'{base}{nxt:03d}'
 

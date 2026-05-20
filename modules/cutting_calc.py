@@ -6,9 +6,8 @@
 from __future__ import annotations
 
 import math
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
-
+from typing import Any, Dict
 
 # ——— База: табличные коэффициенты для групп материалов ———
 

@@ -1,9 +1,18 @@
 """Диалог импорта CAD-файла (STEP / Kompas CDW/SPW)."""
 from pathlib import Path
 
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-                              QFileDialog, QLabel, QLineEdit, QFormLayout,
-                              QGroupBox, QDialogButtonBox, QMessageBox)
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 
 class CadImportDialog(QDialog):
@@ -76,7 +85,7 @@ class CadImportDialog(QDialog):
         self.file_label.setText(path)
 
         # Parse and preview
-        from modules.cad_import import (parse_step, parse_cdw, parse_spw)
+        from modules.cad_import import parse_cdw, parse_spw, parse_step
         suffix = self._file_path.suffix.lower()
         if suffix in ('.step', '.stp'):
             geom = parse_step(self._file_path)

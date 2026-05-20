@@ -1,12 +1,13 @@
 """API дашборда (агрегированная статистика + графики v2)."""
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from web.deps import get_db, get_current_user
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from database.models import Product, TechProcess, User, WorkOrder
+from web.deps import get_current_user, get_db
 from web.schemas import DashboardStats
-from database.models import Product, TechProcess, WorkOrder, User
 
 router = APIRouter(tags=["dashboard"])
 
@@ -17,12 +18,12 @@ def get_dashboard_stats(
     _=Depends(get_current_user),
     workshop: str = Query(None),
 ):
-    base_products = db.query(Product).filter(Product.is_deleted == False)
-    base_tps = db.query(TechProcess).filter(TechProcess.is_deleted == False)
-    base_wos = db.query(WorkOrder).filter(WorkOrder.is_deleted == False)
+    base_products = db.query(Product).filter(not Product.is_deleted)
+    base_tps = db.query(TechProcess).filter(not TechProcess.is_deleted)
+    base_wos = db.query(WorkOrder).filter(not WorkOrder.is_deleted)
 
     if workshop:
-        from database.models import Operation, Equipment, Workshop
+        from database.models import Equipment, Operation, Workshop
         eq_ids = db.query(Equipment.id).join(Workshop).filter(
             Workshop.code == workshop).subquery()
         op_tp_ids = db.query(Operation.tech_process_id).filter(
@@ -41,9 +42,9 @@ def get_dashboard_stats(
     active_wos = base_wos.filter(
         WorkOrder.status.in_(["Передан в производство", "В работе"]),
     ).count()
-    total_users = db.query(User).filter(User.is_active == True).count()
+    total_users = db.query(User).filter(User.is_active).count()
 
-    from database.models import ProductionOrder, PDOStatus
+    from database.models import PDOStatus, ProductionOrder
     pdo_total = db.query(ProductionOrder).count()
     pdo_active = db.query(ProductionOrder).filter(
         ProductionOrder.status.in_([

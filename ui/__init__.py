@@ -1,7 +1,7 @@
 """
 Модуль пользовательского интерфейса
 """
-from .main_window import MainWindow
 from .auth_dialog import AuthDialog
+from .main_window import MainWindow
 
 __all__ = ['MainWindow', 'AuthDialog']

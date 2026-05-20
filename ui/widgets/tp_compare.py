@@ -7,14 +7,21 @@ TPCompareDialog — окно сравнения двух вариантов ТП
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QBrush, QFont
+from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
-    QTableWidgetItem, QPushButton, QHeaderView, QSplitter, QWidget,
+    QDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
-from database.models import TechProcess, Operation, TPStatus
-
+from database.models import Operation, TechProcess
 
 # Цвета подсветки
 COLOR_SAME = QColor('#ffffff')
@@ -140,7 +147,7 @@ class TPCompareDialog(QDialog):
     def _collect_ops(self, session, tp_id: int) -> dict:
         ops = (session.query(Operation)
                .filter(Operation.tech_process_id == tp_id,
-                       (Operation.is_deleted == False)
+                       (not Operation.is_deleted)
                        | (Operation.is_deleted.is_(None)))
                .order_by(Operation.sort_order)
                .all())

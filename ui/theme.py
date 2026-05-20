@@ -5,12 +5,15 @@ Status bar is orange accent. Dark theme removed.
 """
 from __future__ import annotations
 
-from PyQt6.QtGui import QColor, QFont, QPalette
-from PyQt6.QtWidgets import QApplication
-
 # ═══════════════════════════════════════════════════════════════════════════
 # Brand
 # ═══════════════════════════════════════════════════════════════════════════
+import logging
+
+from PyQt6.QtGui import QColor, QFont, QPalette
+from PyQt6.QtWidgets import QApplication
+
+_logger = logging.getLogger(__name__)
 ACCENT_DEFAULT    = "#f97316"   # orange-500
 ACCENT_HOVER      = "#ea580c"   # orange-600
 ACCENT_PRESSED    = "#c2410c"   # orange-700
@@ -109,8 +112,6 @@ def _build_qss(theme: str) -> str:
     chrome_border      = CHROME_BORDER      if is_dark else "#e2e8f0"
     chrome_text        = CHROME_TEXT        if is_dark else TEXT_PRIMARY_LT
     chrome_text_mute   = CHROME_TEXT_MUTE   if is_dark else TEXT_MUTE_LT
-    chrome_text_dim    = CHROME_TEXT_DIM    if is_dark else TEXT_DIM_LT
-    chrome_hover       = CHROME_HOVER       if is_dark else "#f1f5f9"
 
     # ── Title bar search (used to be hardcoded dark) ──
     title_search_bg    = "#0b1220" if is_dark else "#ffffff"
@@ -469,7 +470,7 @@ def _apply_fluent_runtime(accent_color: str) -> None:
         setTheme(Theme.LIGHT)
         setThemeColor(QColor(accent_color))
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
 
 def apply_theme(
@@ -513,6 +514,7 @@ def apply_theme(
             w.style().unpolish(w)
             w.style().polish(w)
         except RuntimeError:
+            _logger.exception("Failed to polish widget style")
             pass
 
 

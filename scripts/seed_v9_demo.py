@@ -13,13 +13,28 @@ sys.path.insert(0, str(ROOT))
 
 from database.db_manager import DatabaseManager
 from database.models import (
-    User, Material, Equipment, Product, TechProcess, Operation,
-    WorkOrder, WorkOrderItem, WorkOrderStatus, RouteStep, RouteStepStatus,
-    ToolingItem, ToolingStatus, ToolingIssue, OperationTooling,
-    MaterialBatch, MaterialReservation, MaterialIssue,
-    Instrument, Calibration, InstrumentStatus,
-    ScrapRecord, ScrapPhoto, ScrapReason, ScrapDecision,
-    ECN, ECNApproval, ECNStatus, SignerRole,
+    ECN,
+    ECNApproval,
+    ECNStatus,
+    Instrument,
+    InstrumentStatus,
+    Material,
+    MaterialBatch,
+    Operation,
+    Product,
+    RouteStep,
+    RouteStepStatus,
+    ScrapDecision,
+    ScrapReason,
+    ScrapRecord,
+    SignerRole,
+    TechProcess,
+    ToolingIssue,
+    ToolingItem,
+    ToolingStatus,
+    User,
+    WorkOrder,
+    WorkOrderItem,
 )
 
 

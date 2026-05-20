@@ -5,28 +5,39 @@ Layout:
   Body: ActivityBar (52px) + Splitter(Sidebar, EditorStack)
   StatusBar (24px, orange)
 """
-from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QStackedWidget,
-    QTabWidget, QTreeWidgetItem, QLabel, QPushButton, QTextEdit, QDockWidget,
-    QMenu, QMessageBox,
-)
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+import logging
+
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QAction, QKeySequence
+from PyQt6.QtWidgets import (
+    QDockWidget,
+    QHBoxLayout,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QSplitter,
+    QStackedWidget,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+_logger = logging.getLogger(__name__)
 
 from utils.logger import get_logger
+
 _log = get_logger(__name__)
 
-from config import APP_NAME, APP_VERSION, WINDOW_WIDTH, WINDOW_HEIGHT
-from database.models import Product, TechProcess, TPStatus
-
-from ui.widgets.main_menu import MainMenu
-from ui.widgets.main_toolbar import MainToolBar
-from ui.widgets.main_statusbar import MainStatusBar
-from ui.widgets.navigation_panel import NavigationPanel
+from config import APP_NAME, APP_VERSION, WINDOW_HEIGHT, WINDOW_WIDTH
 from ui.widgets.activity_bar import ActivityBar
+from ui.widgets.dialog_launchers import DialogLaunchersMixin
+from ui.widgets.main_menu import MainMenu
+from ui.widgets.main_statusbar import MainStatusBar
+from ui.widgets.main_toolbar import MainToolBar
+from ui.widgets.navigation_panel import NavigationPanel
 from ui.widgets.title_bar import TitleBar
 from ui.widgets.welcome_widget import WelcomeWidget
-from ui.widgets.dialog_launchers import DialogLaunchersMixin
 
 
 class MainWindow(DialogLaunchersMixin, QMainWindow):
@@ -116,7 +127,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             if state is not None:
                 splitter.restoreState(state)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         splitter.splitterMoved.connect(self._save_splitter_state)
 
         body.addWidget(splitter, stretch=1)
@@ -529,7 +540,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
     # ═══════════════════════════════════════════════════════════════
 
     def _install_hotkeys(self):
-        from PyQt6.QtGui import QShortcut, QKeySequence
+        from PyQt6.QtGui import QShortcut
 
         def add(seq, slot):
             QShortcut(QKeySequence(seq), self).activated.connect(slot)
@@ -549,7 +560,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
         try:
             self.nav_panel.focus_search()
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _close_current_tab(self):
         idx = self.work_area.currentIndex()
@@ -602,7 +613,7 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
             settings.setValue('splitter_state',
                             self._main_splitter.saveState())
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # ═══════════════════════════════════════════════════════════════
     # Navigation data (delegates)
@@ -628,16 +639,14 @@ class MainWindow(DialogLaunchersMixin, QMainWindow):
 
     def _open_web_interface(self):
         """Открыть веб-интерфейс в браузере."""
+        import os
         import webbrowser
-        import subprocess
         url = "http://localhost:8000"
         try:
-            # Попытка открыть браузер
             webbrowser.open(url)
         except Exception:
-            # Fallback: использовать системную команду
             try:
-                subprocess.Popen(['start', url], shell=True)
+                os.startfile(url)
             except Exception:
                 QMessageBox.information(
                     self, "Веб-интерфейс",

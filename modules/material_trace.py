@@ -5,14 +5,15 @@ from __future__ import annotations
 
 import shutil
 import uuid
-from datetime import datetime, date
+from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional
 
 from database.models import (
-    MaterialBatch, MaterialReservation, MaterialIssue, Material,
+    MaterialBatch,
+    MaterialIssue,
+    MaterialReservation,
 )
-
 
 CERT_DIR = Path('data/material_certs')
 

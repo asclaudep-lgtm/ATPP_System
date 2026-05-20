@@ -1,11 +1,10 @@
 """API производственных нарядов."""
-from typing import Optional
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from web.deps import get_db, get_current_user
-from web.schemas import WorkOrderOut, WOListOut
 from database.models import WorkOrder
+from web.deps import get_current_user, get_db
+from web.schemas import WOListOut, WorkOrderOut
 
 router = APIRouter(tags=["work-orders"])
 
@@ -25,7 +24,7 @@ def list_work_orders(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    q = db.query(WorkOrder).filter(WorkOrder.is_deleted == False)
+    q = db.query(WorkOrder).filter(not WorkOrder.is_deleted)
     if status:
         q = q.filter(WorkOrder.status == status)
     if search:

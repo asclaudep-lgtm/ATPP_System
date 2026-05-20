@@ -1,10 +1,10 @@
 """API технологических процессов."""
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from web.deps import get_db, get_current_user
-from web.schemas import TechProcessOut, TPListOut
 from database.models import TechProcess
+from web.deps import get_current_user, get_db
+from web.schemas import TechProcessOut, TPListOut
 
 router = APIRouter(tags=["tech-processes"])
 
@@ -19,7 +19,7 @@ def list_tps(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    q = db.query(TechProcess).filter(TechProcess.is_deleted == False)
+    q = db.query(TechProcess).filter(not TechProcess.is_deleted)
     if search:
         q = q.filter(TechProcess.number.ilike(f"%{search}%"))
     if status:

@@ -65,3 +65,8 @@ web/static/dist/
 
 # Claude Code (progress journal, not committed)
 .claude/
+
+# Audit tool outputs (regenerated locally)
+audit/*.json
+audit/*.txt
+audit/htmlcov/

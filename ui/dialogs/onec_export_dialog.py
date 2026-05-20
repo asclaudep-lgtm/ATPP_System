@@ -1,9 +1,18 @@
 """Диалог экспорта данных в формат 1C."""
 from pathlib import Path
 
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QCheckBox, QComboBox,
-                              QPushButton, QFileDialog, QLabel, QHBoxLayout,
-                              QDialogButtonBox, QMessageBox, QGroupBox)
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 
 class OneCExportDialog(QDialog):
@@ -65,9 +74,7 @@ class OneCExportDialog(QDialog):
 
     def _export(self):
         from config import EXPORT_DIR
-        from modules.onec_exchange import (export_cost_data,
-                                            export_timeline_data,
-                                            export_specification_xls_v2)
+        from modules.onec_exchange import export_cost_data, export_specification_xls_v2, export_timeline_data
         self._out_dir = getattr(self, '_out_dir', None) or EXPORT_DIR
         results = []
 

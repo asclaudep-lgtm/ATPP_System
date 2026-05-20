@@ -5,14 +5,24 @@ import os
 import subprocess
 from pathlib import Path
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
-    QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QHeaderView, QAbstractItemView, QGroupBox, QMessageBox, QFrame,
-    QFileDialog,
-)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QDialog,
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from modules.report_generator import ReportGenerator
 
@@ -52,8 +62,8 @@ class KTDBrowserDialog(QDialog):
         layout.addWidget(line)
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self._make_ktd_tab(), "📄  Формы КТД (ГОСТ 3.1xxx)")
-        self.tabs.addTab(self._make_reports_tab(), "📊  Ведомости и отчёты")
+        self.tabs.addTab(self._make_ktd_tab(), "Формы КТД (ГОСТ 3.1xxx)")
+        self.tabs.addTab(self._make_reports_tab(), "Ведомости и отчёты")
         layout.addWidget(self.tabs)
 
         # Подсказка
@@ -105,7 +115,7 @@ class KTDBrowserDialog(QDialog):
         open_btn = QPushButton("Открыть в Word")
         open_btn.clicked.connect(self._open_ktd_template)
         open_btn.setStyleSheet("QPushButton { background-color: #2980b9; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
-        import_btn = QPushButton("📥  Импорт шаблона...")
+        import_btn = QPushButton("Импорт шаблона...")
         import_btn.clicked.connect(self._import_ktd_template)
         import_btn.setStyleSheet("QPushButton { background-color: #f97316; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
         import_btn.setToolTip("Добавить свой шаблон .doc/.docx в библиотеку КТД")
@@ -152,7 +162,7 @@ class KTDBrowserDialog(QDialog):
         open_btn = QPushButton("Открыть в Excel")
         open_btn.clicked.connect(self._open_report_template)
         open_btn.setStyleSheet("QPushButton { background-color: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
-        import_btn = QPushButton("📥  Импорт шаблона...")
+        import_btn = QPushButton("Импорт шаблона...")
         import_btn.clicked.connect(self._import_report_template)
         import_btn.setStyleSheet("QPushButton { background-color: #f97316; color: white; border: none; padding: 6px 16px; border-radius: 3px; }")
         import_btn.setToolTip("Добавить свой шаблон .xls/.xlsx в библиотеку отчётов")
@@ -209,22 +219,37 @@ class KTDBrowserDialog(QDialog):
         if row < 0:
             QMessageBox.information(self, "Выбор", "Выберите шаблон в таблице")
             return
-        path = self._ktd_paths[row]
-        try:
-            os.startfile(path)
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть файл:\n{e}")
+        path = self._ktd_paths[row] if row < len(self._ktd_paths) else ''
+        if path and Path(path).exists():
+            try:
+                os.startfile(path)
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Не удалось открыть файл:\n{e}")
+        else:
+            QMessageBox.information(
+                self, "Генерация документа",
+                "Этот документ формируется динамически через диалог генерации.\n"
+                "Откройте ТП и нажмите «Документы» в панели навигации, затем добавьте\n"
+                "нужную форму в список и нажмите «Сгенерировать»."
+            )
 
     def _open_report_template(self):
         row = self.rep_table.currentRow()
         if row < 0:
             QMessageBox.information(self, "Выбор", "Выберите отчёт в таблице")
             return
-        path = self._rep_paths[row]
-        try:
-            os.startfile(path)
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть файл:\n{e}")
+        path = self._rep_paths[row] if row < len(self._rep_paths) else ''
+        if path and Path(path).exists():
+            try:
+                os.startfile(path)
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Не удалось открыть файл:\n{e}")
+        else:
+            QMessageBox.information(
+                self, "Генерация отчёта",
+                "Этот отчёт формируется динамически через диалог генерации документов.\n"
+                "Откройте ТП и перейдите на вкладку «Документы»."
+            )
 
     def _open_ktd_folder(self):
         folder = Path(__file__).parent.parent.parent / 'resources' / 'templates' / 'ktd'

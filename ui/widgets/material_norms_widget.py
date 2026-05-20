@@ -1,18 +1,29 @@
 """
 Виджет материального нормирования
 """
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QComboBox, QDoubleSpinBox, QPushButton,
-    QTableWidget, QTableWidgetItem, QGroupBox,
-    QMessageBox, QHeaderView, QAbstractItemView, QSplitter, QFrame
-)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from database.models import Material, MaterialNorm, TechProcess
+from database.models import Material, MaterialNorm
 from modules.material_calc import MaterialCalculator
-
 
 PROFILES = ["Круг", "Квадрат", "Шестигранник", "Лист", "Труба"]
 
@@ -251,9 +262,8 @@ class MaterialNormsWidget(QWidget):
 
             # Рассчитываем КИМ
             blank_vol = calc.calculate_blank_volume(profile, dims)
-            kim = 0
             if blank_vol > 0:
-                kim = min(blank_vol * 0.5 / blank_vol, 1.0)
+                min(blank_vol * 0.5 / blank_vol, 1.0)
 
             self._result_labels['norm'].setText(f"{norm.norm_per_piece:.4f}")
             self._result_labels['waste'].setText(f"{norm.waste_percent:.1f}")

@@ -2,17 +2,30 @@
 Диалог управления справочниками (материалы, оборудование, инструмент, профессии)
 """
 import json
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
-    QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QLineEdit, QDoubleSpinBox, QSpinBox, QFormLayout,
-    QMessageBox, QHeaderView, QAbstractItemView, QFrame,
-    QComboBox, QTextEdit
-)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 
-from database.models import Material, Equipment, Tool, Profession
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+from database.models import Equipment, Material, Profession, Tool
 
 
 class ReferencesDialog(QDialog):

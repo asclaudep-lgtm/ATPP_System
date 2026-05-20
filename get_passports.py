@@ -1,4 +1,5 @@
-import subprocess, sys, re
+import subprocess
+import sys
 
 sys.stdout.reconfigure(encoding='utf-8')
 

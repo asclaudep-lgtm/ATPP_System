@@ -1,13 +1,22 @@
 """
 Диалог создания и редактирования изделия
 """
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QComboBox, QDoubleSpinBox,
-    QPushButton, QTextEdit, QMessageBox, QFrame
-)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+)
 
 from database.models import Material
 
@@ -102,7 +111,6 @@ class ProductDialog(QDialog):
         self.material_combo.setMinimumWidth(280)
         self.material_combo.addItem("— не выбран —", None)
         for mat_id, mat_label, gost in self._materials:
-            tooltip = gost
             self.material_combo.addItem(mat_label, mat_id)
             if gost:
                 self.material_combo.setItemData(

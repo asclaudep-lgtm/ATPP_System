@@ -1,10 +1,10 @@
 """Tests for v7.7 model changes (is_default_for_product, is_template)."""
 import pytest
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from database.models import (
-    Base, Product, ProductGroup, TechProcess, TPStatus, TPType,
+    Base, Product, TechProcess, TPStatus,
 )
 
 
@@ -50,7 +50,7 @@ def test_one_default_per_product(session):
     # Проверка
     defaults = (session.query(TechProcess)
                 .filter(TechProcess.product_id == p.id,
-                        TechProcess.is_default_for_product == True)
+                        TechProcess.is_default_for_product)
                 .all())
     assert len(defaults) == 1
     assert defaults[0].id == tp2.id
@@ -61,7 +61,7 @@ def test_group_tree_widget_smoke(tmp_path, monkeypatch):
     monkeypatch.setenv('QT_QPA_PLATFORM', 'offscreen')
     from PyQt6.QtWidgets import QApplication
     import sys
-    app = QApplication.instance() or QApplication(sys.argv)
+    QApplication.instance() or QApplication(sys.argv)
 
     from database.db_manager import DatabaseManager
     db_path = tmp_path / 'test.db'
@@ -80,7 +80,7 @@ def test_product_ktp_widget_with_empty_product(tmp_path, monkeypatch):
     monkeypatch.setenv('QT_QPA_PLATFORM', 'offscreen')
     from PyQt6.QtWidgets import QApplication
     import sys
-    app = QApplication.instance() or QApplication(sys.argv)
+    QApplication.instance() or QApplication(sys.argv)
 
     from database.db_manager import DatabaseManager
     db_path = tmp_path / 'test.db'
@@ -108,7 +108,7 @@ def test_tp_compare_dialog_smoke(tmp_path, monkeypatch):
     monkeypatch.setenv('QT_QPA_PLATFORM', 'offscreen')
     from PyQt6.QtWidgets import QApplication
     import sys
-    app = QApplication.instance() or QApplication(sys.argv)
+    QApplication.instance() or QApplication(sys.argv)
 
     from database.db_manager import DatabaseManager
     db_path = tmp_path / 'test.db'

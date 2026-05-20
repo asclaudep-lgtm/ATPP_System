@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import smtplib
 import threading
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 def _get_config():

@@ -7,22 +7,39 @@
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
-    QAbstractItemView, QComboBox, QHBoxLayout, QLabel,
-    QLineEdit, QMessageBox, QPushButton, QTabWidget, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget, QInputDialog,
+    QAbstractItemView,
+    QComboBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    IssueStatus, ProductionIssue, RouteStepStatus, Workshop,
-    WorkOrder, WorkOrderItem, WorkOrderStatus,
+    IssueStatus,
+    ProductionIssue,
+    RouteStepStatus,
+    WorkOrder,
+    WorkOrderItem,
+    WorkOrderStatus,
+    Workshop,
 )
-from modules import production
 
+_logger = logging.getLogger(__name__)
+from modules import production
 
 # ──────────────────────────────────────────────────────────────────────────
 # Вспомогательное
@@ -264,7 +281,11 @@ class OrdersTab(QWidget):
                 self, 'МТП', 'Выберите наряд в таблице.')
             return
         from PyQt6.QtWidgets import (
-            QFileDialog, QMessageBox as MB, QInputDialog,
+            QFileDialog,
+            QInputDialog,
+        )
+        from PyQt6.QtWidgets import (
+            QMessageBox as MB,
         )
         # Спросим: свернуть промежуточные?
         choices = [
@@ -313,7 +334,11 @@ class OrdersTab(QWidget):
                 self, 'МТП', 'Выберите наряд в таблице.')
             return
         from PyQt6.QtWidgets import (
-            QFileDialog, QMessageBox as MB, QInputDialog,
+            QFileDialog,
+            QInputDialog,
+        )
+        from PyQt6.QtWidgets import (
+            QMessageBox as MB,
         )
         choices = [
             "Сокращённый (свернуть промежуточные)",
@@ -360,7 +385,11 @@ class OrdersTab(QWidget):
                 'Выделите наряды в таблице (Ctrl/Shift+клик).')
             return
         from PyQt6.QtWidgets import (
-            QFileDialog, QMessageBox as MB, QInputDialog,
+            QFileDialog,
+            QInputDialog,
+        )
+        from PyQt6.QtWidgets import (
+            QMessageBox as MB,
         )
         fmts = [
             f'PDF — один многостраничный файл ({len(ids)} стр.)',
@@ -410,6 +439,7 @@ class OrdersTab(QWidget):
             if not folder:
                 return
             from pathlib import Path as _P
+
             from modules.mtp_excel import generate_mtp_excel
             saved = 0
             errs: list[str] = []
@@ -498,6 +528,7 @@ class OrdersTab(QWidget):
     def _on_print_labels(self):
         """Генерирует PDF с штрих-кодами всех партий выбранного наряда."""
         from PyQt6.QtWidgets import QFileDialog
+
         from modules import barcode_gen
 
         wo_id = self._selected_wo_id()
@@ -767,7 +798,6 @@ class ItemsTab(QWidget):
                 return
             qty = item.qty
             cur = production._current_step(item)
-            cur_workshop = item.current_workshop_id
 
         good, ok = QInputDialog.getInt(
             self, 'Завершение операции',
@@ -1068,7 +1098,7 @@ class ProductionWidget(QWidget):
             try:
                 w.refresh()
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
 
     def refresh(self):
         for i in range(self.tabs.count()):
@@ -1077,4 +1107,4 @@ class ProductionWidget(QWidget):
                 try:
                     w.refresh()
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")

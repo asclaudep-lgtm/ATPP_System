@@ -1,19 +1,30 @@
 """
 Модуль проектирования технологических процессов
 """
-from typing import List, Dict, Optional
+import logging
+from typing import Dict, List, Optional
+
 from database.models import (
-    TechProcess, Operation, Transition, Product,
-    TPType, TPStatus, TechnologyType, Equipment, Profession,
+    Equipment,
+    Operation,
+    Product,
+    Profession,
+    TechnologyType,
+    TechProcess,
+    TPStatus,
+    TPType,
+    Transition,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 class TPDesigner:
     """Класс для проектирования технологических процессов"""
-    
+
     def __init__(self, db_session):
         self.session = db_session
-    
+
     def create_tech_process(
         self,
         product_id: int,
@@ -48,12 +59,12 @@ class TPDesigner:
             description=description,
             execution_variant=execution_variant
         )
-        
+
         self.session.add(tp)
         self.session.flush()
-        
+
         return tp
-    
+
     def add_operation(
         self,
         tech_process_id: int,
@@ -83,7 +94,7 @@ class TPDesigner:
         max_order = self.session.query(Operation).filter_by(
             tech_process_id=tech_process_id
         ).count()
-        
+
         operation = Operation(
             tech_process_id=tech_process_id,
             number=number,
@@ -94,12 +105,12 @@ class TPDesigner:
             shop=shop,
             sort_order=max_order
         )
-        
+
         self.session.add(operation)
         self.session.flush()
-        
+
         return operation
-    
+
     def add_transition(
         self,
         operation_id: int,
@@ -123,7 +134,7 @@ class TPDesigner:
         max_order = self.session.query(Transition).filter_by(
             operation_id=operation_id
         ).count()
-        
+
         transition = Transition(
             operation_id=operation_id,
             number=number,
@@ -131,10 +142,10 @@ class TPDesigner:
             sort_order=max_order,
             **params
         )
-        
+
         self.session.add(transition)
         self.session.flush()
-        
+
         return transition
 
     def _add_typical_transitions(self, operation: Operation, op_name: str):
@@ -223,7 +234,7 @@ class TPDesigner:
             try:
                 accuracy = int(product.accuracy_class.replace('IT', ''))
             except ValueError:
-                pass
+                _logger.exception("Invalid accuracy class value")
 
         material_name = product.material.name.lower() if product.material and product.material.name else ''
         detail_name = product.name.lower() if product.name else ''
@@ -318,9 +329,9 @@ class TPDesigner:
             'profession': 'Контролёр',
             'grade': 3
         })
-        
+
         return suggestions
-    
+
     def auto_generate_tp(self, product: Product, author_id: int) -> TechProcess:
         """
         Автоматически сгенерировать ТП на основе параметров детали
@@ -343,10 +354,10 @@ class TPDesigner:
             author_id=author_id,
             description=f"Автоматически сгенерированный ТП для {product.name}"
         )
-        
+
         # Получаем предложенный маршрут
         route = self.suggest_route(product)
-        
+
         # Создаём операции
         for op_data in route:
             # Находим оборудование и профессию в справочниках
@@ -380,11 +391,16 @@ class TPDesigner:
 
             # Добавляем типовые переходы на основе типа операции
             self._add_typical_transitions(operation, op_data['name'])
-        
-        self.session.commit()
-        
+
+        # Автоматический расчёт норм времени
+        try:
+            from modules.time_norms import apply_norms_to_db
+            apply_norms_to_db(self.session, tp)
+        except Exception:
+            _logger.exception("Time norm calculation failed")
+
         return tp
-    
+
     def validate_tech_process(self, tech_process_id: int) -> Dict:
         """
         Валидация технологического процесса
@@ -396,34 +412,34 @@ class TPDesigner:
             Словарь с результатами проверки
         """
         tp = self.session.get(TechProcess, tech_process_id)
-        
+
         errors = []
         warnings = []
         recommendations = []
-        
+
         # Проверка операций
         if not tp.operations:
             errors.append("ТП не содержит операций")
-        
+
         for operation in tp.operations:
             # Проверка обязательных полей
             if not operation.name:
                 errors.append(f"Операция {operation.number}: отсутствует наименование")
-            
+
             if not operation.equipment_id:
                 errors.append(f"Операция {operation.number}: не указано оборудование")
-            
+
             if not operation.profession_id:
                 errors.append(f"Операция {operation.number}: не указана профессия")
-            
+
             # Проверка переходов
             if not operation.transitions:
                 warnings.append(f"Операция {operation.number}: отсутствуют переходы")
-            
+
             # Проверка норм времени
             if operation.t_piece == 0:
                 warnings.append(f"Операция {operation.number}: не рассчитаны нормы времени")
-        
+
         # Проверка логичности последовательности операций
         op_sequence = [op.name.lower() for op in sorted(
             tp.operations, key=lambda o: int(o.number or 0)
@@ -457,7 +473,7 @@ class TPDesigner:
             'warnings': warnings,
             'recommendations': recommendations
         }
-    
+
     def copy_tech_process(
         self,
         source_tp_id: int,
@@ -479,7 +495,7 @@ class TPDesigner:
             Скопированный ТП
         """
         source_tp = self.session.get(TechProcess, source_tp_id)
-        
+
         # Создаём новый ТП
         new_tp = TechProcess(
             number=new_number,
@@ -491,10 +507,10 @@ class TPDesigner:
             description=f"Копия {source_tp.number}",
             execution_variant=new_execution_variant if new_execution_variant is not None else getattr(source_tp, 'execution_variant', None)
         )
-        
+
         self.session.add(new_tp)
         self.session.flush()
-        
+
         # Копируем операции
         for source_op in source_tp.operations:
             new_op = Operation(
@@ -514,10 +530,10 @@ class TPDesigner:
                 note=source_op.note,
                 sort_order=source_op.sort_order
             )
-            
+
             self.session.add(new_op)
             self.session.flush()
-            
+
             # Копируем переходы
             for source_trans in source_op.transitions:
                 new_trans = Transition(
@@ -534,9 +550,7 @@ class TPDesigner:
                     passes=source_trans.passes,
                     sort_order=source_trans.sort_order
                 )
-                
+
                 self.session.add(new_trans)
-        
-        self.session.commit()
-        
+
         return new_tp

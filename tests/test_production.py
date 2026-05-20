@@ -5,7 +5,7 @@ from database.models import (
     IssueKind, IssueSeverity, IssueStatus,
     Operation, Product, RouteStepStatus,
     TechProcess, TPStatus, TPType, User, Workshop,
-    WorkOrder, WorkOrderItem, WorkOrderItemStatus, WorkOrderStatus,
+    WorkOrderItem, WorkOrderItemStatus, WorkOrderStatus,
 )
 
 

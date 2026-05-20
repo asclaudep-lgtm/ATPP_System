@@ -2,25 +2,20 @@
 Генератор отчётов и ведомостей по шаблонам УЗГА
 """
 from __future__ import annotations
-from pathlib import Path
+
 from datetime import datetime
+from pathlib import Path
 
 from utils.logger import get_logger
 
 log = get_logger(__name__)
 
 import openpyxl
-from openpyxl.styles import (
-    Font, Alignment, Border, Side, PatternFill, GradientFill
-)
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from database.models import (
-    TechProcess, Operation, Transition, MaterialNorm, CostCalculation,
-    Material, Equipment, Profession, Product
-)
-from config import EXPORT_DIR, TEMPLATES_DIR, product_export_dir
-
+from config import TEMPLATES_DIR, product_export_dir
+from database.models import CostCalculation, Material, MaterialNorm, Operation, Product, TechProcess
 
 # Стиль тонкой рамки
 _thin = Side(style='thin')
@@ -92,7 +87,8 @@ def _add_status_watermark(ws, status_value: str):
         )
         ws.oddFooter.center.size = 10
         ws.oddFooter.center.color = 'AA0000'
-    except Exception as e:
+    except (OSError, ValueError) as e:
+        # best-effort page formatting
         log.warning('Page setup skipped: %s', e)
 
 
@@ -110,7 +106,8 @@ def _ensure_print_settings(ws):
         ws.page_margins.bottom = 0.7
         ws.page_margins.header = 0.3
         ws.page_margins.footer = 0.3
-    except Exception as e:
+    except (OSError, ValueError) as e:
+        # best-effort page formatting
         log.warning('Page setup skipped: %s', e)
 
 
@@ -154,7 +151,7 @@ class ReportGenerator:
         _auto_width(ws, [20, 25, 14, 14, 18, 13, 10, 7, 6, 28, 7, 10, 12, 12, 14])
 
         r = 1
-        _title_row(ws, r, f'МАРШРУТНО-СОПРОВОДИТЕЛЬНАЯ КАРТА', len(cols))
+        _title_row(ws, r, 'МАРШРУТНО-СОПРОВОДИТЕЛЬНАЯ КАРТА', len(cols))
         ws.row_dimensions[r].height = 22
         r += 1
 
@@ -695,9 +692,8 @@ class ReportGenerator:
         ~360 px высоты) с сохранением пропорций.
         """
         from openpyxl.drawing.image import Image as XLImage
-        from openpyxl.utils import get_column_letter
         from PIL import Image as PILImage
-        from database.models import Sketch
+
         from config import DATA_DIR
 
         tp = self.session.get(TechProcess, tp_id)
@@ -738,7 +734,6 @@ class ReportGenerator:
         row = 4
         any_sketches = False
         max_w_px, max_h_px = 480, 360
-        EMU_PER_PX = 9525  # (для openpyxl image width in pixels)
 
         operations = (
             self.session.query(Operation)
@@ -757,7 +752,8 @@ class ReportGenerator:
                 with PILImage.open(img_path) as pil:
                     pil = pil.convert('RGB')
                     w, h = pil.size
-            except Exception as e:
+            except (OSError, ValueError) as e:
+                # image metadata read — best-effort
                 log.warning('Image size detection failed: %s', e)
                 return 18
             scale = min(max_w_px / w, max_h_px / h, 1.0)
@@ -880,7 +876,8 @@ class ReportGenerator:
             try:
                 h = embed_fn(full, row)
                 ws.row_dimensions[row].height = max(h, 80)
-            except Exception as e:
+            except (OSError, ImportError, ValueError) as e:
+                # best-effort image embed
                 img_cell.value = f'[не удалось вставить картинку: {e}]'
                 ws.row_dimensions[row].height = 30
         elif ftype == 'pdf' and full.exists():
@@ -899,7 +896,8 @@ class ReportGenerator:
                         ws.row_dimensions[row].height = max(h, 80)
                     else:
                         raise RuntimeError('Пустой PDF')
-            except Exception as e:
+            except (OSError, ImportError, RuntimeError) as e:
+                # best-effort PDF render
                 log.warning('PDF embed skipped: %s', e)
                 img_cell.value = f'PDF — см. файл-вложение: {full.name}'
                 img_cell.font = Font(name='Arial', size=10, italic=True, color='2980b9')
@@ -916,7 +914,7 @@ class ReportGenerator:
     @staticmethod
     def open_ktd_template(template_path: str | Path) -> None:
         """Открыть шаблон КТД в ассоциированном приложении (Word)"""
-        import subprocess, os
+        import os
         path = Path(template_path)
         if path.exists():
             os.startfile(str(path))
@@ -924,73 +922,48 @@ class ReportGenerator:
             raise FileNotFoundError(f'Шаблон не найден: {path}')
 
     @staticmethod
-    def list_ktd_templates() -> list[dict]:
-        """Вернуть список доступных шаблонов КТД"""
-        ktd_dir = Path(__file__).parent.parent / 'resources' / 'templates' / 'ktd'
+    def list_ktd_templates() -> list:
+        """Return available GOST document forms from the form registry."""
+        try:
+            from modules.doc_forms import DOC_FORM_REGISTRY
+        except ImportError:
+            return []
         result = []
-        if not ktd_dir.exists():
-            return result
-
-        GOST_NAMES = {
-            '3.1105': 'Маршрутная карта (МК)',
-            '3.1118': 'Операционная карта (ОК)',
-            '3.1121': 'Карта типового операционного процесса (КТОП)',
-            '3.1122': 'Карта кодирования информации (ККИ)',
-            '3.1123': 'Карта нормирования (КН)',
-            '3.1201': 'Карта наладки станка (КНС)',
-            '3.1401': 'Ведомость технологической оснастки (ВТО)',
-            '3.1402': 'Карта инструмента (КИ)',
-            '3.1404': 'Операционная карта сборки (ОКС)',
-            '3.1407': 'Карта типовых переходов (КТП)',
-            '3.1408': 'Карта эскизов (КЭ)',
-            '3.1502': 'Операционная карта ТК (ОКТК)',
-        }
-
-        for f in sorted(ktd_dir.iterdir()):
-            if f.suffix.lower() in ('.dot', '.doc', '.docx'):
-                gost_key = next(
-                    (k for k in GOST_NAMES if k in f.name), None
-                )
-                doc_type = GOST_NAMES.get(gost_key, 'Форма КТД')
-                result.append({
-                    'name': f.name,
-                    'path': str(f),
-                    'gost': gost_key or '',
-                    'doc_type': doc_type,
-                    'size_kb': round(f.stat().st_size / 1024),
-                })
-
-        # Also scan ktd_docx templates (new .docx fillable templates)
-        ktd_docx_dir = ktd_dir.parent / 'ktd_docx'
-        if ktd_docx_dir.exists():
-            for f in sorted(ktd_docx_dir.iterdir()):
-                if f.suffix.lower() == '.docx':
-                    doc_type = {
-                        'title_page_template.docx': 'Титульный лист ТП',
-                        'route_card_template.docx': 'Маршрутная карта (МК)',
-                    }.get(f.name, 'Шаблон .docx')
-                    result.append({
-                        'name': f.name,
-                        'path': str(f),
-                        'gost': 'template',
-                        'doc_type': doc_type,
-                        'size_kb': round(f.stat().st_size / 1024),
-                    })
-
+        for form in DOC_FORM_REGISTRY:
+            result.append({
+                'name': form.name,
+                'path': '',  # generated on demand, not a static file
+                'gost': form.gost,
+                'doc_type': form.name,
+                'size_kb': 0,
+                'form_id': form.form_id,
+                'formats': form.formats,
+            })
         return result
 
     @staticmethod
-    def list_report_templates() -> list[dict]:
-        """Вернуть список шаблонов отчётов"""
-        rep_dir = Path(__file__).parent.parent / 'resources' / 'templates' / 'reports'
+    def list_report_templates() -> list:
+        """Return available report forms from the form registry."""
+        try:
+            from modules.doc_forms import DOC_FORM_REGISTRY, DocCategory
+        except ImportError:
+            return []
         result = []
-        if not rep_dir.exists():
-            return result
-        for f in sorted(rep_dir.iterdir()):
-            if f.suffix.lower() in ('.xls', '.xlsx'):
+        for form in DOC_FORM_REGISTRY:
+            if form.category == DocCategory.REPORT:
                 result.append({
-                    'name': f.name,
-                    'path': str(f),
-                    'size_kb': round(f.stat().st_size / 1024),
+                    'name': form.name,
+                    'path': '',
+                    'size_kb': 0,
+                    'form_id': form.form_id,
+                    'formats': form.formats,
                 })
+        # Also include MTP template if available
+        mtp_path = Path(__file__).parent.parent / 'resources' / 'templates' / 'mtp_template.xlsx'
+        if mtp_path.exists():
+            result.append({
+                'name': 'Шаблон МТП (Excel)',
+                'path': str(mtp_path),
+                'size_kb': round(mtp_path.stat().st_size / 1024),
+            })
         return result

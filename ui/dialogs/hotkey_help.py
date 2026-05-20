@@ -1,7 +1,7 @@
 """Hotkey help dialog — shows all keyboard shortcuts."""
 
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTableWidget, QTableWidgetItem, QPushButton
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QDialog, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout
 
 HOTKEYS = [
     ('Ctrl+N', 'Создать ТП'),

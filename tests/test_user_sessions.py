@@ -1,5 +1,5 @@
 """Tests for C13 user_sessions logging."""
-from database.models import User, UserSession
+from database.models import UserSession
 
 
 def test_login_creates_user_session(db_manager):

@@ -6,11 +6,16 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QTreeWidget, QTreeWidgetItem, QPushButton, QDialogButtonBox,
+    QDialog,
+    QDialogButtonBox,
+    QLabel,
+    QLineEdit,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
 )
 
-from database.models import TechProcess, Operation
+from database.models import TechProcess
 
 
 class OpPickerDialog(QDialog):

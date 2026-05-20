@@ -1,12 +1,16 @@
 """PDO API v3 — real workflow with OMTS, Tech Dept, Deputy approval."""
 
-from datetime import date
-from fastapi import APIRouter, Depends, Query, HTTPException, Body
-from sqlalchemy.orm import Session
-from typing import Optional
+import logging
 
-from web.deps import get_db, get_current_user
+_logger = logging.getLogger(__name__)
+
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
 from modules import pdo_module
+from web.deps import get_current_user, get_db
 
 router = APIRouter(tags=["pdo"])
 
@@ -23,6 +27,7 @@ def list_orders(
         try:
             st = PDOStatus[status]
         except KeyError:
+            _logger.exception("Invalid PDO status: %s", status)
             pass
     orders = pdo_module.list_orders_by_status(db, st)
     return [pdo_module.get_order_detail(db, o.id) for o in orders]
@@ -57,7 +62,7 @@ def create_order(
     if not product_id and designation:
         p = db.query(Product).filter(
             Product.designation == designation.strip(),
-            Product.is_deleted == False).first()
+            not Product.is_deleted).first()
         if p:
             product_id = p.id
     if not product_id:

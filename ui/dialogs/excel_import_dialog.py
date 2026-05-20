@@ -7,17 +7,24 @@
 brand+gost для Material) не создаются.
 """
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton,
-    QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView, QFormLayout,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
 )
 
-from database.models import Equipment, Profession, Material
-
+from database.models import Equipment, Material, Profession
 
 ENTITY_OPTIONS = {
     'equipment': {

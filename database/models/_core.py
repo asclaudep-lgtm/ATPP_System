@@ -1,14 +1,25 @@
 """
 Модели базы данных SQLAlchemy
 """
-from datetime import datetime
-from sqlalchemy import (
-    Column, Integer, String, Float, Text, DateTime, Date,
-    ForeignKey, Boolean, Enum as SQLEnum, UniqueConstraint, Index, JSON,
-)
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import relationship
 import enum
+from datetime import datetime
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
@@ -69,7 +80,7 @@ class AssemblyLevel(enum.Enum):
 class User(Base):
     """Пользователь системы"""
     __tablename__ = 'users'
-    
+
     id = Column(Integer, primary_key=True)
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
@@ -96,7 +107,7 @@ class User(Base):
 class Material(Base):
     """Справочник материалов"""
     __tablename__ = 'materials'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     grade = Column(String(50))  # Марка
@@ -104,7 +115,7 @@ class Material(Base):
     density = Column(Float)     # Плотность, кг/м³
     price_per_kg = Column(Float)  # Цена за кг
     description = Column(Text)
-    
+
     # Связи
     products = relationship("Product", back_populates="material")
 
@@ -112,7 +123,7 @@ class Material(Base):
 class Equipment(Base):
     """Справочник оборудования"""
     __tablename__ = 'equipment'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     model = Column(String(50))
@@ -120,7 +131,7 @@ class Equipment(Base):
     power = Column(Float)      # Мощность, кВт
     cost_per_hour = Column(Float)  # Стоимость часа работы
     description = Column(Text)
-    
+
     # Связи
     operations = relationship("Operation", back_populates="equipment")
 
@@ -128,13 +139,13 @@ class Equipment(Base):
 class Tool(Base):
     """Справочник инструмента"""
     __tablename__ = 'tools'
-    
+
     id = Column(Integer, primary_key=True)
     designation = Column(String(100), nullable=False)
     name = Column(String(200))
     tool_type = Column(String(50))  # Режущий, измерительный, вспомогательный
     description = Column(Text)
-    
+
     # Связи
     operation_tools = relationship("OperationTool", back_populates="tool")
 
@@ -142,12 +153,12 @@ class Tool(Base):
 class Profession(Base):
     """Справочник профессий"""
     __tablename__ = 'professions'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     typical_grade = Column(Integer)  # Типовой разряд
     hourly_rates = Column(JSON)  # {1: 200, 2: 220, ...}
-    
+
     # Связи
     operations = relationship("Operation", back_populates="profession")
 
@@ -159,7 +170,7 @@ class OperationTemplate(Base):
     с дефолтными полями в один клик.
     """
     __tablename__ = 'operation_templates'
-    
+
     id = Column(Integer, primary_key=True)
     code = Column(String(20))
     name = Column(String(200), nullable=False)
@@ -180,7 +191,7 @@ class OperationTemplate(Base):
 class TransitionTemplate(Base):
     """Справочник типовых переходов"""
     __tablename__ = 'transition_templates'
-    
+
     id = Column(Integer, primary_key=True)
     operation_template_id = Column(Integer, ForeignKey('operation_templates.id'))
     code = Column(String(20))
@@ -290,15 +301,15 @@ class BOMItem(Base):
 class TechProcess(Base):
     """Технологический процесс"""
     __tablename__ = 'tech_processes'
-    
+
     id = Column(Integer, primary_key=True)
     number = Column(String(50), unique=True, nullable=False)  # Номер ТП
     product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
-    
+
     tp_type = Column(SQLEnum(TPType), default=TPType.SINGLE)
     technology_type = Column(SQLEnum(TechnologyType))
     status = Column(SQLEnum(TPStatus), default=TPStatus.DRAFT)
-    
+
     version = Column(String(20), default="1.0")
     description = Column(Text)
 
@@ -335,7 +346,7 @@ class TechProcess(Base):
     signatures = relationship("ApprovalSignature",
                               cascade="all, delete-orphan",
                               order_by="ApprovalSignature.signed_at")
-    operations = relationship("Operation", back_populates="tech_process", 
+    operations = relationship("Operation", back_populates="tech_process",
                             cascade="all, delete-orphan", order_by="Operation.sort_order")
     material_norms = relationship("MaterialNorm", back_populates="tech_process")
     cost_calculation = relationship("CostCalculation", back_populates="tech_process", uselist=False)
@@ -344,25 +355,25 @@ class TechProcess(Base):
 class Operation(Base):
     """Операция технологического процесса"""
     __tablename__ = 'operations'
-    
+
     id = Column(Integer, primary_key=True)
     tech_process_id = Column(Integer, ForeignKey('tech_processes.id'), nullable=False)
-    
+
     number = Column(String(10), nullable=False)  # Номер операции (005, 010, ...)
     name = Column(String(200), nullable=False)
     code = Column(String(20))
-    
+
     shop = Column(String(100))  # Цех/участок
     equipment_id = Column(Integer, ForeignKey('equipment.id'))
     profession_id = Column(Integer, ForeignKey('professions.id'))
     grade = Column(Integer)  # Разряд
-    
+
     # Нормы времени
     t_setup = Column(Float, default=0)  # Тпз, мин
     t_piece = Column(Float, default=0)  # Тшт, мин
     t_main = Column(Float, default=0)   # То, мин
     t_auxiliary = Column(Float, default=0)  # Тв, мин
-    
+
     machine_count = Column(Integer, default=1)
     note = Column(Text)
     sort_order = Column(Integer, default=0)
@@ -380,7 +391,7 @@ class Operation(Base):
     tech_process = relationship("TechProcess", back_populates="operations")
     equipment = relationship("Equipment", back_populates="operations")
     profession = relationship("Profession", back_populates="operations")
-    transitions = relationship("Transition", back_populates="operation", 
+    transitions = relationship("Transition", back_populates="operation",
                               cascade="all, delete-orphan", order_by="Transition.sort_order")
     tools = relationship("OperationTool", back_populates="operation", cascade="all, delete-orphan")
     sketches = relationship("Sketch", back_populates="operation",
@@ -391,14 +402,14 @@ class Operation(Base):
 class Transition(Base):
     """Переход операции"""
     __tablename__ = 'transitions'
-    
+
     id = Column(Integer, primary_key=True)
     operation_id = Column(Integer, ForeignKey('operations.id'), nullable=False)
-    
+
     number = Column(String(10), nullable=False)
     text = Column(Text, nullable=False)
     code = Column(String(20))
-    
+
     # Параметры обработки (для механической обработки)
     diameter = Column(Float)  # Диаметр, мм
     length = Column(Float)    # Длина, мм
@@ -407,9 +418,9 @@ class Transition(Base):
     speed = Column(Float)     # Скорость резания, м/мин
     rpm = Column(Float)       # Частота вращения, об/мин
     passes = Column(Integer, default=1)  # Число проходов
-    
+
     sort_order = Column(Integer, default=0)
-    
+
     # Связи
     operation = relationship("Operation", back_populates="transitions")
     sketches = relationship("Sketch", back_populates="transition",
@@ -420,12 +431,12 @@ class Transition(Base):
 class OperationTool(Base):
     """Оснастка операции"""
     __tablename__ = 'operation_tools'
-    
+
     id = Column(Integer, primary_key=True)
     operation_id = Column(Integer, ForeignKey('operations.id'), nullable=False)
     tool_id = Column(Integer, ForeignKey('tools.id'), nullable=False)
     quantity = Column(Integer, default=1)
-    
+
     # Связи
     operation = relationship("Operation", back_populates="tools")
     tool = relationship("Tool", back_populates="operation_tools")
@@ -456,21 +467,21 @@ class Sketch(Base):
 class MaterialNorm(Base):
     """Норма расхода материала"""
     __tablename__ = 'material_norms'
-    
+
     id = Column(Integer, primary_key=True)
     tech_process_id = Column(Integer, ForeignKey('tech_processes.id'), nullable=False)
     material_id = Column(Integer, ForeignKey('materials.id'), nullable=False)
-    
+
     blank_profile = Column(String(50))  # Профиль заготовки
     blank_dimensions = Column(String(100))  # Размеры заготовки
     allowance = Column(Float)  # Припуск, мм
     cutting_allowance = Column(Float)  # Припуск на отрезку, мм
     consumption_coefficient = Column(Float, default=1.0)
-    
+
     norm_per_piece = Column(Float)  # Норма на деталь, кг
     waste_percent = Column(Float)   # % отходов
     cost_per_piece = Column(Float)  # Стоимость материала на деталь
-    
+
     # Связи
     tech_process = relationship("TechProcess", back_populates="material_norms")
 
@@ -478,36 +489,36 @@ class MaterialNorm(Base):
 class CostCalculation(Base):
     """Расчёт себестоимости"""
     __tablename__ = 'cost_calculations'
-    
+
     id = Column(Integer, primary_key=True)
     tech_process_id = Column(Integer, ForeignKey('tech_processes.id'), nullable=False)
-    
+
     # Материалы
     material_cost = Column(Float, default=0)
-    
+
     # Заработная плата
     labor_cost = Column(Float, default=0)
-    
+
     # Отчисления
     social_contributions = Column(Float, default=0)
-    
+
     # Эксплуатация оборудования
     equipment_cost = Column(Float, default=0)
-    
+
     # Цеховые расходы
     shop_overhead = Column(Float, default=0)
-    
+
     # Общезаводские расходы
     factory_overhead = Column(Float, default=0)
-    
+
     # Итого
     production_cost = Column(Float, default=0)  # Производственная себестоимость
     full_cost = Column(Float, default=0)        # Полная себестоимость
     price = Column(Float, default=0)            # Цена с рентабельностью
     profit = Column(Float, default=0)           # Прибыль
-    
+
     calculated_at = Column(DateTime, default=datetime.now)
-    
+
     # Связи
     tech_process = relationship("TechProcess", back_populates="cost_calculation")
 
@@ -517,7 +528,7 @@ class CostCalculation(Base):
 class ChangeLog(Base):
     """Журнал изменений"""
     __tablename__ = 'change_logs'
-    
+
     id = Column(Integer, primary_key=True)
     entity_type = Column(String(50))  # TechProcess, Operation, etc.
     entity_id = Column(Integer)
@@ -533,7 +544,7 @@ class ChangeLog(Base):
 class TPVersion(Base):
     """Версии технологического процесса"""
     __tablename__ = 'tp_versions'
-    
+
     id = Column(Integer, primary_key=True)
     tech_process_id = Column(Integer, ForeignKey('tech_processes.id'))
     version_number = Column(String(20))

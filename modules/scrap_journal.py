@@ -8,20 +8,21 @@ v9-9: Брак-журнал с фотофиксацией.
 """
 from __future__ import annotations
 
-import os
 import shutil
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy import func
 
 from database.models import (
-    ScrapRecord, ScrapPhoto, ScrapReason, ScrapDecision,
-    Operation, WorkOrder, WorkOrderItem,
+    Operation,
+    ScrapDecision,
+    ScrapPhoto,
+    ScrapReason,
+    ScrapRecord,
 )
-
 
 SCRAP_PHOTOS_DIR = Path('data/scrap')
 

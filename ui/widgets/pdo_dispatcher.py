@@ -1,19 +1,37 @@
 """PDO Dispatcher v2 — Kanban board with rich cards, timeline, documents."""
 
-from datetime import datetime, date
+import logging
+from datetime import date, datetime
+
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QFrame, QGroupBox, QMessageBox, QInputDialog,
-    QSplitter, QTextEdit, QSizePolicy, QGridLayout,
-    QLineEdit, QFormLayout, QTableWidget, QTableWidgetItem, QDialog,
     QComboBox,
+    QDialog,
+    QFormLayout,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
-from PyQt6.QtGui import QFont, QColor, QPalette
+
+_logger = logging.getLogger(__name__)
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QCompleter
 
-from modules import pdo_module
 from database.models import PDOStatus
+from modules import pdo_module
 
 STATUS_COLORS = {
     PDOStatus.NEW:                '#6c757d',
@@ -139,12 +157,12 @@ class PDOOrderCard(QFrame):
                     due_lbl.setStyleSheet(
                         'color: #e67e22; font-weight: bold; font-size: 10px;')
             except ValueError:
-                pass
+                _logger.exception("Invalid due date format")
         bot.addWidget(due_lbl)
         layout.addLayout(bot)
 
         # Memos line
-        memo_count = order_data.get('memo_count', 0)
+        order_data.get('memo_count', 0)
         omts = order_data.get('omts_memo', '')
         deputy = order_data.get('deputy_memo', '')
         if omts or deputy:
@@ -251,7 +269,7 @@ class PDOKanbanColumn(QGroupBox):
                 self.order_dropped.emit(order_id, self.status)
                 ev.acceptProposedAction()
             except ValueError:
-                pass
+                _logger.exception("Invalid order ID in drop event")
         self.dragLeaveEvent(ev)
         super().dropEvent(ev)
 
@@ -578,7 +596,6 @@ class PDODispatcherWidget(QWidget):
     # ── Actions ───────────────────────────────────────────────────
 
     def _create_order(self):
-        from PyQt6.QtWidgets import QDialog, QFormLayout, QTableWidget
         from database.models import Product
 
         dlg = QDialog(self)
@@ -593,7 +610,7 @@ class PDODispatcherWidget(QWidget):
         with self.db_manager.get_session() as s:
             from database.models import Product
             all_des = [p.designation for p in s.query(Product.designation)
-                       .filter(Product.is_deleted == False)
+                       .filter(not Product.is_deleted)
                        .order_by(Product.designation).all()]
         completer = QCompleter(all_des, des_edit)
         completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
@@ -654,7 +671,7 @@ class PDODispatcherWidget(QWidget):
             with self.db_manager.get_session() as s:
                 p = s.query(Product).filter(
                     Product.designation == des,
-                    Product.is_deleted == False).first()
+                    not Product.is_deleted).first()
                 if p is None:
                     QMessageBox.warning(dlg, 'Ошибка', f'Изделие "{des}" не найдено.')
                     return
@@ -772,7 +789,6 @@ class PDODispatcherWidget(QWidget):
         self.refresh()
 
     def _print_order_card(self):
-        from modules.doc_generator import DocumentGenerator
         if not hasattr(self, '_current_detail'):
             return
         oid = self._current_detail['id']
@@ -786,7 +802,8 @@ class PDODispatcherWidget(QWidget):
                 return
 
             import openpyxl
-            from openpyxl.styles import Font, Alignment, Border, Side
+            from openpyxl.styles import Font
+
             from config import EXPORT_DIR
 
             wb = openpyxl.Workbook()
@@ -839,7 +856,7 @@ class PDODispatcherWidget(QWidget):
                     order_id=order_id,
                     from_dept=old_status.value if old_status else '?',
                     to_dept=new_status.value,
-                    comment=f'Перемещено drag-and-drop',
+                    comment='Перемещено drag-and-drop',
                 )
                 s.add(handoff)
         self.refresh()
@@ -874,7 +891,8 @@ class PDODispatcherWidget(QWidget):
 
     def _export_orders(self):
         import openpyxl
-        from openpyxl.styles import Font, Alignment
+        from openpyxl.styles import Alignment, Font
+
         from config import EXPORT_DIR
 
         wb = openpyxl.Workbook()

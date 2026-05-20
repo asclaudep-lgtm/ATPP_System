@@ -4,15 +4,24 @@
 Показывает: какие роли подписали ТП, кто, когда, с каким комментарием.
 Текущий пользователь может добавить подпись своей роли (одной из).
 """
-from typing import Dict, List, Set
+from typing import Dict
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
-    QPushButton, QComboBox, QLineEdit, QMessageBox, QHeaderView, QAbstractItemView,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
 )
 
-from database.models import TechProcess, TPStatus, SignerRole
+from database.models import SignerRole, TechProcess
 from modules import workflow
 
 

@@ -1,13 +1,21 @@
 """PDO module v3 — реальный процесс УЗГА: ПЭУ→ОМТС→Тех.отдел→Зам.Тех.Дир→Цех."""
 
-from datetime import datetime, date
-from typing import Optional, List
+import logging
+from datetime import date, datetime
+from typing import List
 
 from database.models import (
-    ProductionOrder, PDOHandoff, MTPSignoff, PDOStatus,
-    NomenclatureItem, ServiceMemo,
-    TechProcess, Product, TPStatus, User,
+    MTPSignoff,
+    NomenclatureItem,
+    PDOHandoff,
+    PDOStatus,
+    ProductionOrder,
+    ServiceMemo,
+    TechProcess,
+    TPStatus,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -39,7 +47,7 @@ def create_order(
     """Create a PDO order with optional nomenclature items."""
     tp = session.query(TechProcess).filter(
         TechProcess.product_id == product_id,
-        TechProcess.is_deleted == False,
+        not TechProcess.is_deleted,
         TechProcess.status == TPStatus.APPROVED,
     ).first()
 
@@ -241,8 +249,8 @@ def sign_mtp(session, *, order_id: int, tech_process_id: int,
     if tp is None:
         raise ValueError(f'TP #{tech_process_id} not found')
 
-    from modules.workflow import add_signature, try_auto_approve
     from database.models import SignerRole
+    from modules.workflow import add_signature, try_auto_approve
     add_signature(session, tp_id=tech_process_id,
                   role=SignerRole.CHIEF_TECH.value, user_id=signed_by,
                   comment=f'МТП подписан: {comment}')
@@ -451,4 +459,4 @@ def _send_push(target: str, title: str, message: str):
         from web.server import send_push_alert
         send_push_alert(target, title, message)
     except Exception:
-        pass
+        _logger.exception("Unhandled error")

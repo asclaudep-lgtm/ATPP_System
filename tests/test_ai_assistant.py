@@ -1,5 +1,4 @@
 """Тесты AI-помощника технолога."""
-import pytest
 from database.models import (Product, Material, TechProcess, Operation,
                               TPStatus, TechnologyType)
 

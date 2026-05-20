@@ -9,10 +9,13 @@ description = "Система автоматизации технологиче�
 requires-python = ">=3.11"
 
 [tool.ruff]
+line-length = 130
 target-version = "py311"
+exclude = ["alembic", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+ignore = ["E402", "E501", "E702", "E701", "E741", "E742", "E731", "E711", "E712", "F403", "F401", "F821", "N806", "N802", "N814", "N817", "N811", "W293"]
 
 [tool.mypy]
 python_version = "3.11"

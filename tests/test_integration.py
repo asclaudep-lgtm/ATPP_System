@@ -1,7 +1,5 @@
 """Integration tests — end-to-end workflows across multiple modules."""
 
-import pytest
-from pathlib import Path
 
 
 class TestProductToMKWorkflow:
@@ -106,10 +104,9 @@ class TestBOMToNestingWorkflow:
 
     def test_bom_to_nesting_layout(self, db_manager):
         from database.models import (
-            Product, Material, BOMItem, TPStatus, TechProcess,
+            Product, Material, BOMItem,
         )
         from modules.pdm_integration import export_bom_json
-        import json
 
         with db_manager.get_session() as s:
             mat = Material(name="BOM Nest Steel", grade="NS1")
@@ -158,7 +155,7 @@ class TestSketchVersioningWorkflow:
     def test_sketch_versioning_roundtrip(self, db_manager, tmp_path):
         from modules.sketch_versioning import (
             add_sketch_version, get_sketch_versions,
-            restore_sketch_version, delete_sketch_version,
+            delete_sketch_version,
         )
         from database.models import Product, TechProcess, Operation
         from database.models import Material, TPStatus

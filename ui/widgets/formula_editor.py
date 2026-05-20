@@ -5,13 +5,127 @@ Each formula is a Python expression evaluated with a restricted set of
 predefined variables (D, L, t, S, n, V, HB, etc.).
 """
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
-    QLabel, QLineEdit, QPushButton, QTextEdit, QMessageBox,
-    QSplitter, QGroupBox,
-)
+import ast
+import logging
+import math
+import operator
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+_logger = logging.getLogger(__name__)
+
+# ——— Safe expression evaluator ———————————————————————————————
+# Replaces eval() with a whitelist-based AST walker.
+# Only numeric literals, variables, arithmetic operators and
+# built-in math functions (abs, min, max, pow, round, sum, sqrt, etc.)
+
+_SAFE_BUILTINS = {
+    'abs': abs, 'min': min, 'max': max, 'pow': pow, 'round': round, 'sum': sum,
+    'sqrt': math.sqrt, 'log': math.log, 'log10': math.log10,
+    'sin': math.sin, 'cos': math.cos, 'tan': math.tan,
+    'pi': math.pi, 'e': math.e,
+}
+
+_BIN_OPS = {
+    ast.Add: operator.add, ast.Sub: operator.sub,
+    ast.Mult: operator.mul, ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+}
+
+_UNARY_OPS = {
+    ast.USub: operator.neg, ast.UAdd: operator.pos,
+}
+
+_CMP_OPS = {
+    ast.Eq: operator.eq, ast.NotEq: operator.ne,
+    ast.Lt: operator.lt, ast.LtE: operator.le,
+    ast.Gt: operator.gt, ast.GtE: operator.ge,
+}
+
+
+class _FormulaError(Exception):
+    pass
+
+
+def safe_eval(expr: str, variables: dict) -> float:
+    """Evaluate a math expression using AST whitelist — no eval()."""
+    try:
+        tree = ast.parse(expr.strip(), '<formula>', 'eval')
+    except SyntaxError:
+        raise _FormulaError(f'Синтаксическая ошибка в выражении: {expr}')
+
+    def _eval(node):
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+        elif isinstance(node, ast.Constant):
+            if isinstance(node.value, (int, float)):
+                return node.value
+            raise _FormulaError(f'Недопустимая константа: {node.value}')
+        elif isinstance(node, ast.Name):
+            if node.id in variables:
+                return variables[node.id]
+            if node.id in _SAFE_BUILTINS:
+                return _SAFE_BUILTINS[node.id]
+            raise _FormulaError(f'Неизвестная переменная: {node.id}')
+        elif isinstance(node, ast.BinOp):
+            left = _eval(node.left)
+            right = _eval(node.right)
+            op = _BIN_OPS.get(type(node.op))
+            if op is None:
+                raise _FormulaError(f'Недопустимый оператор: {type(node.op).__name__}')
+            return op(left, right)
+        elif isinstance(node, ast.UnaryOp):
+            op = _UNARY_OPS.get(type(node.op))
+            if op is None:
+                raise _FormulaError(f'Недопустимый унарный оператор: {type(node.op).__name__}')
+            return op(_eval(node.operand))
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id in _SAFE_BUILTINS:
+                args = [_eval(a) for a in node.args]
+                return _SAFE_BUILTINS[node.func.id](*args)
+            raise _FormulaError(f'Вызовы разрешены только для: {list(_SAFE_BUILTINS.keys())}')
+        elif isinstance(node, ast.Compare):
+            left = _eval(node.left)
+            for op_node, comp in zip(node.ops, node.comparators):
+                right = _eval(comp)
+                op = _CMP_OPS.get(type(op_node))
+                if op is None:
+                    raise _FormulaError('Недопустимое сравнение')
+                if not op(left, right):
+                    return 0.0
+            return 1.0
+        elif isinstance(node, ast.BoolOp):
+            if isinstance(node.op, ast.And):
+                result = 1.0
+                for v in node.values:
+                    if not _eval(v):
+                        return 0.0
+                return result
+            elif isinstance(node.op, ast.Or):
+                for v in node.values:
+                    if _eval(v):
+                        return 1.0
+                return 0.0
+            raise _FormulaError('Недопустимая булева операция')
+        raise _FormulaError(f'Недопустимый элемент выражения: {type(node).__name__}')
+
+    result = _eval(tree)
+    return float(result)
 
 
 # ——— Default formula catalogue ———————————————————————————————————
@@ -138,7 +252,7 @@ class FormulaEditorWidget(QWidget):
                                 old[2], old[3],
                             )
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         return formulas
 
     def _save_formulas(self):
@@ -153,7 +267,7 @@ class FormulaEditorWidget(QWidget):
             from modules import settings as us
             us.set('formulas', overrides)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -268,9 +382,14 @@ class FormulaEditorWidget(QWidget):
             QMessageBox.warning(self, 'Проверка', 'Введите выражение.')
             return
         try:
-            code = compile(expr, '<formula>', 'eval')
-            test_vars = {n: 1.0 for n in code.co_names}
-            result = eval(code, {'__builtins__': {}}, test_vars)
+            # Collect variable names via AST
+            tree = ast.parse(expr, '<formula>', 'eval')
+            var_names = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Name) and node.id not in _SAFE_BUILTINS:
+                    var_names.add(node.id)
+            test_vars = {n: 1.0 for n in var_names}
+            result = safe_eval(expr, test_vars)
             QMessageBox.information(
                 self, 'Проверка',
                 f'Выражение корректно.\n'
@@ -292,7 +411,7 @@ class FormulaEditorWidget(QWidget):
             from modules import settings as us
             us.set('formulas', {})
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         self.formula_changed.emit()
 
     def evaluate(self, category: str, key: str, variables: dict) -> float:
@@ -301,7 +420,4 @@ class FormulaEditorWidget(QWidget):
         if entry is None:
             raise KeyError(f'Formula {category}/{key} not found')
         expr = entry[1]
-        code = compile(expr, f'<{category}/{key}>', 'eval')
-        safe_builtins = {'abs': abs, 'min': min, 'max': max,
-                         'pow': pow, 'round': round, 'sum': sum}
-        return float(eval(code, {'__builtins__': safe_builtins}, variables))
+        return safe_eval(expr, variables)

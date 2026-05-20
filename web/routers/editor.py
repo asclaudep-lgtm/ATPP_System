@@ -1,15 +1,20 @@
 """V12: CRUD API — создание, редактирование, удаление основных сущностей."""
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional, List
 from datetime import datetime
+from typing import List, Optional
 
-from web.deps import get_db, get_current_user
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from database.models import (
-    Product, Material, TechProcess, Operation, Equipment, Profession,
-    WorkOrder, WorkOrderStatus, Workshop, TPStatus,
+    Operation,
+    Product,
+    TechProcess,
+    TPStatus,
+    WorkOrder,
+    WorkOrderStatus,
 )
+from web.deps import get_current_user, get_db
 
 router = APIRouter(prefix="/api/editor", tags=["editor"])
 
@@ -105,7 +110,7 @@ def create_tp(body: TPCreate,
     if not product or product.is_deleted:
         raise HTTPException(404, "Product not found")
 
-    from database.models import TPType, TechnologyType
+    from database.models import TechnologyType, TPType
     tp_type = getattr(TPType, body.tp_type, TPType.SINGLE)
     tech_type = getattr(TechnologyType, body.technology_type,
                         TechnologyType.MACHINING)
@@ -304,50 +309,74 @@ def update_wo(wo_id: int, body: WOUpdate,
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Documents export (basic)
+# Documents export
 # ═══════════════════════════════════════════════════════════════════
 
 class DocExportRequest(BaseModel):
-    product_id: int
-    doc_type: str = "MK"  # MK, MSK, MTP, VO
+    tech_process_id: int
+    doc_type: str = "MK"  # MK, title, OK, pack, VO, VM, KK
+    output_format: str = "xlsx"  # xlsx, docx, pdf
 
 
 @router.post("/documents/generate", summary="Сгенерировать ГОСТ-документ")
 def generate_document(body: DocExportRequest,
                       db: Session = Depends(get_db),
                       _=Depends(get_current_user)):
-    """Генерирует и возвращает путь к документу."""
-    product = db.get(Product, body.product_id)
-    if not product or product.is_deleted:
-        raise HTTPException(404, "Product not found")
+    """Generate and return path(s) to GOST document(s)."""
+    tp = db.get(TechProcess, body.tech_process_id)
+    if not tp or tp.is_deleted:
+        raise HTTPException(404, "TechProcess not found")
 
-    # Найти утверждённый ТП
-    tp = db.query(TechProcess).filter(
-        TechProcess.product_id == body.product_id,
-        TechProcess.is_deleted == False,
-        TechProcess.status == TPStatus.APPROVED,
-    ).first()
+    from modules.doc_generator import DocumentGenerator
+    gen = DocumentGenerator(db)
 
-    if not tp:
-        raise HTTPException(400, "No approved TechProcess for this product")
+    doc_type = body.doc_type.upper()
+    fmt = body.output_format
 
-    from pathlib import Path
-    from modules.doc_generator import generate_route_card
-
-    export_dir = Path(DATA_DIR) / 'exports' / str(product.id)
-    export_dir.mkdir(parents=True, exist_ok=True)
-
-    if body.doc_type == 'MK':
-        path = generate_route_card(db, tp_id=tp.id, output_dir=str(export_dir))
+    if doc_type == 'MK':
+        result = gen.generate_route_card(tp.id, fmt)
+    elif doc_type == 'TITLE':
+        result = gen.generate_title_page(tp.id, fmt)
+    elif doc_type == 'OK':
+        result = gen.generate_all_operation_cards(tp.id, fmt)
+    elif doc_type == 'PACK':
+        result = gen.generate_document_pack(tp.id)
+    elif doc_type == 'VO':
+        result = gen.generate_tooling_list(tp.id, fmt)
+    elif doc_type == 'VM':
+        result = gen.generate_material_specification(tp.id, fmt)
+    elif doc_type == 'KK':
+        result = gen.generate_control_card(tp.id, fmt)
     else:
-        from modules.doc_generator import generate_operational_card
-        path = generate_operational_card(db, tp_id=tp.id, output_dir=str(export_dir))
+        raise HTTPException(400, f"Unsupported doc_type: {body.doc_type}")
 
-    return {
-        "generated": True,
-        "doc_type": body.doc_type,
-        "file_path": str(path) if path else None,
-    }
+    if isinstance(result, list):
+        return {"generated": True, "doc_type": body.doc_type,
+                "files": [str(p) for p in result]}
+    return {"generated": True, "doc_type": body.doc_type,
+            "file_path": str(result)}
 
 
-DATA_DIR = __import__('config').DATA_DIR
+# ═══════════════════════════════════════════════════════════════════
+# Time norm calculation
+# ═══════════════════════════════════════════════════════════════════
+
+class NormCalcRequest(BaseModel):
+    tech_process_id: int
+    production_type: str = "batch"  # single, small_batch, batch, mass
+
+
+@router.post("/calculate-norms", summary="Автоматический расчёт норм времени")
+def calculate_norms(body: NormCalcRequest,
+                    db: Session = Depends(get_db),
+                    _=Depends(get_current_user)):
+    """Calculate Tшт/Тпз for all operations in a TP."""
+    tp = db.get(TechProcess, body.tech_process_id)
+    if not tp or tp.is_deleted:
+        raise HTTPException(404, "TechProcess not found")
+
+    from modules.time_norms import TimeNormCalculator
+    calc = TimeNormCalculator(body.production_type)
+    results = calc.calculate_for_tp(tp)
+
+    return {"tech_process_id": tp.id, "operations": results}

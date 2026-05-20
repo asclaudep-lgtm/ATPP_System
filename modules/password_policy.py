@@ -15,7 +15,6 @@ from __future__ import annotations
 import re
 from typing import Iterable, Optional
 
-
 _BLACKLIST: set[str] = {
     'admin', 'administrator', '123456', '12345678', '1234567890',
     'qwerty', 'qwerty123', 'password', 'passw0rd', 'pa$$w0rd',

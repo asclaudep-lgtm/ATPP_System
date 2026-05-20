@@ -23,13 +23,14 @@
 from __future__ import annotations
 
 import io
+import logging
 from pathlib import Path
-from typing import Iterable, Optional, Union, List
+from typing import Iterable, List, Optional, Union
 
 # Те же фильтры операций, что и в xlsx-генераторе.
 from modules.mtp_excel import _apply_op_filters, _generate_barcode_png
 
-
+_logger = logging.getLogger(__name__)
 FONT_DIR = Path(__file__).resolve().parent.parent / 'resources' / 'fonts'
 FONT_REGULAR = FONT_DIR / 'DejaVuSans.ttf'
 FONT_BOLD = FONT_DIR / 'DejaVuSans-Bold.ttf'
@@ -68,7 +69,11 @@ def _load_data(session, tech_process_id: int,
                respect_include_in_mtp: bool = True):
     """Загрузить из БД всё, что нужно для одного МТП-документа."""
     from database.models import (
-        TechProcess, WorkOrder, Operation, Equipment, Material,
+        Equipment,
+        Material,
+        Operation,
+        TechProcess,
+        WorkOrder,
     )
 
     tp = session.get(TechProcess, tech_process_id)
@@ -101,7 +106,7 @@ def _load_data(session, tech_process_id: int,
                 mat_name = mat.name or ''
                 mat_desig = mat.designation or ''
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # Подготавливаем строки таблицы операций.
     op_rows: List[List[str]] = []
@@ -115,7 +120,7 @@ def _load_data(session, tech_process_id: int,
                     if eq.model:
                         eq_label = f'{eq_label} ({eq.model})'
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
         op_text = op.name or ''
         if eq_label:
             op_text = f'{op_text}\n{eq_label}'
@@ -139,12 +144,17 @@ def _load_data(session, tech_process_id: int,
 
 def _build_document(data, story, styles):
     """Собрать один МТП-документ в существующий story."""
-    from reportlab.platypus import (
-        Paragraph, Spacer, Table, TableStyle, Image as RImage,
-        PageBreak,
-    )
     from reportlab.lib import colors
     from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        Image as RImage,
+    )
+    from reportlab.platypus import (
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     tp = data['tp']
     wo = data['wo']
@@ -166,7 +176,7 @@ def _build_document(data, story, styles):
                 story.append(img)
                 story.append(Spacer(1, 2 * mm))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # ── Блок «Изделие» ───────────────────────────────────────────
     prod_rows = [
@@ -262,8 +272,8 @@ def _build_document(data, story, styles):
 
 
 def _build_styles():
-    from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib.styles import ParagraphStyle
 
     return {
         'mtp_title': ParagraphStyle(
@@ -338,7 +348,7 @@ def generate_mtp_pdf_batch(
     """
     _ensure_fonts()
     from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.platypus import SimpleDocTemplate, PageBreak
+    from reportlab.platypus import PageBreak, SimpleDocTemplate
 
     from database.models import WorkOrder
 

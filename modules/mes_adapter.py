@@ -5,14 +5,12 @@ OPC-UA коллектор (альтернатива MQTT), Statistical Process C
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import List, Optional
 
 import numpy as np
 from sqlalchemy.orm import Session
-
 
 # ═══════════════════════════════════════════════════════════════════
 # 6.1 OPC-UA Collector (simulator-based, real OPC-UA requires async)
@@ -100,7 +98,6 @@ def collect_opcua(session: Session, *,
             r = simulate_opcua_read(eq_id)
             readings.append(r)
             store_machine_reading(session, r)
-    session.commit()
     return readings
 
 
@@ -182,7 +179,6 @@ def calculate_spc(measurements: List[float], *,
 
         # D3, D4 for n=5: D3=0, D4=2.114
         ucl_r = 2.114 * r_mean
-        lcl_r = 0.0
 
         xbar_violations = [
             i + 1 for i, v in enumerate(xbars)
@@ -277,7 +273,7 @@ def increment_tool_cycles(session: Session, *,
     remaining = 100.0 - tool.wear_percent
     remaining_pct = remaining
 
-    session.commit()
+    session.flush()
 
     return ToolLifeStatus(
         tool_id=tool.id,

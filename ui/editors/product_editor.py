@@ -1,15 +1,28 @@
 """Product editor widget — tabbed form with TP list and documents."""
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QTabWidget,
-    QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox,
-    QPushButton, QTextEdit, QTableWidget, QTableWidgetItem,
-    QMessageBox, QFrame, QFileDialog,
-)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from database.models import Product, Material, TechProcess
+from database.models import Material, Product, TechProcess
 
 
 class ProductEditorWidget(QWidget):
@@ -291,7 +304,7 @@ class ProductEditorWidget(QWidget):
         with self.db_manager.get_session() as s:
             tps = (s.query(TechProcess)
                    .filter(TechProcess.product_id == self.product_id,
-                           (TechProcess.is_deleted == False) |
+                           (not TechProcess.is_deleted) |
                            (TechProcess.is_deleted.is_(None)))
                    .order_by(TechProcess.number)
                    .all())

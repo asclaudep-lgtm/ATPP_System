@@ -7,18 +7,28 @@
 """
 from typing import Dict, Optional
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit,
-    QTableWidget, QTableWidgetItem, QFormLayout, QComboBox, QDoubleSpinBox,
-    QSpinBox, QTextEdit, QMessageBox, QHeaderView, QAbstractItemView,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
     QDialogButtonBox,
-)
-
-from database.models import (
-    OperationTemplate, Equipment, Profession, Operation, TechnologyType
+    QDoubleSpinBox,
+    QFormLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
 )
 from sqlalchemy import func
+
+from database.models import Equipment, Operation, OperationTemplate, Profession, TechnologyType
 
 
 class OpTemplatesDialog(QDialog):
@@ -199,7 +209,7 @@ class OpTemplatesDialog(QDialog):
                             func.max(Operation.code).label('code'),
                             func.max(Operation.shop).label('shop'))
                     .filter(Operation.name.isnot(None),
-                            (Operation.is_deleted == False) | (Operation.is_deleted.is_(None)))
+                            (not Operation.is_deleted) | (Operation.is_deleted.is_(None)))
                     .group_by(Operation.name)
                     .having(func.count(Operation.id) >= 5)
                     .order_by(func.count(Operation.id).desc())

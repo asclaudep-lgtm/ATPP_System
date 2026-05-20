@@ -9,13 +9,13 @@ v9-1: Простой APS-lite планировщик.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, time
-from typing import List, Dict, Optional
+from datetime import datetime, time, timedelta
+from typing import Dict, List, Optional
 
 from database.models import (
-    WorkOrder, WorkOrderStatus, Operation, Equipment,
+    WorkOrder,
+    WorkOrderStatus,
 )
-
 
 # Рабочий день по умолчанию: 08:00–17:00 (с учётом обеда).
 WORK_START = time(8, 0)
@@ -228,10 +228,11 @@ def estimate_setup_time(session, *,
     if from_product_id == to_product_id:
         return 0.0
 
-    from database.models import TechProcess as TP, Operation as Op
+    from database.models import Operation as Op
+    from database.models import TechProcess as TP
     tp = session.query(TP).filter(
         TP.product_id == to_product_id,
-        TP.is_deleted == False,
+        not TP.is_deleted,
     ).order_by(TP.id).first()
     if tp is None:
         return 15.0  # дефолт: 15 минут
@@ -239,7 +240,7 @@ def estimate_setup_time(session, *,
     first_op = session.query(Op).filter(
         Op.tech_process_id == tp.id,
         Op.equipment_id == equipment_id,
-        Op.is_deleted == False,
+        not Op.is_deleted,
     ).order_by(Op.sort_order).first()
 
     if first_op:
@@ -406,8 +407,6 @@ def plan_for_week(session, *,
     Возвращает: {work_order_ids, equipment_hours, total_hours, week_start,
                   week_end}
     """
-    from datetime import date as date_type
-    from database.models import Equipment as Eq
 
     week_end = week_start + timedelta(days=6)
     week_start_dt = datetime.combine(week_start, WORK_START)
@@ -489,9 +488,7 @@ def get_shift_slots(session, *,
                     equipment_id: Optional[int] = None,
                     on_date: Optional['date_type'] = None) -> List[TimeSlot]:
     """Получить рабочие слоты для оборудования на дату."""
-    from datetime import date as date_type
-    from database.models._v10_v14 import ShiftSlot, CalendarException, \
-        ShiftType
+    from database.models._v10_v14 import CalendarException, ShiftSlot, ShiftType
 
     if on_date is None:
         on_date = datetime.now().date()
@@ -530,7 +527,7 @@ def get_shift_slots(session, *,
     # Обычные слоты смен
     query = session.query(ShiftSlot).filter(
         ShiftSlot.day_of_week == day_of_week,
-        ShiftSlot.is_active == True,
+        ShiftSlot.is_active,
         ShiftSlot.shift_type.in_([ShiftType.DAY, ShiftType.NIGHT]),
     )
     if equipment_id is not None:
@@ -625,7 +622,6 @@ def schedule_backward(session, *,
     Операции размещаются на оси времени в обратном порядке —
     последняя операция завершается к due_date.
     """
-    from datetime import date as date_type
 
     if due_date is None:
         due_date = datetime.now().date() + timedelta(days=14)

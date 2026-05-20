@@ -3,11 +3,14 @@
 Запуск:  python -m web.server  (из корня проекта)
 Не зависит от desktop-режима — использует ту же БД.
 """
-import sys
-from pathlib import Path
-
 # Ensure project root is importable when running as ``python web/server.py``.
 # Running as ``python -m web.server`` from the project root needs no adjustment.
+import logging
+import sys
+import threading
+from pathlib import Path
+
+_logger = logging.getLogger(__name__)
 _ROOT = Path(__file__).resolve().parent.parent
 if _ROOT not in map(Path, sys.path):
     sys.path.insert(0, str(_ROOT))
@@ -15,19 +18,34 @@ if _ROOT not in map(Path, sys.path):
 import asyncio
 import json
 from datetime import datetime
+from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
+from config import APP_VERSION as _APP_VERSION
 from web.config import CORS_ORIGINS, STATIC_DIR
-from web.deps import _get_db_manager
+from web.deps import _get_db_manager, get_current_user
+from web.routers import (
+    approval,
+    audit,
+    batch,
+    bom,
+    dashboard,
+    editor,
+    mobile,
+    pdo,
+    production,
+    products,
+    tech_processes,
+    tooling,
+    work_orders,
+)
 from web.schemas import LoginRequest
-from web.routers import (products, tech_processes, work_orders,
-                          approval, bom, dashboard, production, tooling,
-                          mobile, pdo, audit, batch, editor)
 
-app = FastAPI(title="ATPP Web API", version="10.0.0")
+app = FastAPI(title="ATPP Web API", version=_APP_VERSION)
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,8 +72,8 @@ app.include_router(editor.router)
 
 @app.post("/api/auth/login", tags=["auth"],
     summary="Вход в систему",
-    description="Логин/пароль или API-ключ (поле api_key)")
-def login(body: LoginRequest):
+    description="Логин/пароль или API-ключ (поле api_key). JWT возвращается в httpOnly cookie.")
+def login(body: LoginRequest, response: Response):
     from web.auth import login_user, login_user_by_api_key
     api_key = getattr(body, 'api_key', None)
     if api_key:
@@ -65,8 +83,18 @@ def login(body: LoginRequest):
     if user is None:
         from fastapi import HTTPException
         raise HTTPException(401, "Invalid credentials")
+    # AUDIT-011: set httpOnly cookie instead of returning token in JSON body
+    from web.config import JWT_EXPIRE
+    response.set_cookie(
+        key="atpp_token",
+        value=user["access_token"],
+        httponly=True,
+        secure=False,  # False for localhost dev; set True in production with HTTPS
+        samesite="lax",
+        max_age=int(JWT_EXPIRE.total_seconds()),
+    )
     return {
-        "access_token": user["access_token"],
+        "access_token": user["access_token"],  # backward compat (clients using JSON body)
         "token_type": "bearer",
         "user": {
             "id": user["id"],
@@ -78,54 +106,86 @@ def login(body: LoginRequest):
 
 
 @app.post("/api/auth/reset-password", tags=["auth"],
-    summary="Сброс пароля",
-    description="Отправляет новый пароль для указанного логина/email")
-def reset_password(body: dict):
+    summary="Сброс пароля (только admin)",
+    description="Сбрасывает пароль пользователя. Доступно только администраторам.")
+def reset_password(body: dict, user: dict = Depends(get_current_user)):
+    # Только admin может сбрасывать пароли других пользователей
+    if user.get("role") != "admin":
+        from fastapi import HTTPException
+        raise HTTPException(403, "Only admin can reset passwords")
     from web.auth import reset_user_password
     pwd = reset_user_password(_get_db_manager(), body.get("login", ""))
     if pwd is None:
         from fastapi import HTTPException
         raise HTTPException(404, "User not found")
-    return {"message": f"Новый пароль: {pwd}", "new_password": pwd}
+    # Возвращаем новый пароль только admin'у (не в открытый эндпоинт)
+    return {"message": "Пароль сброшен.", "new_password": pwd}
+
+
+@app.post("/api/auth/logout", tags=["auth"],
+    summary="Выход из системы",
+    description="Удаляет httpOnly cookie с JWT токеном")
+def logout(response: Response):
+    response.delete_cookie("atpp_token")
+    return {"ok": True}
 
 
 @app.get("/api/health", tags=["system"],
     summary="Проверка здоровья сервера",
     description="Возвращает статус сервера и БД")
 def health():
+    from sqlalchemy import text as sa_text
     db_status = "ok"
     try:
         db = _get_db_manager()
         with db.get_session() as s:
-            s.execute("SELECT 1")
+            s.execute(sa_text("SELECT 1"))
     except Exception:
         db_status = "error"
-    return {"status": "ok", "db": db_status, "version": "11.0.0"}
+    return {"status": "ok", "db": db_status, "version": _APP_VERSION}
 
 
 # ——— Rate limiting ————————————————————————
 
-_rate_limit_store = {}  # {ip: [timestamps]}
+_rate_limit_store: dict = {}  # {ip: [timestamps]}
+_rate_limit_lock = threading.Lock()
+_RATE_LIMIT_RPM = 60  # requests per minute per IP
+_RATE_LIMIT_CLEANUP_EVERY = 100  # cleanup stale IPs every N requests
+_rate_limit_counter = 0
 
 
 @app.middleware("http")
 async def rate_limit_middleware(request, call_next):
-    """Simple rate limiter: 60 requests per minute per IP."""
-    from fastapi.responses import JSONResponse
+    """Thread-safe rate limiter: 60 requests per minute per IP."""
     import time as _time
+
+    from fastapi.responses import JSONResponse
+    global _rate_limit_counter
 
     ip = request.client.host if request.client else 'unknown'
     now = _time.time()
     window = now - 60
 
-    if ip not in _rate_limit_store:
-        _rate_limit_store[ip] = [now]
-    else:
-        _rate_limit_store[ip] = [
-            t for t in _rate_limit_store[ip] if t > window]
-        _rate_limit_store[ip].append(now)
+    with _rate_limit_lock:
+        if ip not in _rate_limit_store:
+            _rate_limit_store[ip] = [now]
+        else:
+            _rate_limit_store[ip] = [
+                t for t in _rate_limit_store[ip] if t > window]
+            _rate_limit_store[ip].append(now)
 
-    if len(_rate_limit_store[ip]) > 60:
+        over_limit = len(_rate_limit_store[ip]) > _RATE_LIMIT_RPM
+
+        # Periodic cleanup of stale IPs to prevent memory leak
+        _rate_limit_counter += 1
+        if _rate_limit_counter >= _RATE_LIMIT_CLEANUP_EVERY:
+            _rate_limit_counter = 0
+            stale = [k for k, v in _rate_limit_store.items()
+                     if not v or v[-1] < window]
+            for k in stale:
+                del _rate_limit_store[k]
+
+    if over_limit:
         return JSONResponse(
             status_code=429,
             content={"detail": "Too many requests. Wait."})
@@ -135,6 +195,7 @@ async def rate_limit_middleware(request, call_next):
 
 # ——— Prometheus metrics ————————————————————————
 
+_metrics_lock = threading.Lock()
 _request_count = 0
 _request_errors = 0
 _request_latency_sum = 0.0
@@ -144,14 +205,17 @@ _request_latency_sum = 0.0
 async def metrics_middleware(request, call_next):
     import time
     global _request_count, _request_errors, _request_latency_sum
-    _request_count += 1
     t0 = time.time()
     try:
         response = await call_next(request)
     except Exception:
-        _request_errors += 1
+        with _metrics_lock:
+            _request_count += 1
+            _request_errors += 1
+            _request_latency_sum += time.time() - t0
         raise
-    finally:
+    with _metrics_lock:
+        _request_count += 1
         _request_latency_sum += time.time() - t0
     return response
 
@@ -159,16 +223,20 @@ async def metrics_middleware(request, call_next):
 @app.get("/metrics")
 def prometheus_metrics():
     """Prometheus text format endpoint for scraping."""
+    with _metrics_lock:
+        count = _request_count
+        errors = _request_errors
+        latency = _request_latency_sum
     lines = [
         "# HELP atpp_requests_total Total HTTP requests.",
         "# TYPE atpp_requests_total counter",
-        f"atpp_requests_total {_request_count}",
+        f"atpp_requests_total {count}",
         "# HELP atpp_requests_errors_total Total HTTP errors.",
         "# TYPE atpp_requests_errors_total counter",
-        f"atpp_requests_errors_total {_request_errors}",
+        f"atpp_requests_errors_total {errors}",
         "# HELP atpp_request_latency_seconds_sum Total latency.",
         "# TYPE atpp_request_latency_seconds_sum counter",
-        f"atpp_request_latency_seconds_sum {_request_latency_sum:.6f}",
+        f"atpp_request_latency_seconds_sum {latency:.6f}",
     ]
     return "\n".join(lines) + "\n"
 
@@ -186,12 +254,12 @@ def send_push_alert(alert_type: str, title: str, message: str):
         'ts': datetime.now().isoformat(),
     }
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
         asyncio.create_task(ws_manager.broadcast(data))
     except RuntimeError:
         pass  # Not in async context
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
 
 # ——— WebSocket: IoT live updates ———
@@ -206,22 +274,46 @@ class ConnectionManager:
         self.active.append(ws)
 
     def disconnect(self, ws: WebSocket):
-        self.active.remove(ws)
+        try:
+            self.active.remove(ws)
+        except ValueError:
+            pass  # already removed
 
     async def broadcast(self, data: dict):
         msg = json.dumps(data)
-        for ws in self.active:
+        dead: list[WebSocket] = []
+        for ws in list(self.active):  # iterate over copy
             try:
                 await ws.send_text(msg)
             except Exception:
-                self.disconnect(ws)
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
 
 
 ws_manager = ConnectionManager()
 
 
+def _ws_verify_token(websocket: WebSocket) -> Optional[dict]:
+    """Extract and verify JWT from WebSocket query param or cookie."""
+    from web.auth import verify_token
+    # Try query parameter first: ws://host/ws/iot?token=...
+    token = websocket.query_params.get('token')
+    if not token:
+        # Try cookie
+        token = websocket.cookies.get('atpp_token')
+    if not token:
+        return None
+    return verify_token(token)
+
+
 @app.websocket("/ws/iot")
 async def ws_iot(websocket: WebSocket):
+    # Auth: verify JWT before accepting connection
+    payload = _ws_verify_token(websocket)
+    if payload is None:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
     await ws_manager.connect(websocket)
     try:
         while True:
@@ -243,21 +335,28 @@ async def ws_iot(websocket: WebSocket):
 @app.websocket("/ws/kpi")
 async def ws_kpi(websocket: WebSocket):
     """Live KPI dashboard — broadcast stats every 3 seconds."""
+    # Auth: verify JWT before accepting connection
+    payload = _ws_verify_token(websocket)
+    if payload is None:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
     await ws_manager.connect(websocket)
     try:
         while True:
             db = _get_db_manager()
             with db.get_session() as s:
                 from database.models import (
-                    Product, TechProcess, WorkOrder,
+                    Product,
                     ScrapRecord,
+                    TechProcess,
+                    WorkOrder,
                 )
                 total_products = s.query(Product).filter(
-                    Product.is_deleted == False).count()
+                    not Product.is_deleted).count()
                 total_tps = s.query(TechProcess).filter(
-                    TechProcess.is_deleted == False).count()
+                    not TechProcess.is_deleted).count()
                 active_wos = s.query(WorkOrder).filter(
-                    WorkOrder.is_deleted == False,
+                    not WorkOrder.is_deleted,
                     WorkOrder.status.in_([
                         'RELEASED', 'REGISTERED', 'IN_PROGRESS']),
                 ).count()

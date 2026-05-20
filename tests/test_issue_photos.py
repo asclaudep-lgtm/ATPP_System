@@ -4,8 +4,7 @@ from pathlib import Path
 import pytest
 
 from database.models import (
-    IssueKind, IssueSeverity, Operation, Product, ProductionIssue,
-    TechProcess, TPStatus, TPType, User,
+    IssueKind, IssueSeverity, Operation, Product, TechProcess, TPStatus, TPType, User,
 )
 from modules import issue_photos, production
 

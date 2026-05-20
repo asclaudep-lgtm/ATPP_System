@@ -16,16 +16,17 @@ API:
 """
 from __future__ import annotations
 
+import logging
 import re
-from datetime import datetime, date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Iterable, List, Optional
 
 from sqlalchemy import func
 
-from database.models import (
-    RegistrationJournal, Product, TechProcess
-)
+from database.models import RegistrationJournal, TechProcess
+
+_logger = logging.getLogger(__name__)
 
 
 # ---------- Назначение номеров ----------
@@ -224,12 +225,12 @@ def list_entries(session, *, only_active: bool = True,
                  ) -> List[RegistrationJournal]:
     q = session.query(RegistrationJournal)
     if only_active:
-        q = q.filter((RegistrationJournal.excluded == False) |
+        q = q.filter((not RegistrationJournal.excluded) |
                      (RegistrationJournal.excluded.is_(None)))
     if in_tp is True:
-        q = q.filter(RegistrationJournal.in_tp_journal == True)
+        q = q.filter(RegistrationJournal.in_tp_journal)
     if in_mtp is True:
-        q = q.filter(RegistrationJournal.in_mtp_journal == True)
+        q = q.filter(RegistrationJournal.in_mtp_journal)
     if search:
         like = f'%{search}%'
         q = q.filter(
@@ -257,8 +258,9 @@ def export_to_excel(session, entries: Iterable[RegistrationJournal],
         'unified'  — все колонки разом (для архива)
     """
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
+
     from config import EXPORT_DIR
 
     if out_path is None:
@@ -281,17 +283,18 @@ def export_to_excel(session, entries: Iterable[RegistrationJournal],
             'Дата разработки ТП',
             'Примечание',
         ]
-        getter = lambda e: [
-            e.entry_no,
-            e.tp_number or '',
-            e.product_designation or '',
-            e.product_name or '',
-            e.project or '',
-            e.executor or '',
-            (e.date_developed.strftime('%d.%m.%Y')
-             if e.date_developed else ''),
-            e.notes or '',
-        ]
+        def getter(e):
+            return [
+                    e.entry_no,
+                    e.tp_number or '',
+                    e.product_designation or '',
+                    e.product_name or '',
+                    e.project or '',
+                    e.executor or '',
+                    (e.date_developed.strftime('%d.%m.%Y')
+                     if e.date_developed else ''),
+                    e.notes or '',
+                ]
         widths = [6, 26, 36, 28, 30, 22, 16, 30]
     elif layout == 'mtp':
         ws.title = 'МСП -УЗГА.02101.00001-19999'
@@ -304,16 +307,17 @@ def export_to_excel(session, entries: Iterable[RegistrationJournal],
             'Обозначение документа (номер чертежа)',
             'Исполнитель',
         ]
-        getter = lambda e: [
-            e.entry_no,
-            (e.date_registered.strftime('%d.%m.%Y')
-             if e.date_registered else ''),
-            e.mtp_number or '',
-            e.product_type or '',
-            e.tp_number or '',
-            e.product_designation or '',
-            e.executor or '',
-        ]
+        def getter(e):
+            return [
+                    e.entry_no,
+                    (e.date_registered.strftime('%d.%m.%Y')
+                     if e.date_registered else ''),
+                    e.mtp_number or '',
+                    e.product_type or '',
+                    e.tp_number or '',
+                    e.product_designation or '',
+                    e.executor or '',
+                ]
         widths = [6, 18, 26, 32, 28, 36, 22]
     else:
         ws.title = 'Журнал регистрации'
@@ -334,25 +338,26 @@ def export_to_excel(session, entries: Iterable[RegistrationJournal],
             'Причина исключения',
             'Примечание',
         ]
-        getter = lambda e: [
-            e.entry_no,
-            e.tp_number or '',
-            e.mtp_number or '',
-            (e.date_registered.strftime('%d.%m.%Y')
-             if e.date_registered else ''),
-            (e.date_developed.strftime('%d.%m.%Y')
-             if e.date_developed else ''),
-            e.product_designation or '',
-            e.product_name or '',
-            e.product_type or '',
-            e.project or '',
-            e.executor or '',
-            'да' if e.in_tp_journal else 'нет',
-            'да' if e.in_mtp_journal else 'нет',
-            'да' if e.excluded else '',
-            e.excluded_reason or '',
-            e.notes or '',
-        ]
+        def getter(e):
+            return [
+                    e.entry_no,
+                    e.tp_number or '',
+                    e.mtp_number or '',
+                    (e.date_registered.strftime('%d.%m.%Y')
+                     if e.date_registered else ''),
+                    (e.date_developed.strftime('%d.%m.%Y')
+                     if e.date_developed else ''),
+                    e.product_designation or '',
+                    e.product_name or '',
+                    e.product_type or '',
+                    e.project or '',
+                    e.executor or '',
+                    'да' if e.in_tp_journal else 'нет',
+                    'да' if e.in_mtp_journal else 'нет',
+                    'да' if e.excluded else '',
+                    e.excluded_reason or '',
+                    e.notes or '',
+                ]
         widths = [6, 22, 22, 16, 16, 32, 26, 26, 24, 22, 12, 12, 10, 24, 30]
 
     # Шапка
@@ -400,7 +405,7 @@ def export_to_excel(session, entries: Iterable[RegistrationJournal],
         ws.page_setup.fitToHeight = 0
         ws.sheet_properties.pageSetUpPr.fitToPage = True
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
     wb.save(out_path)
     return out_path
@@ -503,7 +508,7 @@ def import_from_xlsx(session, path: Path,
             continue
 
         if skip_existing:
-            from sqlalchemy import or_, false
+            from sqlalchemy import false, or_
             conds = []
             if tp_num:
                 conds.append(RegistrationJournal.tp_number == str(tp_num).strip())

@@ -3,16 +3,32 @@
 Module buttons moved to ActivityBar. Search moved to TitleBar.
 All styling via QSS selectors (setObjectName / setProperty).
 """
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTreeWidget,
-    QTreeWidgetItem, QPushButton, QLineEdit, QMenu, QMessageBox,
-    QLabel, QFrame, QSizePolicy, QScrollArea,
-)
+import logging
+
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QTabWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from database.models import (
-    Product, ProductGroup, TechProcess, TPStatus,
+    Product,
+    ProductGroup,
+    TechProcess,
+    TPStatus,
 )
+
+_logger = logging.getLogger(__name__)
 
 STATUS_BADGE = {
     TPStatus.DRAFT:    ("#f97316", "Черновик"),
@@ -245,7 +261,7 @@ class NavigationPanel(QWidget):
                     lambda checked=False, pid=product_id:
                         self._move_product(pid, None))
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _move_product(self, product_id, group_id):
         """Переместить изделие в другую группу."""
@@ -331,7 +347,7 @@ class NavigationPanel(QWidget):
                     self._product_tree.addTopLevelItem(grp_item)
 
                     q = s.query(Product).filter(
-                        Product.is_deleted == False,
+                        not Product.is_deleted,
                         Product.group_id == g.id,
                     )
                     if search:
@@ -346,7 +362,7 @@ class NavigationPanel(QWidget):
 
                 # Изделия без группы
                 q = s.query(Product).filter(
-                    Product.is_deleted == False,
+                    not Product.is_deleted,
                     Product.group_id.is_(None),
                 )
                 if search:
@@ -366,14 +382,14 @@ class NavigationPanel(QWidget):
                         item.setToolTip(0, f"{p.designation} — {p.name}")
                         grp_item.addChild(item)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     def _populate_tps(self, search: str = ""):
         self._tp_tree.clear()
         try:
             with self.db_manager.get_session() as s:
                 q = s.query(TechProcess).filter(
-                    TechProcess.is_deleted == False)
+                    not TechProcess.is_deleted)
                 if search:
                     q = q.filter(TechProcess.number.ilike(f"%{search}%"))
                 for tp in q.order_by(TechProcess.number).all():
@@ -385,4 +401,4 @@ class NavigationPanel(QWidget):
                         f"{tp.product.designation if tp.product else '—'}")
                     self._tp_tree.addTopLevelItem(item)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")

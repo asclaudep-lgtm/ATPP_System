@@ -9,7 +9,6 @@
 """
 from datetime import datetime, timedelta
 
-import pytest
 
 from database.models import (
     Product, TechProcess, WorkOrder, WorkOrderItem, Operation,
@@ -90,7 +89,7 @@ def test_recycle_bin_filters_live_products(db_manager):
 
     with db_manager.get_session() as s:
         live = (s.query(Product)
-                .filter((Product.is_deleted == False)
+                .filter((not Product.is_deleted)
                         | (Product.is_deleted.is_(None)))
                 .filter(Product.designation.in_(['LIVE-1', 'DEL-1']))
                 .all())
@@ -250,7 +249,7 @@ def test_generate_mtp_pdf_single(db_manager, tmp_path):
 
 
 def test_generate_mtp_pdf_batch(db_manager, tmp_path):
-    from modules.mtp_pdf import generate_mtp_pdf_batch, MTPPDFError
+    from modules.mtp_pdf import generate_mtp_pdf_batch
 
     with db_manager.get_session() as s:
         wo_ids = []

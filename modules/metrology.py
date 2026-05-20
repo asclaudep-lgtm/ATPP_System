@@ -5,15 +5,16 @@ API над таблицами ``instruments`` / ``calibrations``.
 """
 from __future__ import annotations
 
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from typing import List, Optional
 
-from sqlalchemy import or_, and_
+from sqlalchemy import or_
 
 from database.models import (
-    Instrument, Calibration, InstrumentStatus,
+    Calibration,
+    Instrument,
+    InstrumentStatus,
 )
-
 
 # Алерт за N дней до окончания срока поверки.
 ALERT_WINDOW_DAYS = 30
@@ -120,7 +121,7 @@ def check_due_alerts(session, *, days_warning: int = 30) -> List[dict]:
     days_left, severity ('warning' — жёлтый / 'expired' — красный).
     """
     today = date.today()
-    deadline = today + timedelta(days=days_warning)
+    today + timedelta(days=days_warning)
     alerts: List[dict] = []
 
     instruments = session.query(Instrument).filter(

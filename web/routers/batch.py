@@ -1,13 +1,13 @@
 """Batch-операции: массовое утверждение ТП, назначение нарядов."""
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
-from web.deps import get_db, get_current_user
-from modules.workflow import try_auto_approve, add_signature
 from modules.audit import log_change_session
+from modules.workflow import add_signature, try_auto_approve
+from web.deps import get_current_user, get_db
 
 router = APIRouter(tags=["batch"])
 

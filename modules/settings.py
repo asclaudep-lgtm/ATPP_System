@@ -14,7 +14,6 @@ import json
 import sys
 import threading
 import traceback
-from pathlib import Path
 from typing import Any, Dict
 
 from config import DATA_DIR

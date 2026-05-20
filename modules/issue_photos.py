@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from database.models import IssuePhoto, ProductionIssue
 
-
 _ALLOWED_EXT = {'.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'}
 
 

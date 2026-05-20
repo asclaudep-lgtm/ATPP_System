@@ -6,21 +6,36 @@ v9-3 UI: Терминал ОТК — фокус-вид для приёмки п�
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QSplitter, QFrame, QSpinBox,
-    QDialog, QDialogButtonBox, QFormLayout, QComboBox, QTextEdit,
-    QFileDialog, QMessageBox, QInputDialog,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QFrame,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    WorkOrder, WorkOrderItem, WorkOrderStatus, RouteStep, RouteStepStatus,
-    ScrapReason, ScrapDecision, Operation,
+    ScrapDecision,
+    ScrapReason,
+    WorkOrder,
+    WorkOrderStatus,
 )
+
+_logger = logging.getLogger(__name__)
 from modules import scrap_journal as sj
 
 
@@ -45,7 +60,7 @@ class _AcceptDialog(QDialog):
         self.scrap = QSpinBox()
         self.scrap.setRange(0, max_qty)
         self.scrap.setValue(0)
-        lay.addRow(f'Партия, шт.:', QLabel(f'{max_qty}'))
+        lay.addRow('Партия, шт.:', QLabel(f'{max_qty}'))
         lay.addRow('Принято в норму:', self.good)
         lay.addRow('В брак:', self.scrap)
         bb = QDialogButtonBox(
@@ -251,7 +266,7 @@ class QATerminalWidget(QWidget):
                     sj.attach_photo(s, scrap_id=rec.id, src_path=f,
                                     uploaded_by=self.user_id)
                 except Exception:
-                    pass
+                    _logger.exception("Unhandled error")
             sj.decide(s, scrap_id=rec.id, decision=ScrapDecision.SCRAP,
                       resolution='Решение ОТК: в брак',
                       decided_by=self.user_id)

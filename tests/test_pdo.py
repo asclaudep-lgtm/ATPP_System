@@ -1,6 +1,5 @@
 """Tests for PDO module — real UZGA workflow."""
 
-import pytest
 from datetime import date
 
 
@@ -29,7 +28,6 @@ class TestPDOOrderLifecycle:
         from modules import pdo_module
         from database.models import (Product, Material, TechProcess,
                                       TPStatus, PDOStatus)
-        import time
 
         with db_manager.get_session() as s:
             # Setup

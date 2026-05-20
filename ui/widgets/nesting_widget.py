@@ -4,13 +4,23 @@ Greedy shelf-алгоритм + гильотинный раскрой: разм�
 заготовки на листе, минимизируя отходы. Поддерживает деловые отходы
 (остатки листа), импорт из BOM изделия, экспорт карты раскроя в PDF.
 """
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                              QLabel, QSpinBox, QDoubleSpinBox, QTableWidget,
-                              QTableWidgetItem, QGroupBox, QMessageBox,
-                              QComboBox, QFileDialog)
-from PyQt6.QtCore import Qt, QRectF
-from PyQt6.QtGui import (QPainter, QColor, QPen, QBrush, QFont,
-                          QPaintEvent)
+from PyQt6.QtCore import QRectF, Qt
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPaintEvent, QPen
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class NestingCanvas(QWidget):
@@ -174,7 +184,7 @@ class NestingWidget(QWidget):
 
     def _load_from_bom(self, product_id):
         """Load parts from a product's BOM into the table."""
-        from database.models import Product, BOMItem
+        from database.models import BOMItem, Product
         with self.db_manager.get_session() as s:
             p = s.get(Product, product_id)
             if p is None:
@@ -228,6 +238,7 @@ class NestingWidget(QWidget):
     def _import_from_bom_dialog(self):
         """Prompt for product designation and load its BOM parts."""
         from PyQt6.QtWidgets import QInputDialog
+
         from database.models import Product
         des, ok = QInputDialog.getText(
             self, 'BOM → Раскрой', 'Обозначение изделия:')

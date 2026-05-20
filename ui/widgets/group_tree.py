@@ -17,16 +17,22 @@ GroupTreeWidget — дерево «Группа» для нового UI v7.7.
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QAction, QDragEnterEvent, QDropEvent
+from PyQt6.QtGui import QAction, QColor, QDropEvent
 from PyQt6.QtWidgets import (
-    QTreeWidget, QTreeWidgetItem, QMenu, QMessageBox, QInputDialog,
     QAbstractItemView,
+    QInputDialog,
+    QMenu,
+    QMessageBox,
+    QTreeWidget,
+    QTreeWidgetItem,
 )
 
 from database.models import (
-    Product, ProductGroup, TechProcess, TPStatus,
+    Product,
+    ProductGroup,
+    TechProcess,
+    TPStatus,
 )
-
 
 # Маркеры типа узла в UserRole
 ROLE_KIND = Qt.ItemDataRole.UserRole          # 'group' | 'product' | 'virtual'
@@ -99,26 +105,26 @@ class GroupTreeWidget(QTreeWidget):
         # 1. Без ТП (только живые изделия)
         all_prod_ids = {
             p.id for p in s.query(Product).filter(
-                (Product.is_deleted == False)
+                (not Product.is_deleted)
                 | (Product.is_deleted.is_(None))
             ).all()
         }
         prod_with_tp = {tp.product_id for tp in
                         s.query(TechProcess).filter(
-                            TechProcess.is_deleted == False).all()}
+                            not TechProcess.is_deleted).all()}
         no_tp = sorted(all_prod_ids - prod_with_tp)
 
         # 2. Детали с ТП на согласовании
         review_pids = {tp.product_id for tp in
                        s.query(TechProcess).filter(
                            TechProcess.status == TPStatus.REVIEW,
-                           TechProcess.is_deleted == False).all()}
+                           not TechProcess.is_deleted).all()}
 
         # 3. Детали с ТП на доработке
         rework_pids = {tp.product_id for tp in
                        s.query(TechProcess).filter(
                            TechProcess.status == TPStatus.REWORK,
-                           TechProcess.is_deleted == False).all()}
+                           not TechProcess.is_deleted).all()}
 
         if not (no_tp or review_pids or rework_pids):
             return
@@ -162,8 +168,8 @@ class GroupTreeWidget(QTreeWidget):
         """Добавляет виртуальную секцию «📋 Шаблоны» (TP с is_template=True)."""
         try:
             templates = (s.query(TechProcess)
-                         .filter(TechProcess.is_template == True,
-                                 TechProcess.is_deleted == False)
+                         .filter(TechProcess.is_template,
+                                 not TechProcess.is_deleted)
                          .order_by(TechProcess.number).all())
         except Exception:
             return
@@ -230,7 +236,7 @@ class GroupTreeWidget(QTreeWidget):
         # Детали в этой группе (только живые)
         prods = (s.query(Product)
                  .filter(Product.group_id == group.id,
-                         (Product.is_deleted == False)
+                         (not Product.is_deleted)
                          | (Product.is_deleted.is_(None)))
                  .order_by(Product.designation).all())
         for p in prods:
@@ -243,7 +249,7 @@ class GroupTreeWidget(QTreeWidget):
     def _add_orphan_products(self, s):
         orphans = (s.query(Product)
                    .filter(Product.group_id.is_(None),
-                           (Product.is_deleted == False)
+                           (not Product.is_deleted)
                            | (Product.is_deleted.is_(None)))
                    .order_by(Product.designation).all())
         if not orphans:
@@ -272,7 +278,9 @@ class GroupTreeWidget(QTreeWidget):
         # её индикатором у узла детали.
         try:
             from modules.completeness import (
-                score_tp, score_label, score_tooltip,
+                score_label,
+                score_tooltip,
+                score_tp,
             )
         except Exception:
             score_tp = None
@@ -320,7 +328,7 @@ class GroupTreeWidget(QTreeWidget):
     def _count_products(self, s, g: ProductGroup) -> int:
         c = (s.query(Product)
              .filter(Product.group_id == g.id,
-                     (Product.is_deleted == False)
+                     (not Product.is_deleted)
                      | (Product.is_deleted.is_(None)))
              .count())
         for ch in g.children:

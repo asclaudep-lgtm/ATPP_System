@@ -10,14 +10,24 @@
 """
 from __future__ import annotations
 
-from typing import Optional, Dict, Any
+import logging
+from typing import Any, Dict, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QFormLayout, QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout,
-    QPushButton, QLabel, QDialogButtonBox, QGroupBox, QPlainTextEdit,
-    QComboBox,
+    QCheckBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 class JournalRegisterDialog(QDialog):
@@ -203,7 +213,7 @@ class JournalRegisterDialog(QDialog):
         try:
             self.tp_in.textChanged.disconnect(self._sync_mtp)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         if on:
             self.tp_in.textChanged.connect(self._sync_mtp)
 
@@ -220,7 +230,7 @@ class JournalRegisterDialog(QDialog):
             if self.same_chk.isChecked():
                 self.mtp_in.setText(nx)
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
 
     # ------------------------------------------------------------------
     # Buttons

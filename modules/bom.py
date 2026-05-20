@@ -5,11 +5,12 @@ Self-referencing adjacency list с рекурсивными CTE для flatten.
 """
 from __future__ import annotations
 
-from typing import List, Optional, Dict
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
-from database.models import BOMItem, AssemblyLevel, Product, TechProcess
+
+from database.models import AssemblyLevel, BOMItem, TechProcess
 
 
 @dataclass
@@ -32,7 +33,7 @@ def _bom_item_to_node(session: Session, item: BOMItem) -> BOMNode:
     """Преобразовать BOMItem → BOMNode (с проверкой наличия ТП)."""
     has_tp = session.query(TechProcess).filter(
         TechProcess.product_id == item.product_id,
-        TechProcess.is_deleted == False,
+        not TechProcess.is_deleted,
     ).first() is not None
     p = item.product
     return BOMNode(
@@ -72,7 +73,7 @@ def get_bom_tree(session: Session, *,
             return []
         return [_build_subtree(session, item)]
 
-    q = session.query(BOMItem).filter(BOMItem.parent_id == None)
+    q = session.query(BOMItem).filter(BOMItem.parent_id is None)
     if product_id is not None:
         q = q.filter(BOMItem.product_id == product_id)
 

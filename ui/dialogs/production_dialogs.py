@@ -8,20 +8,38 @@
 """
 from __future__ import annotations
 
-from datetime import date
 from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
-    QCheckBox, QComboBox, QDateEdit, QDialog, QDialogButtonBox,
-    QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-    QPlainTextEdit, QPushButton, QSpinBox, QTextEdit, QVBoxLayout,
+    QCheckBox,
+    QComboBox,
+    QDateEdit,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QSpinBox,
+    QTextEdit,
+    QVBoxLayout,
 )
 
 from database.models import (
-    IssueKind, IssueSeverity, ProductionIssue, RouteStepStatus, TechProcess,
-    User, Workshop, WorkOrder, WorkOrderItem,
+    IssueKind,
+    IssueSeverity,
+    ProductionIssue,
+    RouteStepStatus,
+    TechProcess,
+    User,
+    WorkOrder,
+    WorkOrderItem,
+    Workshop,
 )
 
 

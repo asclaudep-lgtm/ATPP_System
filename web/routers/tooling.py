@@ -1,10 +1,11 @@
 """Tooling API — issue/return, history, inventory."""
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.orm import Session
 from typing import Optional
 
-from web.deps import get_db, get_current_user
-from database.models import ToolingItem, ToolingIssue
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from database.models import ToolingIssue, ToolingItem
+from web.deps import get_current_user, get_db
 
 router = APIRouter(tags=["tooling"])
 

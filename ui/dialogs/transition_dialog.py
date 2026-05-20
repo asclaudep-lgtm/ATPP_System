@@ -1,15 +1,26 @@
 """
 Диалог создания и редактирования перехода операции
 """
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QDoubleSpinBox, QSpinBox,
-    QPushButton, QTextEdit, QMessageBox, QFrame,
-    QGroupBox, QWidget, QTabWidget
-)
+import math
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-import math
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDoubleSpinBox,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class TransitionDialog(QDialog):
@@ -75,6 +86,58 @@ class TransitionDialog(QDialog):
         )
         self.text_edit.setMinimumHeight(100)
         text_v.addWidget(self.text_edit)
+
+        # Спецсимволы для техпроцесса
+        spec_row = QHBoxLayout()
+        spec_row.setContentsMargins(0, 0, 0, 0)
+        spec_row.setSpacing(2)
+        spec_label = QLabel("Спецсимволы:")
+        spec_label.setStyleSheet("color: #888; font-size: 11px;")
+        spec_row.addWidget(spec_label)
+
+        TECH_SYMBOLS = [
+            ('∅', 'Диаметр'),
+            ('°', 'Градус'),
+            ('±', 'Плюс-минус'),
+            ('×', 'Знак умножения'),
+            ('≈', 'Примерно'),
+            ('≤', 'Меньше или равно'),
+            ('≥', 'Больше или равно'),
+            ('√', 'Корень'),
+            ('′', 'Штрих (мин)'),
+            ('″', 'Двойной штрих (сек)'),
+            ('µ', 'Микро (мкм)'),
+            ('‰', 'Промилле'),
+            ('α', 'Альфа'),
+            ('β', 'Бета'),
+            ('Δ', 'Дельта'),
+            ('π', 'Пи'),
+            ('Σ', 'Сумма'),
+            ('№', 'Номер'),
+            ('→', 'Стрелка'),
+            ('•', 'Маркер'),
+        ]
+
+        for char, tooltip in TECH_SYMBOLS:
+            btn = QPushButton(char)
+            btn.setFixedSize(28, 24)
+            btn.setToolTip(tooltip)
+            btn.setStyleSheet("""
+                QPushButton {
+                    font-size: 14px; padding: 0px;
+                    border: 1px solid #ccc; border-radius: 3px;
+                    background-color: #f8f9fa;
+                }
+                QPushButton:hover {
+                    background-color: #e0e0e0;
+                    border-color: #aaa;
+                }
+            """)
+            btn.clicked.connect(lambda checked, c=char: self._insert_symbol(c))
+            spec_row.addWidget(btn)
+
+        spec_row.addStretch()
+        text_v.addLayout(spec_row)
 
         tpl_row = QHBoxLayout()
         tpl_row.setContentsMargins(0, 0, 0, 0)
@@ -255,6 +318,12 @@ class TransitionDialog(QDialog):
             f'(L={L:g}, i={i}, n={n:g}, S={S:g})'
         )
         self._t_main_label.setStyleSheet('color: #2c7a3f; font-weight: bold;')
+
+    def _insert_symbol(self, char: str):
+        """Вставить спецсимвол в текущую позицию курсора."""
+        cursor = self.text_edit.textCursor()
+        cursor.insertText(char)
+        self.text_edit.setFocus()
 
     def _pick_from_templates(self):
         """v8: Открыть библиотеку шаблонов и вставить выбранный."""

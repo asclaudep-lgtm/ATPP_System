@@ -1,7 +1,5 @@
 """Tests for v7.7-fix: pending-эскизы до сохранения операции/перехода."""
 import os
-import shutil
-from pathlib import Path
 
 import pytest
 

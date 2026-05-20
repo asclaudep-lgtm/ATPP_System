@@ -3,13 +3,19 @@
 Pinned to left edge between TitleBar and StatusBar.
 Width fixed at 52px. Active module = orange left bar + tinted bg.
 """
+import logging
+
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QFrame,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QSize
-from PyQt6.QtGui import QIcon
+
+_logger = logging.getLogger(__name__)
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 
 from ui.fluent_compat import FLUENT_AVAILABLE
+
 if FLUENT_AVAILABLE:
     from qfluentwidgets import FluentIcon as FIF
 
@@ -99,7 +105,7 @@ class ActivityBar(QWidget):
             try:
                 return getattr(FIF, ficon).icon()
             except Exception:
-                pass
+                _logger.exception("Unhandled error")
         return symbol
 
     def _on_module(self, key: str):

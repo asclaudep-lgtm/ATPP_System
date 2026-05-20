@@ -10,10 +10,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
-from typing import Optional, Callable, Dict, Any, List
-from threading import Thread, Event
 from dataclasses import dataclass
+from datetime import datetime
+from threading import Event, Thread
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -24,8 +24,7 @@ try:
 except ImportError:
     HAS_MQTT = False
 
-from database.models import (MachineStatus, MachineStatusSummary,
-                              Equipment, Operation, WorkOrderItem)
+from database.models import MachineStatus, MachineStatusSummary
 
 
 @dataclass

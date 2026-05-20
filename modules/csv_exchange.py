@@ -2,9 +2,8 @@
 
 import csv
 from pathlib import Path
-from typing import Optional
 
-from database.models import Material, Equipment, Tool, Profession
+from database.models import Equipment, Material, Profession, Tool
 
 EXPORT_MODELS = {
     'materials': (Material, ['name', 'grade', 'gost', 'density', 'price_per_kg']),
@@ -34,7 +33,7 @@ def validate_csv(file_path: Path, model_key: str) -> dict:
     try:
         with open(file_path, 'r', encoding='utf-8-sig') as f:
             reader = csv.reader(f)
-            header = next(reader, None)
+            next(reader, None)
             for i, row in enumerate(reader, 2):
                 if not any(row):
                     continue

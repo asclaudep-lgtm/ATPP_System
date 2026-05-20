@@ -1,6 +1,6 @@
 """Тесты многоуровневого БОМ."""
 import pytest
-from database.models import BOMItem, AssemblyLevel, Product, Material
+from database.models import AssemblyLevel, Product, Material
 
 
 class TestBOM:
@@ -22,7 +22,7 @@ class TestBOM:
                                level=AssemblyLevel.PRODUCT,
                                quantity=1)
 
-            child = add_bom_item(s, parent_id=root.id,
+            add_bom_item(s, parent_id=root.id,
                                 product_id=p_child.id,
                                 level=AssemblyLevel.DETAIL,
                                 quantity=2, position='поз.1')

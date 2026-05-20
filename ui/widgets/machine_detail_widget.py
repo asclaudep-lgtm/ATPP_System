@@ -1,13 +1,21 @@
 """Детализация одного станка с историей телеметрии."""
 from datetime import datetime, timedelta
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                              QComboBox, QTableWidget, QTableWidgetItem,
-                              QPushButton, QGroupBox)
 from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from modules.iot_collector import get_latest_status, get_status_history
 from database.models import Equipment
+from modules.iot_collector import get_latest_status, get_status_history
 
 
 class MachineDetailWidget(QWidget):

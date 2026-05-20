@@ -7,15 +7,30 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QDialog, QDialogButtonBox, QLineEdit, QComboBox, QSpinBox,
-    QMessageBox, QTextEdit, QTabWidget, QInputDialog,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QHBoxLayout,
+    QInputDialog,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    ToolingItem, ToolingIssue, ToolingStatus, OperationTooling,
-    User, WorkOrder,
+    ToolingItem,
+    ToolingStatus,
+    User,
+    WorkOrder,
 )
 from modules import tooling
 

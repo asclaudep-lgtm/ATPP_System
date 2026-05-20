@@ -3,19 +3,34 @@ v9-10 UI: Метрологическая поверка измерительны
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QDialog, QDialogButtonBox, QLineEdit, QComboBox, QDateEdit, QSpinBox,
-    QMessageBox, QTextEdit, QFileDialog,
+    QAbstractItemView,
+    QComboBox,
+    QDateEdit,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
-from database.models import Instrument, Calibration, InstrumentStatus
+from database.models import Instrument
 from modules import metrology as mt
 
 
@@ -146,9 +161,9 @@ class CalibrationDialog(QDialog):
         # Скопируем pdf в data/calibrations/
         cert_stored = None
         if self.cert_path:
-            from pathlib import Path
             import shutil
             import uuid
+            from pathlib import Path
             store = Path('data/calibrations')
             store.mkdir(parents=True, exist_ok=True)
             src = Path(self.cert_path)

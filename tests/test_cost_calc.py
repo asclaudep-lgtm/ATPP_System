@@ -1,5 +1,4 @@
 """Тесты модуля расчёта себестоимости."""
-import pytest
 
 from database.models import (
     User, Product, Material, TechProcess, Operation, Profession, Equipment,

@@ -1,11 +1,24 @@
 """Auto-generated sub-module."""
+import enum
 from datetime import datetime
+
 from sqlalchemy import (
-    Column, Integer, String, Float, Text, DateTime, Date,
-    ForeignKey, Boolean, Enum as SQLEnum, UniqueConstraint, Index, JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
 )
 from sqlalchemy.orm import relationship
-import enum
+
 from database.models._core import Base
 
 # ==================== v10: WEB — REFRESH TOKENS ====================

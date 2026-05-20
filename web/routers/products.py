@@ -1,10 +1,10 @@
 """API изделий."""
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from web.deps import get_db, get_current_user
-from web.schemas import ProductOut, ProductListOut
 from database.models import Product
+from web.deps import get_current_user, get_db
+from web.schemas import ProductListOut, ProductOut
 
 router = APIRouter(tags=["products"])
 
@@ -28,7 +28,7 @@ def list_products(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    q = db.query(Product).filter(Product.is_deleted == False)
+    q = db.query(Product).filter(not Product.is_deleted)
     if search:
         q = q.filter(Product.designation.ilike(f"%{search}%"))
     total = q.count()

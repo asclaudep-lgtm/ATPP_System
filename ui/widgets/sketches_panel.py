@@ -3,22 +3,33 @@
 
 Используется внутри OperationDialog и TransitionDialog.
 """
+import logging
 import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QSize, QFileInfo
+from PyQt6.QtCore import QFileInfo, QSize, Qt
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QFileDialog, QMessageBox,
-    QInputDialog, QFileIconProvider, QMenu,
+    QFileDialog,
+    QFileIconProvider,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
-from config import SKETCHES_DIR
-from database.models import Sketch, Operation, Transition
+_logger = logging.getLogger(__name__)
 
+from config import SKETCHES_DIR
+from database.models import Sketch
 
 _IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff', '.webp', '.gif'}
 _PDF_EXTS = {'.pdf'}
@@ -35,7 +46,9 @@ def _detect_file_type(path: Path) -> str | None:
 
 def _open_path(path: str):
     """Открыть файл в системной программе. Кросс-платформенно."""
-    import sys, os, subprocess
+    import os
+    import subprocess
+    import sys
     try:
         if sys.platform.startswith('win'):
             os.startfile(path)  # type: ignore[attr-defined]
@@ -44,7 +57,7 @@ def _open_path(path: str):
         else:
             subprocess.Popen(['xdg-open', path])
     except Exception:
-        pass
+        _logger.exception("Unhandled error")
 
 
 class SketchesPanel(QWidget):
@@ -477,7 +490,7 @@ class SketchesPanel(QWidget):
                 if full.exists():
                     full.unlink()
             except OSError:
-                pass
+                _logger.exception("Failed to delete sketch file")
             s.delete(sk)
         self.refresh()
 

@@ -15,10 +15,6 @@
 """
 from __future__ import annotations
 
-import os
-import json
-import shutil
-import tempfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 import pytest
@@ -26,13 +22,9 @@ import pytest
 from database.db_manager import DatabaseManager
 from database.models import (
     User, Material, Equipment, Profession, Product, ProductGroup,
-    TechProcess, TPStatus, TPType, Operation, Transition,
-    WorkOrder, WorkOrderStatus, WorkOrderItem,
-    RouteStep, RouteStepStatus, ScrapRecord, ScrapPhoto,
-    ScrapReason, ScrapDecision, ToolingItem, ToolingStatus,
-    ToolingIssue, MaterialBatch, MaterialReservation, MaterialIssue,
-    ECN, ECNApproval, ECNStatus, SignerRole, Instrument, Calibration,
-    InstrumentStatus, TPVersion,
+    TechProcess, TPStatus, TPType, Operation, WorkOrder, WorkOrderStatus, WorkOrderItem,
+    RouteStep, RouteStepStatus, ScrapRecord, ScrapReason, ToolingItem, ToolingStatus,
+    MaterialBatch, ECN, SignerRole, Instrument,
 )
 
 

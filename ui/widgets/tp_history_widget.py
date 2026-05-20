@@ -3,21 +3,35 @@ v9-7 UI: История версий ТП — список снимков и dif
 """
 from __future__ import annotations
 
-from typing import Optional
+import logging
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QBrush
+from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QSplitter, QTableWidget,
-    QTableWidgetItem, QHeaderView, QAbstractItemView, QMessageBox,
-    QTextEdit, QInputDialog,
+    QAbstractItemView,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from modules import audit
 from modules.tp_versioning import (
-    list_versions, load_snapshot, diff_snapshots, diff_human,
+    diff_human,
+    diff_snapshots,
+    list_versions,
+    load_snapshot,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 class TPHistoryWidget(QWidget):
@@ -115,7 +129,7 @@ class TPHistoryWidget(QWidget):
             if int(a.version_number) > int(b.version_number):
                 sa, sb = sb, sa
         except Exception:
-            pass
+            _logger.exception("Unhandled error")
         d = diff_snapshots(sa, sb)
         self.diff_table.setRowCount(len(d) if d else 1)
         if not d:

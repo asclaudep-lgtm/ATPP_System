@@ -18,16 +18,17 @@ optimistic-lock на ``WorkOrderItem.version``.
 """
 from __future__ import annotations
 
-from modules import audit as _audit
-
 import json
 import secrets
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Iterable, Optional
 
 from sqlalchemy.orm import Session
 
 from database.models import (
+    IssueKind,
+    IssueSeverity,
+    IssueStatus,
     Operation,
     ProductionEvent,
     ProductionIssue,
@@ -39,11 +40,8 @@ from database.models import (
     WorkOrderItemStatus,
     WorkOrderStatus,
     Workshop,
-    IssueKind,
-    IssueSeverity,
-    IssueStatus,
 )
-
+from modules import audit as _audit
 
 # ────────────────────────────────────────────────────────────────────────────
 # Роли — кому что разрешено

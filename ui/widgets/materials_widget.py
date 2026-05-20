@@ -8,15 +8,33 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QDialog, QDialogButtonBox, QLineEdit, QComboBox, QDateEdit,
-    QDoubleSpinBox, QMessageBox, QTextEdit, QFileDialog, QTabWidget,
+    QAbstractItemView,
+    QComboBox,
+    QDateEdit,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
     QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    Material, MaterialBatch, MaterialReservation, MaterialIssue, WorkOrder,
+    Material,
+    MaterialBatch,
+    MaterialIssue,
+    WorkOrder,
 )
 from modules import material_trace as mtr
 

@@ -1,13 +1,8 @@
 """Виджет редактора многоуровневого БОМ."""
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
-                              QTreeWidget, QTreeWidgetItem, QPushButton,
-                              QMessageBox)
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 
-from modules.bom import (get_bom_tree, get_bom_flat, add_bom_item,
-                          remove_bom_item, update_bom_item, validate_bom,
-                          BOMNode)
-from database.models import AssemblyLevel
+from modules.bom import add_bom_item, get_bom_tree, remove_bom_item, update_bom_item, validate_bom
 
 
 class BOMWidget(QWidget):

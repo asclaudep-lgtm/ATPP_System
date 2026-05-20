@@ -5,19 +5,34 @@ from utils.logger import get_logger
 
 _log = get_logger(__name__)
 
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
-    QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QFrame, QTabWidget, QGroupBox, QToolBar, QMessageBox,
-    QHeaderView, QAbstractItemView, QSizePolicy
+    QAbstractItemView,
+    QComboBox,
+    QFileIconProvider,
+    QFormLayout,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QSize
-from PyQt6.QtGui import QFont, QColor, QIcon
 
-from database.models import (
-    TechProcess, Operation, Transition, Equipment, Profession,
-    TPStatus, TPType, TechnologyType
-)
+from database.models import Operation, TechProcess, TPStatus, Transition
 
 STATUS_COLORS = {
     TPStatus.DRAFT:     ('#f39c12', 'Черновик'),
@@ -97,7 +112,7 @@ class TPEditorWidget(QWidget):
         try:
             ops = (session.query(Operation)
                    .filter(Operation.tech_process_id == self.tp_id,
-                           (Operation.is_deleted == False) | (Operation.is_deleted.is_(None)))
+                           (not Operation.is_deleted) | (Operation.is_deleted.is_(None)))
                    .order_by(Operation.sort_order)
                    .all())
             self._operations = []
@@ -740,10 +755,13 @@ class TPEditorWidget(QWidget):
 
     def _copy_op_from_other_tp(self):
         """Скопировать операцию (со всеми переходами) из другого ТП в текущий."""
-        from ui.dialogs.op_picker_dialog import OpPickerDialog
         from database.models import (
-            Operation as OpM, Transition as TrM, TechProcess as TPM,
+            Operation as OpM,
         )
+        from database.models import (
+            Transition as TrM,
+        )
+        from ui.dialogs.op_picker_dialog import OpPickerDialog
 
         dlg = OpPickerDialog(self.db_manager, exclude_tp_id=self.tp_id, parent=self)
         if dlg.exec() != dlg.DialogCode.Accepted:
@@ -997,9 +1015,7 @@ class TPEditorWidget(QWidget):
     # ──────────────────────────────────────────────────────────────
     def _make_documents_tab(self):
         from PyQt6.QtWidgets import (
-            QGroupBox, QComboBox, QCheckBox, QTextEdit,
-            QScrollArea, QSpinBox, QFormLayout, QLineEdit,
-            QListWidget, QListWidgetItem, QFileIconProvider, QMenu
+            QAbstractItemView,
         )
 
         w = QWidget()
@@ -1007,7 +1023,6 @@ class TPEditorWidget(QWidget):
         outer.setContentsMargins(6, 6, 6, 6)
         outer.setSpacing(8)
 
-        # Заголовок
         title = QLabel("Генерация технологических документов")
         font = QFont()
         font.setPointSize(11)
@@ -1017,24 +1032,12 @@ class TPEditorWidget(QWidget):
 
         splitter_h = QHBoxLayout()
 
-        # ── Левая колонка: МК + ведомости ──
+        # ── Левая колонка ──
         left = QVBoxLayout()
 
-        # Формат
-        fmt_group = QGroupBox("Формат МК")
-        fg = QHBoxLayout(fmt_group)
-        self._doc_format_combo = QComboBox()
-        self._doc_format_combo.addItem("Excel (.xlsx)", "xlsx")
-        self._doc_format_combo.addItem("Word (.docx)", "docx")
-        self._doc_format_combo.addItem("PDF (.pdf)", "pdf")
-        fg.addWidget(QLabel("Формат:"))
-        fg.addWidget(self._doc_format_combo)
-        fg.addStretch()
-        left.addWidget(fmt_group)
-
-        # Количество
+        # Количество (для МСК, ВНВ)
         qty_layout = QHBoxLayout()
-        qty_layout.addWidget(QLabel("Кол-во изделий в заказе:"))
+        qty_layout.addWidget(QLabel("Кол-во изделий в партии:"))
         self._qty_spin = QSpinBox()
         self._qty_spin.setRange(1, 99999)
         self._qty_spin.setValue(1)
@@ -1043,7 +1046,7 @@ class TPEditorWidget(QWidget):
         qty_layout.addStretch()
         left.addLayout(qty_layout)
 
-        # Доп. поля для МТП (нет в БД)
+        # Доп. поля для МТП
         mtp_group = QGroupBox("Заголовок МТП (необязательные поля)")
         mtp_form = QFormLayout(mtp_group)
         mtp_form.setContentsMargins(8, 6, 8, 6)
@@ -1057,7 +1060,6 @@ class TPEditorWidget(QWidget):
         mtp_form.addRow("Наименование проекта:", self._mtp_project)
         mtp_form.addRow("№ Комплекта (изделия):", self._mtp_kit)
         mtp_form.addRow("Шифр заказа / № Заказ:", self._mtp_order)
-        # Подгружаем последний использованный заголовок для этой детали
         try:
             from modules import settings as _s
             _saved = _s.get_mtp_header(self._tp.get('product_designation') or '')
@@ -1069,55 +1071,67 @@ class TPEditorWidget(QWidget):
             _log.debug('Non-critical operation skipped: %s', e)
         left.addWidget(mtp_group)
 
-        # Документы
-        doc_group = QGroupBox("Документы для генерации")
-        doc_layout = QVBoxLayout(doc_group)
+        # ── Добавление форм ──
+        add_group = QGroupBox("Добавить документ в список формирования")
+        add_layout = QHBoxLayout(add_group)
+        add_layout.addWidget(QLabel("Форма:"))
+        self._form_combo = QComboBox()
+        self._form_combo.setMinimumWidth(220)
+        from modules.doc_forms import DOC_FORM_REGISTRY
+        for f in DOC_FORM_REGISTRY:
+            label = f"{f.name}  — {f.gost}"
+            self._form_combo.addItem(label, f.form_id)
+        add_layout.addWidget(self._form_combo)
 
-        self._check_mk = QCheckBox("Маршрутная карта (МК)  [xlsx/docx/pdf]")
-        self._check_mk.setChecked(True)
-        doc_layout.addWidget(self._check_mk)
+        add_layout.addWidget(QLabel("Формат:"))
+        self._add_fmt_combo = QComboBox()
+        self._add_fmt_combo.addItem("Excel (.xlsx)", "xlsx")
+        self._add_fmt_combo.addItem("Word (.docx)", "docx")
+        self._add_fmt_combo.addItem("PDF (.pdf)", "pdf")
+        add_layout.addWidget(self._add_fmt_combo)
 
-        self._check_msk = QCheckBox("Маршрутно-сопроводительная карта (МСК)  [xlsx]")
-        self._check_msk.setChecked(True)
-        doc_layout.addWidget(self._check_msk)
+        add_btn = QPushButton("+  Добавить")
+        add_btn.clicked.connect(self._add_doc_to_list)
+        add_btn.setStyleSheet(
+            "QPushButton { background-color: #27ae60; color: white; "
+            "border: none; padding: 4px 12px; border-radius: 3px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #219a52; }")
+        add_layout.addWidget(add_btn)
+        left.addWidget(add_group)
 
-        self._check_mtp = QCheckBox(
-            "Маршрутно-технологический паспорт (МТП) — по шаблону УЗГА  [xlsx]"
-        )
-        self._check_mtp.setChecked(True)
-        self._check_mtp.setToolTip(
-            "Заполняет шаблон resources/templates/mtp_template.xlsx.\n"
-            "Операции с отключённым флажком «Включать в МТП» в выводе пропускаются."
-        )
-        doc_layout.addWidget(self._check_mtp)
+        # ── Список на генерацию ──
+        gen_group = QGroupBox("Список на генерацию")
+        gen_layout = QVBoxLayout(gen_group)
 
-        self._check_vnv = QCheckBox("Ведомость норм времени (ВНВ)  [xlsx]")
-        self._check_vnv.setChecked(True)
-        doc_layout.addWidget(self._check_vnv)
+        self._gen_list_widget = QListWidget()
+        self._gen_list_widget.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._gen_list_widget.setAlternatingRowColors(True)
+        self._gen_list_widget.setMaximumHeight(180)
+        gen_layout.addWidget(self._gen_list_widget)
 
-        self._check_vm = QCheckBox("Ведомость материалов (ВМ)  [xlsx]")
-        self._check_vm.setChecked(True)
-        doc_layout.addWidget(self._check_vm)
+        self._gen_list = []  # [{form_id, form_name, fmt, gost}, ...]
 
-        self._check_kalk = QCheckBox("Калькуляция себестоимости  [xlsx]")
-        self._check_kalk.setChecked(True)
-        doc_layout.addWidget(self._check_kalk)
+        list_btn_layout = QHBoxLayout()
+        remove_btn = QPushButton("-  Удалить выбранные")
+        remove_btn.clicked.connect(self._remove_doc_from_list)
+        remove_btn.setStyleSheet(
+            "QPushButton { color: #c0392b; padding: 4px 10px; }")
+        list_btn_layout.addWidget(remove_btn)
+        clear_btn = QPushButton("Очистить")
+        clear_btn.clicked.connect(self._clear_doc_list)
+        list_btn_layout.addWidget(clear_btn)
+        list_btn_layout.addStretch()
+        gen_layout.addLayout(list_btn_layout)
+        left.addWidget(gen_group)
 
-        self._check_kesk = QCheckBox(
-            "Карта эскизов (КЭ) — ГОСТ 3.1408  [xlsx]"
-        )
-        self._check_kesk.setChecked(True)
-        self._check_kesk.setToolTip(
-            "Сводная карта эскизов: по каждой операции и переходу,\n"
-            "к которым прикреплены изображения, вставляются картинки.\n"
-            "PDF-файлы добавляются ссылкой."
-        )
-        doc_layout.addWidget(self._check_kesk)
+        # Подсказка
+        hint = QLabel("Двойной клик по строке — переключить формат")
+        hint.setStyleSheet("color: #7f8c8d; font-size: 10px;")
+        left.addWidget(hint)
 
-        left.addWidget(doc_group)
-
-        # Кнопки
-        gen_btn = QPushButton("  Сгенерировать выбранные документы  ")
+        # Кнопка генерации
+        gen_btn = QPushButton("  Сгенерировать документы из списка  ")
         gen_btn.setFixedHeight(38)
         gen_btn.clicked.connect(self._generate_docs)
         gen_btn.setStyleSheet("""
@@ -1129,54 +1143,40 @@ class TPEditorWidget(QWidget):
         """)
         left.addWidget(gen_btn)
 
-        ktd_btn = QPushButton("📁  Библиотека шаблонов КТД (ГОСТ 3.1xxx)...")
-        ktd_btn.setFixedHeight(34)
+        # Доп. кнопки
+        aux_btns = QHBoxLayout()
+        ktd_btn = QPushButton("Библиотека КТД...")
         ktd_btn.clicked.connect(self._open_ktd_browser)
-        ktd_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #8e44ad; color: white;
-                border: none; border-radius: 4px; font-size: 11px;
-            }
-            QPushButton:hover { background-color: #7d3c98; }
-        """)
-        left.addWidget(ktd_btn)
-
-        open_folder_btn = QPushButton("📂  Открыть папку экспорта")
+        aux_btns.addWidget(ktd_btn)
+        open_folder_btn = QPushButton("Папка экспорта")
         open_folder_btn.clicked.connect(self._open_export_folder)
-        open_folder_btn.setStyleSheet("QPushButton { padding: 5px 10px; }")
-        left.addWidget(open_folder_btn)
-
-        zip_btn = QPushButton("🗂  Собрать ZIP-архив всех документов")
+        aux_btns.addWidget(open_folder_btn)
+        zip_btn = QPushButton("ZIP-архив")
         zip_btn.clicked.connect(self._zip_all_docs)
-        zip_btn.setStyleSheet(
-            "QPushButton { padding: 5px 10px; background-color: #34495e; "
-            "color: white; border: none; border-radius: 3px; }"
-            "QPushButton:hover { background-color: #2c3e50; }"
-        )
-        left.addWidget(zip_btn)
+        aux_btns.addWidget(zip_btn)
+        aux_btns.addStretch()
+        left.addLayout(aux_btns)
 
         left.addStretch()
         splitter_h.addLayout(left, stretch=1)
 
-        # ── Правая колонка: журнал + сформированные документы ──
+        # ── Правая колонка ──
         right = QVBoxLayout()
 
         right.addWidget(QLabel("Журнал генерации:"))
         self._doc_log = QTextEdit()
         self._doc_log.setReadOnly(True)
-        self._doc_log.setMaximumHeight(160)
+        self._doc_log.setMaximumHeight(150)
         self._doc_log.setStyleSheet(
             "font-family: Consolas, monospace; font-size: 10px; "
-            "background-color: #1e1e1e; color: #d4d4d4;"
-        )
+            "background-color: #1e1e1e; color: #d4d4d4;")
         right.addWidget(self._doc_log)
 
-        # Список сформированных документов на эту деталь
         files_header = QHBoxLayout()
         self._files_label = QLabel("Сформированные документы на деталь:")
         files_header.addWidget(self._files_label)
         files_header.addStretch()
-        refresh_btn = QPushButton("⟳  Обновить")
+        refresh_btn = QPushButton("Обновить")
         refresh_btn.setStyleSheet("QPushButton { padding: 3px 8px; }")
         refresh_btn.clicked.connect(self._refresh_export_files)
         files_header.addWidget(refresh_btn)
@@ -1191,110 +1191,136 @@ class TPEditorWidget(QWidget):
 
         splitter_h.addLayout(right, stretch=1)
 
-        # Первичная загрузка
-        self._refresh_export_files()
+        self._form_combo.currentIndexChanged.connect(self._update_tp_formats)
+        self._gen_list_widget.itemDoubleClicked.connect(self._toggle_tp_format)
 
+        self._refresh_export_files()
         outer.addLayout(splitter_h)
         return w
 
-    def _generate_docs(self):
-        import subprocess, os
-        from pathlib import Path
-        fmt = self._doc_format_combo.currentData()
-        qty = self._qty_spin.value()
+    # ── Управление списком генерации (tp_editor) ──
 
+    def _update_tp_formats(self):
+        form_id = self._form_combo.currentData()
+        from modules.doc_forms import DOC_FORM_REGISTRY
+        form = next((f for f in DOC_FORM_REGISTRY if f.form_id == form_id), None)
+        if form is None:
+            return
+        self._add_fmt_combo.clear()
+        fmt_labels = {"xlsx": "Excel (.xlsx)", "docx": "Word (.docx)", "pdf": "PDF (.pdf)"}
+        for fmt in form.formats:
+            self._add_fmt_combo.addItem(fmt_labels.get(fmt, fmt), fmt)
+
+    def _add_doc_to_list(self):
+        try:
+            form_id = self._form_combo.currentData()
+            if form_id is None:
+                return
+            from modules.doc_forms import DOC_FORM_REGISTRY
+            form = next((f for f in DOC_FORM_REGISTRY if f.form_id == form_id), None)
+            if form is None:
+                return
+            fmt = self._add_fmt_combo.currentData()
+            entry = {
+                'form_id': form.form_id,
+                'form_name': form.name,
+                'gost': form.gost,
+                'fmt': fmt,
+            }
+            self._gen_list.append(entry)
+            label = f"{form.name}  [{fmt.upper()}]  — {form.gost}"
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, len(self._gen_list) - 1)
+            self._gen_list_widget.addItem(item)
+        except Exception as e:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Ошибка", f"Не удалось добавить форму:\n{e}")
+
+    def _remove_doc_from_list(self):
+        selected = self._gen_list_widget.selectedItems()
+        if not selected:
+            return
+        indices = sorted(
+            [self._gen_list_widget.row(item) for item in selected],
+            reverse=True,
+        )
+        for idx in indices:
+            self._gen_list_widget.takeItem(idx)
+            del self._gen_list[idx]
+        for i in range(self._gen_list_widget.count()):
+            self._gen_list_widget.item(i).setData(Qt.ItemDataRole.UserRole, i)
+
+    def _clear_doc_list(self):
+        self._gen_list.clear()
+        self._gen_list_widget.clear()
+
+    def _toggle_tp_format(self, item):
+        idx = item.data(Qt.ItemDataRole.UserRole)
+        if idx is None or idx >= len(self._gen_list):
+            return
+        from modules.doc_forms import DOC_FORM_REGISTRY
+        entry = self._gen_list[idx]
+        form = next((f for f in DOC_FORM_REGISTRY
+                     if f.form_id == entry['form_id']), None)
+        if form is None:
+            return
+        fmts = form.formats
+        try:
+            next_idx = (fmts.index(entry['fmt']) + 1) % len(fmts)
+        except ValueError:
+            next_idx = 0
+        entry['fmt'] = fmts[next_idx]
+        label = f"{entry['form_name']}  [{fmts[next_idx].upper()}]  — {entry['gost']}"
+        item.setText(label)
+
+    def _generate_docs(self):
+        if not self._gen_list:
+            self._doc_log.clear()
+            self._doc_log.append("⚠  Добавьте формы документов в список генерации")
+            return
+
+        qty = self._qty_spin.value()
         self._doc_log.clear()
-        self._doc_log.append(f"ТП: {self._tp.get('number', '')}   Кол-во: {qty} шт")
+        self._doc_log.append(f"ТП: {self._tp.get('number', '')}   Партия: {qty} шт")
         self._doc_log.append("─" * 50)
 
         session = self.db_manager.Session()
         last_path = None
         try:
-            from modules.doc_generator import DocumentGenerator
-            from modules.report_generator import ReportGenerator
+            from modules.doc_forms import generate_form
 
-            gen  = DocumentGenerator(session)
-            rgen = ReportGenerator(session)
-
-            if self._check_mk.isChecked():
-                self._doc_log.append(f"[1/7] Маршрутная карта ({fmt.upper()})...")
+            for i, entry in enumerate(self._gen_list, start=1):
+                form_id = entry['form_id']
+                fmt = entry['fmt']
+                self._doc_log.append(
+                    f"[{i}/{len(self._gen_list)}] {entry['form_name']} ({fmt.upper()})...")
                 try:
-                    path = gen.generate_route_card(self.tp_id, fmt)
-                    self._doc_log.append(f"   OK  {path.name}")
-                    last_path = path
-                except Exception as e:
-                    self._doc_log.append(f"   ERR {e}")
+                    kwargs = {'quantity': qty}
+                    if form_id == 'MTP':
+                        kwargs['project_name'] = self._mtp_project.text().strip()
+                        kwargs['kit_number'] = self._mtp_kit.text().strip()
+                        kwargs['order_number'] = self._mtp_order.text().strip()
+                        # Запоминаем последние значения
+                        try:
+                            from modules import settings as _s
+                            _s.set_mtp_header(
+                                self._tp.get('product_designation') or '',
+                                project_name=kwargs['project_name'],
+                                kit_number=kwargs['kit_number'],
+                                order_number=kwargs['order_number'],
+                            )
+                        except Exception:
+                            pass
 
-            if self._check_msk.isChecked():
-                self._doc_log.append(f"[2/7] Маршрутно-сопроводительная карта...")
-                try:
-                    path = rgen.generate_route_map(self.tp_id, qty)
-                    self._doc_log.append(f"   OK  {path.name}")
-                    last_path = path
-                except Exception as e:
-                    self._doc_log.append(f"   ERR {e}")
-
-            if self._check_mtp.isChecked():
-                self._doc_log.append(f"[3/7] Маршрутно-технологический паспорт (МТП)...")
-                try:
-                    _proj = self._mtp_project.text().strip()
-                    _kit = self._mtp_kit.text().strip()
-                    _order = self._mtp_order.text().strip()
-                    path = rgen.generate_mtp(
-                        self.tp_id,
-                        project_name=_proj,
-                        kit_number=_kit,
-                        order_number=_order,
-                    )
-                    # Запоминаем последние значения per-product
-                    try:
-                        from modules import settings as _s
-                        _s.set_mtp_header(
-                            self._tp.get('product_designation') or '',
-                            project_name=_proj,
-                            kit_number=_kit,
-                            order_number=_order,
-                        )
-                    except Exception as e:
-                        _log.warning('MTP generation failed for %s: %s', path.name, e)
-                    self._doc_log.append(f"   OK  {path.name}")
-                    last_path = path
-                except Exception as e:
-                    self._doc_log.append(f"   ERR {e}")
-
-            if self._check_vnv.isChecked():
-                self._doc_log.append(f"[4/7] Ведомость норм времени...")
-                try:
-                    path = rgen.generate_time_norms(self.tp_id, qty)
-                    self._doc_log.append(f"   OK  {path.name}")
-                    last_path = path
-                except Exception as e:
-                    self._doc_log.append(f"   ERR {e}")
-
-            if self._check_vm.isChecked():
-                self._doc_log.append(f"[5/7] Ведомость материалов...")
-                try:
-                    path = rgen.generate_material_norms_report(self.tp_id, qty)
-                    self._doc_log.append(f"   OK  {path.name}")
-                    last_path = path
-                except Exception as e:
-                    self._doc_log.append(f"   ERR {e}")
-
-            if self._check_kalk.isChecked():
-                self._doc_log.append(f"[6/7] Калькуляция себестоимости...")
-                try:
-                    path = rgen.generate_cost_report(self.tp_id)
-                    self._doc_log.append(f"   OK  {path.name}")
-                    last_path = path
-                except Exception as e:
-                    self._doc_log.append(f"   ERR {e}")
-
-            if self._check_kesk.isChecked():
-                self._doc_log.append(f"[7/7] Карта эскизов (КЭ)...")
-                try:
-                    path = rgen.generate_sketch_card(self.tp_id)
-                    self._doc_log.append(f"   OK  {path.name}")
-                    last_path = path
+                    result = generate_form(session, form_id, self.tp_id, fmt, **kwargs)
+                    if isinstance(result, list):
+                        for p in result:
+                            self._doc_log.append(f"   OK  {p.name}")
+                        if result:
+                            last_path = result[-1]
+                    else:
+                        self._doc_log.append(f"   OK  {result.name}")
+                        last_path = result
                 except Exception as e:
                     self._doc_log.append(f"   ERR {e}")
 
@@ -1331,9 +1357,10 @@ class TPEditorWidget(QWidget):
 
     def _refresh_export_files(self):
         """Перечитать содержимое папки экспорта детали и наполнить список."""
-        from PyQt6.QtWidgets import QListWidgetItem, QFileIconProvider
-        from PyQt6.QtCore import QFileInfo
         from datetime import datetime as _dt
+
+        from PyQt6.QtCore import QFileInfo
+        from PyQt6.QtWidgets import QListWidgetItem
 
         if not hasattr(self, '_files_list'):
             return
@@ -1401,8 +1428,9 @@ class TPEditorWidget(QWidget):
             from pathlib import Path as _P
             self._open_path(str(_P(path).parent))
         elif chosen == act_delete:
-            from PyQt6.QtWidgets import QMessageBox
             from pathlib import Path as _P
+
+            from PyQt6.QtWidgets import QMessageBox
             reply = QMessageBox.question(
                 self, "Удалить файл",
                 f"Удалить файл «{_P(path).name}»?",
@@ -1419,7 +1447,9 @@ class TPEditorWidget(QWidget):
     @staticmethod
     def _open_path(path: str):
         """Открыть файл/папку в системной программе. Кросс-платформенно."""
-        import sys, os, subprocess
+        import os
+        import subprocess
+        import sys
         try:
             if sys.platform.startswith('win'):
                 os.startfile(path)  # type: ignore[attr-defined]

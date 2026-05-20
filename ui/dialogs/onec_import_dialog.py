@@ -1,10 +1,18 @@
 """Диалог импорта спецификации из 1C (XML/JSON)."""
 from pathlib import Path
 
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-                              QFileDialog, QTableWidget, QTableWidgetItem,
-                              QLabel, QDialogButtonBox, QMessageBox)
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
 
 
 class OneCImportDialog(QDialog):
@@ -103,8 +111,7 @@ class OneCImportDialog(QDialog):
     def _import(self):
         if self._file_path is None:
             return
-        from modules.onec_exchange import (import_specification_xml,
-                                            import_specification_json)
+        from modules.onec_exchange import import_specification_json, import_specification_xml
 
         suffix = self._file_path.suffix.lower()
         try:
