@@ -424,7 +424,7 @@ class DialogLaunchersMixin:
         try:
             w.tp_open.connect(self._open_tp_editor)
         except Exception:
-            _logger.exception("Unhandled error")
+            _logger.exception("Signal connection failed")  # best-effort UX
         self._add_or_focus_tab(w, 'Поиск')
 
     def _open_quick_search(self):
@@ -433,7 +433,7 @@ class DialogLaunchersMixin:
         try:
             dlg.tp_open.connect(self._open_tp_editor)
         except Exception:
-            _logger.exception("Unhandled error")
+            _logger.exception("Signal connection failed")  # best-effort UX
         dlg.exec()
 
     def _open_analytics(self):
@@ -476,7 +476,7 @@ class DialogLaunchersMixin:
         try:
             w.open_tp.connect(self._open_tp_editor)
         except Exception:
-            _logger.exception("Unhandled error")
+            _logger.exception("Signal connection failed")  # best-effort UX
         self._add_or_focus_tab(w, 'Журнал регистрации')
 
     def _open_op_templates(self):

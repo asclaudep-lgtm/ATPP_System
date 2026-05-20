@@ -92,7 +92,8 @@ def _add_status_watermark(ws, status_value: str):
         )
         ws.oddFooter.center.size = 10
         ws.oddFooter.center.color = 'AA0000'
-    except Exception as e:
+    except (OSError, ValueError) as e:
+        # best-effort page formatting
         log.warning('Page setup skipped: %s', e)
 
 
@@ -110,7 +111,8 @@ def _ensure_print_settings(ws):
         ws.page_margins.bottom = 0.7
         ws.page_margins.header = 0.3
         ws.page_margins.footer = 0.3
-    except Exception as e:
+    except (OSError, ValueError) as e:
+        # best-effort page formatting
         log.warning('Page setup skipped: %s', e)
 
 
@@ -757,7 +759,8 @@ class ReportGenerator:
                 with PILImage.open(img_path) as pil:
                     pil = pil.convert('RGB')
                     w, h = pil.size
-            except Exception as e:
+            except (OSError, ValueError) as e:
+                # image metadata read — best-effort
                 log.warning('Image size detection failed: %s', e)
                 return 18
             scale = min(max_w_px / w, max_h_px / h, 1.0)
@@ -880,7 +883,8 @@ class ReportGenerator:
             try:
                 h = embed_fn(full, row)
                 ws.row_dimensions[row].height = max(h, 80)
-            except Exception as e:
+            except (OSError, ImportError, ValueError) as e:
+                # best-effort image embed
                 img_cell.value = f'[не удалось вставить картинку: {e}]'
                 ws.row_dimensions[row].height = 30
         elif ftype == 'pdf' and full.exists():
@@ -899,7 +903,8 @@ class ReportGenerator:
                         ws.row_dimensions[row].height = max(h, 80)
                     else:
                         raise RuntimeError('Пустой PDF')
-            except Exception as e:
+            except (OSError, ImportError, RuntimeError) as e:
+                # best-effort PDF render
                 log.warning('PDF embed skipped: %s', e)
                 img_cell.value = f'PDF — см. файл-вложение: {full.name}'
                 img_cell.font = Font(name='Arial', size=10, italic=True, color='2980b9')
