@@ -9,6 +9,7 @@ description = "Система автоматизации технологиче�
 requires-python = ">=3.11"
 
 [tool.ruff]
+line-length = 130
 target-version = "py311"
 exclude = ["alembic"]
 
