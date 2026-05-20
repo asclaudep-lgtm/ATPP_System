@@ -63,17 +63,34 @@ class DialogLaunchersMixin:
         if not hasattr(widget, 'tp_id'):
             QMessageBox.information(self, "Экспорт", "Откройте ТП для экспорта")
             return
-        from modules.doc_generator import DocumentGenerator
-        session = self.db_manager.Session()
-        try:
-            gen = DocumentGenerator(session)
-            path = gen.generate_route_card(widget.tp_id, fmt)
-            QMessageBox.information(self, "Экспорт", f"Файл сохранён:\n{path}")
-            self._log_message(f"Экспорт МК: {path.name}")
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка экспорта:\n{e}")
-        finally:
-            session.close()
+
+        tp_id = widget.tp_id
+        db = self.db_manager
+
+        def _do_export():
+            from modules.doc_generator import DocumentGenerator
+            session = db.Session()
+            try:
+                gen = DocumentGenerator(session)
+                return gen.generate_route_card(tp_id, fmt)
+            finally:
+                session.close()
+
+        self._statusbar.showMessage("Генерация документа...", 0)
+        from utils.worker import BackgroundWorker
+        self._export_worker = BackgroundWorker(_do_export)
+        self._export_worker.finished_with_result.connect(
+            lambda path: (
+                QMessageBox.information(self, "Экспорт", f"Файл сохранён:\n{path}"),
+                self._log_message(f"Экспорт МК: {path.name}"),
+                self._statusbar.clearMessage(),
+            ))
+        self._export_worker.failed.connect(
+            lambda err: (
+                QMessageBox.critical(self, "Ошибка", f"Ошибка экспорта:\n{err}"),
+                self._statusbar.clearMessage(),
+            ))
+        self._export_worker.start()
 
     # ── Dashboard / Audit / Completeness ──────────────────────────
 
