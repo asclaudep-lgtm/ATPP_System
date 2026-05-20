@@ -1,11 +1,11 @@
 """
 Конфигурация приложения АТПП
 """
+# Базовые пути
+import logging
 import os
 from pathlib import Path
 
-# Базовые пути
-import logging
 _logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"

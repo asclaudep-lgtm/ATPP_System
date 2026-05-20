@@ -1,28 +1,42 @@
 """
 Менеджер базы данных
 """
-from datetime import datetime
-from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.pool import StaticPool, NullPool
-import bcrypt
 from contextlib import contextmanager
+from datetime import datetime
 
-from .models import (Base, User, Material, Equipment, Tool, Profession,
-                     Product, ProductGroup, TechProcess, Workshop,
-                     BOMItem, AssemblyLevel)
+import bcrypt
+import sqlalchemy
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.pool import NullPool
+
 from config import DATABASE_URL
 from utils.logger import get_logger
+
+from .models import (
+    AssemblyLevel,
+    Base,
+    BOMItem,
+    Equipment,
+    Material,
+    Product,
+    ProductGroup,
+    Profession,
+    TechProcess,
+    Tool,
+    User,
+    Workshop,
+)
 
 log = get_logger(__name__)
 
 
 class DatabaseManager:
     """Менеджер для работы с базой данных"""
-    
+
     def __init__(self, database_url=None):
         self.database_url = database_url or DATABASE_URL
-        
+
         if self.database_url.startswith('sqlite'):
             self.engine = create_engine(
                 self.database_url,
@@ -34,11 +48,11 @@ class DatabaseManager:
                 self.database_url,
                 pool_size=5, max_overflow=10
             )
-        
+
         # Создаём фабрику сессий
         session_factory = sessionmaker(bind=self.engine)
         self.Session = scoped_session(session_factory)
-    
+
     def init_database(self):
         """Инициализация БД: create_all для свежих, Alembic для миграций."""
         # Всегда создаём таблицы, которых ещё нет (работает на свежей БД).
@@ -51,8 +65,9 @@ class DatabaseManager:
         alembic_ok = False
         try:
             if alembic_ini.exists():
-                from alembic import command
                 from alembic.config import Config as AlembicConfig
+
+                from alembic import command
                 cfg = AlembicConfig(str(alembic_ini))
                 cfg.set_main_option('sqlalchemy.url', self.database_url)
                 command.upgrade(cfg, 'head')
@@ -104,7 +119,7 @@ class DatabaseManager:
                             log.info('Added column %s.%s', table_name, col.name)
                         except (sqlalchemy.exc.OperationalError, AttributeError) as e:
                             log.debug('Skip %s.%s: %s', table_name, col.name, e)
-    
+
     def _ensure_primary_keys(self):
         """v13: гарантирует INTEGER PRIMARY KEY AUTOINCREMENT для всех id.
 
@@ -112,7 +127,7 @@ class DatabaseManager:
         Если таблица создана с id INT вместо INTEGER, INSERT даёт NULL в id.
         Метод проверяет и пересоздаёт таблицы с неправильной схемой.
         """
-        from sqlalchemy import inspect, text
+        from sqlalchemy import inspect
 
         inspector = inspect(self.engine)
         for table_name in inspector.get_table_names():
@@ -228,7 +243,7 @@ class DatabaseManager:
                 session.add(admin)
                 session.flush()  # get admin.id for FK references below
                 session.flush()
-            
+
             # Добавляем базовые материалы
             if session.query(Material).count() == 0:
                 materials = [
@@ -239,7 +254,7 @@ class DatabaseManager:
                     Material(name='Бронза БрАЖ9-4', grade='БрАЖ9-4', gost='ГОСТ 18175-78', density=7600, price_per_kg=800),
                 ]
                 session.add_all(materials)
-            
+
             # Добавляем базовое оборудование
             if session.query(Equipment).count() == 0:
                 equipment = [
@@ -249,11 +264,11 @@ class DatabaseManager:
                     Equipment(name='Пресс гидравлический', model='П6330', type='Прессовое', power=15, cost_per_hour=200),
                 ]
                 session.add_all(equipment)
-            
+
             # Добавляем профессии
             if session.query(Profession).count() == 0:
                 professions = [
-                    Profession(name='Токарь', typical_grade=3, 
+                    Profession(name='Токарь', typical_grade=3,
                               hourly_rates='{"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}'),
                     Profession(name='Фрезеровщик', typical_grade=3,
                               hourly_rates='{"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}'),
@@ -265,7 +280,7 @@ class DatabaseManager:
                               hourly_rates='{"1": 180, "2": 200, "3": 230, "4": 260, "5": 300, "6": 340}'),
                 ]
                 session.add_all(professions)
-            
+
             # Добавим демонстрационные группы и изделия, чтобы UI имел что отображать
             if session.query(ProductGroup).count() == 0:
                 g1 = ProductGroup(name='G1', display_name='Группа 1', sort_order=1)
@@ -291,7 +306,7 @@ class DatabaseManager:
                     author_id=admin.id if admin is not None else None,
                 )
                 session.add(prod1)
-            
+
             # Базовые производственные участки (для модуля «Производство»)
             if session.query(Workshop).count() == 0:
                 workshops = [
@@ -348,17 +363,17 @@ class DatabaseManager:
             raise e
         finally:
             session.close()
-    
+
     @staticmethod
     def _hash_password(password: str) -> str:
         """Хеширование пароля"""
         return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+
     @staticmethod
     def verify_password(password: str, password_hash: str) -> bool:
         """Проверка пароля"""
         return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
-    
+
     @contextmanager
     def get_session(self):
         """Контекстный менеджер для работы с сессией"""
@@ -371,7 +386,7 @@ class DatabaseManager:
             raise
         finally:
             session.close()
-    
+
     def authenticate_user(self, username: str, password: str):
         """Аутентификация пользователя"""
         session = self.Session()
@@ -386,7 +401,6 @@ class DatabaseManager:
                 role_val = user.role
                 is_active_val = user.is_active
                 created_at_val = user.created_at
-                last_login_val = user.last_login
                 must_change_pw = bool(user.must_change_password)
 
                 # Обновляем время последнего входа
@@ -418,7 +432,7 @@ class DatabaseManager:
             raise e
         finally:
             session.close()
-    
+
     def create_user(self, username: str, password: str, full_name: str = None,
                    email: str = None, role: str = 'user',
                    must_change_password: bool = True):
@@ -446,8 +460,9 @@ class DatabaseManager:
 
     def _log_login(self, user_id: int) -> int:
         """Создаёт запись в user_sessions. Возвращает id сессии."""
-        from .models import UserSession
         import socket
+
+        from .models import UserSession
         try:
             host = socket.gethostname()
         except OSError:
@@ -487,7 +502,7 @@ class DatabaseManager:
             u.password_changed_at = datetime.now()
             if clear_must_change:
                 u.must_change_password = False
-    
+
     def close(self):
         """Закрытие соединения"""
         self.Session.remove()
