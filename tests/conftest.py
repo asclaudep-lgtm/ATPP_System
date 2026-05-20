@@ -7,6 +7,10 @@ from pathlib import Path
 
 import pytest
 
+# AUDIT-027: Qt headless mode — тесты не требуют дисплея
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("ATPP_TEST_MODE", "1")
+
 # Гарантируем доступ к корню проекта
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
