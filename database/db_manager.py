@@ -44,27 +44,31 @@ class DatabaseManager:
         # Всегда создаём таблицы, которых ещё нет (работает на свежей БД).
         Base.metadata.create_all(self.engine)
 
-        # v13: проверить и исправить INTEGER PRIMARY KEY у всех таблиц
-        self._ensure_primary_keys()
-
-        # Применяем миграции Alembic (новые колонки / индексы после v10).
+        # Миграции: Alembic — основной механизм (v10+).
+        # _ensure_* — страховочный пояс для legacy БД, где Alembic может не сработать.
         from pathlib import Path
         alembic_ini = Path(__file__).resolve().parent.parent / 'alembic.ini'
+        alembic_ok = False
         try:
             if alembic_ini.exists():
                 from alembic import command
                 from alembic.config import Config as AlembicConfig
                 cfg = AlembicConfig(str(alembic_ini))
                 cfg.set_main_option('sqlalchemy.url', self.database_url)
-                # Только дополняем существующую схему
                 command.upgrade(cfg, 'head')
+                alembic_ok = True
         except (ImportError, RuntimeError, OSError):
             log.debug('Alembic upgrade skipped (no new migrations or DB unavailable)')
         except Exception:
             log.warning('Alembic upgrade failed — DB may need manual migration', exc_info=True)
 
-        # v14: гарантировать новые колонки (даже если Alembic не сработал)
-        self._ensure_v14_columns()
+        # v13: исправить INTEGER PRIMARY KEY (только если Alembic недоступен)
+        if not alembic_ok:
+            self._ensure_primary_keys()
+
+        # v14: добавить отсутствующие колонки (только если Alembic недоступен)
+        if not alembic_ok:
+            self._ensure_v14_columns()
 
         self._create_initial_data()
 
