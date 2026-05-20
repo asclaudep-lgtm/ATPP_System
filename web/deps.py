@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 import threading
@@ -16,7 +16,7 @@ import threading
 from database.db_manager import DatabaseManager
 from web.auth import verify_token
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 _db_manager = None
 _db_lock = threading.Lock()
@@ -40,11 +40,21 @@ def get_db():
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db=Depends(get_db),
 ) -> dict:
-    """Извлечь и проверить JWT, вернуть данные пользователя."""
-    token = credentials.credentials
+    """Extract JWT from httpOnly cookie (preferred) or Authorization header (backward compat)."""
+    token = None
+    # AUDIT-011: read from httpOnly cookie first
+    token = request.cookies.get("atpp_token")
+    if not token and credentials is not None:
+        token = credentials.credentials
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
     payload = verify_token(token)
     if payload is None:
         raise HTTPException(

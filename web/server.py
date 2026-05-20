@@ -19,6 +19,7 @@ import json
 from datetime import datetime
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -56,8 +57,8 @@ app.include_router(editor.router)
 
 @app.post("/api/auth/login", tags=["auth"],
     summary="Вход в систему",
-    description="Логин/пароль или API-ключ (поле api_key)")
-def login(body: LoginRequest):
+    description="Логин/пароль или API-ключ (поле api_key). JWT возвращается в httpOnly cookie.")
+def login(body: LoginRequest, response: Response):
     from web.auth import login_user, login_user_by_api_key
     api_key = getattr(body, 'api_key', None)
     if api_key:
@@ -67,8 +68,18 @@ def login(body: LoginRequest):
     if user is None:
         from fastapi import HTTPException
         raise HTTPException(401, "Invalid credentials")
+    # AUDIT-011: set httpOnly cookie instead of returning token in JSON body
+    from web.config import JWT_EXPIRE
+    response.set_cookie(
+        key="atpp_token",
+        value=user["access_token"],
+        httponly=True,
+        secure=False,  # False for localhost dev; set True in production with HTTPS
+        samesite="lax",
+        max_age=int(JWT_EXPIRE.total_seconds()),
+    )
     return {
-        "access_token": user["access_token"],
+        "access_token": user["access_token"],  # backward compat (clients using JSON body)
         "token_type": "bearer",
         "user": {
             "id": user["id"],
@@ -89,6 +100,14 @@ def reset_password(body: dict):
         from fastapi import HTTPException
         raise HTTPException(404, "User not found")
     return {"message": "Пароль успешно сброшен. Новый пароль передан администратору."}
+
+
+@app.post("/api/auth/logout", tags=["auth"],
+    summary="Выход из системы",
+    description="Удаляет httpOnly cookie с JWT токеном")
+def logout(response: Response):
+    response.delete_cookie("atpp_token")
+    return {"ok": True}
 
 
 @app.get("/api/health", tags=["system"],
