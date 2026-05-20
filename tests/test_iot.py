@@ -1,5 +1,4 @@
 """Тесты IoT-модуля (телеметрия + симулятор)."""
-import pytest
 from datetime import datetime, timedelta
 
 from database.models import Equipment
@@ -37,7 +36,7 @@ class TestIoT:
             assert rec.spindle_speed == 1500.0
 
             # Проверим MachineStatusSummary
-            summary = s.query(MachineStatusSummary).filter(
+            s.query(MachineStatusSummary).filter(
                 MachineStatusSummary.equipment_id == eq_id).first()
             # Может быть None если тест не вызвал flush в том же контексте
             # Проверяем создание отдельно

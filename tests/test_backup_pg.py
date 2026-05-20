@@ -3,7 +3,6 @@ import sys
 import types
 from pathlib import Path
 
-import pytest
 
 
 def _reload_backup_with_url(url: str, monkeypatch):

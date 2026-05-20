@@ -7,14 +7,28 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QDialog, QDialogButtonBox, QLineEdit, QComboBox, QTextEdit,
-    QMessageBox, QInputDialog,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    ECN, ECNApproval, ECNStatus, Product, TechProcess, SignerRole,
+    Product,
+    SignerRole,
+    TechProcess,
 )
 from modules import ecn as ecn_mod
 

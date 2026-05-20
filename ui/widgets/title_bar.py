@@ -2,11 +2,14 @@
 
 Layout: [logo][app name][·····][page title (center)][···][search field][window controls]
 """
-from PyQt6.QtWidgets import (
-    QWidget, QHBoxLayout, QLabel, QLineEdit, QPushButton, QFrame,
-)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QWidget,
+)
 
 
 class TitleBar(QWidget):

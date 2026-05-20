@@ -10,16 +10,23 @@
 """
 from __future__ import annotations
 
-from typing import Optional, Dict, Any
+import logging
+from typing import Any, Dict, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QFormLayout, QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout,
-    QPushButton, QLabel, QDialogButtonBox, QGroupBox, QPlainTextEdit,
-    QComboBox,
+    QCheckBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
 )
 
-import logging
 _logger = logging.getLogger(__name__)
 
 

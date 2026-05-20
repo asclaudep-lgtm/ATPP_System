@@ -26,7 +26,7 @@ def test_softdelete_columns_exist(db_manager):
 
     with db_manager.get_session() as s:
         active_tp = (s.query(TechProcess)
-                     .filter((TechProcess.is_deleted == False) |
+                     .filter((not TechProcess.is_deleted) |
                              (TechProcess.is_deleted.is_(None))).count())
         deleted_tp = s.query(TechProcess).filter_by(is_deleted=True).count()
         assert active_tp == 0

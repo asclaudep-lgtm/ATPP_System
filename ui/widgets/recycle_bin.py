@@ -15,15 +15,21 @@
 """
 from datetime import datetime, timedelta
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTableWidget,
-    QTableWidgetItem, QPushButton, QLabel, QMessageBox, QHeaderView,
     QAbstractItemView,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
-from database.models import TechProcess, Operation, Product, WorkOrder, User
-
+from database.models import Operation, Product, TechProcess, User, WorkOrder
 
 # Срок автоочистки.
 PURGE_AFTER_DAYS = 30
@@ -145,7 +151,7 @@ class RecycleBinWidget(QWidget):
     def reload(self):
         with self.db.get_session() as s:
             tps = (s.query(TechProcess)
-                   .filter(TechProcess.is_deleted == True)
+                   .filter(TechProcess.is_deleted)
                    .order_by(TechProcess.deleted_at.desc())
                    .all())
             self._fill(self.tp_tbl, [
@@ -158,7 +164,7 @@ class RecycleBinWidget(QWidget):
             self.tabs.setTabText(0, f'ТП в корзине ({len(tps)})')
 
             ops = (s.query(Operation)
-                   .filter(Operation.is_deleted == True)
+                   .filter(Operation.is_deleted)
                    .order_by(Operation.deleted_at.desc())
                    .all())
             self._fill(self.op_tbl, [
@@ -170,7 +176,7 @@ class RecycleBinWidget(QWidget):
             self.tabs.setTabText(1, f'Операции в корзине ({len(ops)})')
 
             prods = (s.query(Product)
-                     .filter(Product.is_deleted == True)
+                     .filter(Product.is_deleted)
                      .order_by(Product.deleted_at.desc())
                      .all())
             self._fill(self.prod_tbl, [
@@ -182,7 +188,7 @@ class RecycleBinWidget(QWidget):
             self.tabs.setTabText(2, f'Детали в корзине ({len(prods)})')
 
             wos = (s.query(WorkOrder)
-                   .filter(WorkOrder.is_deleted == True)
+                   .filter(WorkOrder.is_deleted)
                    .order_by(WorkOrder.deleted_at.desc())
                    .all())
             self._fill(self.wo_tbl, [
@@ -344,29 +350,29 @@ class RecycleBinWidget(QWidget):
         counts = {'tp': 0, 'op': 0, 'product': 0, 'wo': 0}
         with self.db.get_session() as s:
             for tp in (s.query(TechProcess)
-                       .filter(TechProcess.is_deleted == True,
-                               TechProcess.deleted_at != None,
+                       .filter(TechProcess.is_deleted,
+                               TechProcess.deleted_at is not None,
                                TechProcess.deleted_at < cutoff)
                        .all()):
                 s.delete(tp)
                 counts['tp'] += 1
             for op in (s.query(Operation)
-                       .filter(Operation.is_deleted == True,
-                               Operation.deleted_at != None,
+                       .filter(Operation.is_deleted,
+                               Operation.deleted_at is not None,
                                Operation.deleted_at < cutoff)
                        .all()):
                 s.delete(op)
                 counts['op'] += 1
             for p in (s.query(Product)
-                      .filter(Product.is_deleted == True,
-                              Product.deleted_at != None,
+                      .filter(Product.is_deleted,
+                              Product.deleted_at is not None,
                               Product.deleted_at < cutoff)
                       .all()):
                 s.delete(p)
                 counts['product'] += 1
             for w in (s.query(WorkOrder)
-                      .filter(WorkOrder.is_deleted == True,
-                              WorkOrder.deleted_at != None,
+                      .filter(WorkOrder.is_deleted,
+                              WorkOrder.deleted_at is not None,
                               WorkOrder.deleted_at < cutoff)
                       .all()):
                 s.delete(w)

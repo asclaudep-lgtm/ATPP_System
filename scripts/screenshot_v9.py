@@ -3,7 +3,6 @@ Open main window without login dialog and capture v9 widgets as PNGs.
 """
 from __future__ import annotations
 
-import os
 import sys
 import time
 from pathlib import Path
@@ -12,11 +11,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QTimer, Qt
 
 from database.db_manager import DatabaseManager
 from ui.main_window import MainWindow
-
 
 OUT = ROOT / 'screenshots' / 'v9'
 OUT.mkdir(parents=True, exist_ok=True)

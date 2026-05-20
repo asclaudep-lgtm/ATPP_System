@@ -1,18 +1,29 @@
 """Custom report builder — select fields, filter, group, export."""
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QListWidget, QListWidgetItem,
-    QGroupBox, QMessageBox, QFileDialog, QCheckBox, QLineEdit,
-    QSplitter,
-)
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
-
 import openpyxl
-from openpyxl.styles import Font as XlFont, Alignment as XlAlign
-from config import EXPORT_DIR
+from openpyxl.styles import Alignment as XlAlign
+from openpyxl.styles import Font as XlFont
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFileDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
+from config import EXPORT_DIR
 
 # ——— Report definitions ——————————————————————————————————————————
 
@@ -189,7 +200,7 @@ class ReportBuilderWidget(QWidget):
         with self.db_manager.get_session() as s:
             q = s.query(model_cls)
             if hasattr(model_cls, 'is_deleted'):
-                q = q.filter(model_cls.is_deleted == False)
+                q = q.filter(not model_cls.is_deleted)
             if search and defn.get('search_field'):
                 sf = getattr(model_cls, defn['search_field'], None)
                 if sf:

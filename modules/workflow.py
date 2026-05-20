@@ -16,11 +16,15 @@ from datetime import datetime
 from typing import List, Optional, Set
 
 from database.models import (
-    TechProcess, TPStatus, LOCKED_STATUSES,
-    ApprovalSignature, SignerRole, User,
+    LOCKED_STATUSES,
+    ApprovalSignature,
+    SignerRole,
+    TechProcess,
+    TPStatus,
+    User,
 )
-from . import audit
 
+from . import audit
 
 # Какие роли обязательны для перехода в «Утверждён».
 # Можно настраивать (через settings, в будущем — отдельная админка).

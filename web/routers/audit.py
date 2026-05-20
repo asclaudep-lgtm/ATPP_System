@@ -1,8 +1,8 @@
 """GET /api/audit — журнал изменений с диффами полей."""
 from fastapi import APIRouter, Query
 
-from web.deps import _get_db_manager
 from modules.audit import list_audit_enriched
+from web.deps import _get_db_manager
 
 router = APIRouter(tags=["audit"])
 

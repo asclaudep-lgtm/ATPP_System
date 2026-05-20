@@ -8,12 +8,21 @@ from __future__ import annotations
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTableWidget,
-    QTableWidgetItem, QHeaderView, QAbstractItemView, QComboBox, QLineEdit,
+    QAbstractItemView,
+    QComboBox,
     QFrame,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
-from database.models import TechProcess, Operation, MaterialNorm, Product
+from database.models import TechProcess
 
 
 class DataCompletenessWidget(QWidget):

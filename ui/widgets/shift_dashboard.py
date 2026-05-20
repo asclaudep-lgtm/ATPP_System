@@ -1,12 +1,19 @@
 """Shift dashboard — цеховой экран: текущие наряды, статусы, брак за смену."""
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QLabel, QPushButton, QGroupBox,
-)
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
 from datetime import datetime
+
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class ShiftDashboard(QWidget):
@@ -77,12 +84,12 @@ class ShiftDashboard(QWidget):
         layout.addWidget(self._orders_table, stretch=1)
 
     def refresh(self):
-        from database.models import WorkOrder, RouteStep, ScrapRecord
+        from database.models import RouteStep, ScrapRecord, WorkOrder
 
         with self.db_manager.get_session() as s:
             # KPI
             active = s.query(WorkOrder).filter(
-                WorkOrder.is_deleted == False,
+                not WorkOrder.is_deleted,
                 WorkOrder.status.in_(['RELEASED', 'REGISTERED', 'IN_PROGRESS'])
             ).count()
             self._kpi_widgets['active_orders'].setText(str(active))
@@ -104,7 +111,7 @@ class ShiftDashboard(QWidget):
 
             # Orders
             orders = s.query(WorkOrder).filter(
-                WorkOrder.is_deleted == False,
+                not WorkOrder.is_deleted,
                 WorkOrder.status.in_(['RELEASED', 'REGISTERED', 'IN_PROGRESS'])
             ).order_by(WorkOrder.due_date).limit(50).all()
 

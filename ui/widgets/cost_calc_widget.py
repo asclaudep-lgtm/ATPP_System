@@ -1,23 +1,30 @@
 """
 Виджет расчёта себестоимости
 """
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QDoubleSpinBox, QPushButton, QComboBox,
-    QTableWidget, QTableWidgetItem, QGroupBox,
-    QFrame, QHeaderView, QSplitter
-)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
+from config import DEFAULT_FACTORY_OVERHEAD, DEFAULT_LABOR_OVERHEAD, DEFAULT_PROFIT_MARGIN, DEFAULT_SHOP_OVERHEAD
 from modules.cost_calc import (
-    CostCalculator, TIME_MODE_PLAN, TIME_MODE_ACTUAL,
+    TIME_MODE_ACTUAL,
+    TIME_MODE_PLAN,
+    CostCalculator,
 )
-from config import (
-    DEFAULT_LABOR_OVERHEAD, DEFAULT_SHOP_OVERHEAD,
-    DEFAULT_FACTORY_OVERHEAD, DEFAULT_PROFIT_MARGIN
-)
-
 
 COST_ROWS = [
     ('material_cost',      'Материалы'),

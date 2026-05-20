@@ -7,12 +7,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 from sqlalchemy.orm import Session
 
 from database.models import Equipment
-from database.models._v10_v14 import ShiftType
 
 
 @dataclass
@@ -156,8 +155,8 @@ def calculate_oee(session: Session, *,
     Performance = actual_output / theoretical_output
     Quality = good_parts / total_parts
     """
+    from database.models._production import RouteStep
     from database.models._v9 import MachineStatus
-    from database.models._production import RouteStep, RouteStepStatus
 
     eq = session.get(Equipment, equipment_id)
     name = eq.name if eq else f'Станок {equipment_id}'
@@ -187,7 +186,7 @@ def calculate_oee(session: Session, *,
     from database.models import Operation as Op
     eq_ops = session.query(Op.id).filter(
         Op.equipment_id == equipment_id,
-        Op.is_deleted == False,
+        not Op.is_deleted,
     ).all()
     eq_op_ids = [o[0] for o in eq_ops]
 
@@ -242,8 +241,9 @@ def simulate_flow(session: Session, *,
 
     speedup: ускорение (60 = 1 час за секунду).
     """
-    from modules.scheduler import schedule_aps
     from random import random, seed
+
+    from modules.scheduler import schedule_aps
 
     seed(42)
 

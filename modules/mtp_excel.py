@@ -28,16 +28,16 @@
 from __future__ import annotations
 
 import io
-from copy import copy
-from pathlib import Path
-from typing import Iterable, Optional, Union, List
 
 # ────────────────────────────────────────────────────────────────────────
 # Координаты ячеек (под шаблон УЗГА-Инжиниринг).
 # Если форма поменяется — нужно обновить только эти константы.
 # ────────────────────────────────────────────────────────────────────────
-
 import logging
+from copy import copy
+from pathlib import Path
+from typing import Optional, Union
+
 _logger = logging.getLogger(__name__)
 TEMPLATE_PATH = Path(__file__).resolve().parent.parent \
     / 'resources' / 'MTP_УЗГА_template.xlsx'
@@ -325,7 +325,10 @@ def generate_mtp_excel(
         )
 
     from database.models import (
-        TechProcess, WorkOrder, Operation, Equipment,
+        Equipment,
+        Operation,
+        TechProcess,
+        WorkOrder,
     )
 
     tp = session.get(TechProcess, tech_process_id)
@@ -403,7 +406,7 @@ def generate_mtp_excel(
 
     # ── Операции (маршрутно-технологическое описание) ────────────────
     # Если операций больше, чем мест в шаблоне — расширяем
-    new_footer_row = _ensure_op_rows(ws, len(ops))
+    _ensure_op_rows(ws, len(ops))
 
     for idx, op in enumerate(ops):
         row = ROW_OPS_FIRST + idx

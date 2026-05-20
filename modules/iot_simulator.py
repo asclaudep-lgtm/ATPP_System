@@ -9,24 +9,21 @@
 """
 from __future__ import annotations
 
+# ──────────────────────────────────────────────────────────────
+# Simulated Machine
+# ──────────────────────────────────────────────────────────────
+import logging
 import random
 import time
-from datetime import datetime, timedelta, date as date_type
-from typing import Optional, Callable, List
-from threading import Thread, Event
+from datetime import datetime
+from threading import Event, Thread
+from typing import Callable, List, Optional
 
 from sqlalchemy.orm import Session
 
 from database.models import Equipment
 from modules.iot_collector import MachineTelemetry, store_telemetry
 
-
-# ──────────────────────────────────────────────────────────────
-# Simulated Machine
-# ──────────────────────────────────────────────────────────────
-
-
-import logging
 _logger = logging.getLogger(__name__)
 class SimulatedMachine:
     """Один симулированный станок."""

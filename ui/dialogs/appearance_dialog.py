@@ -8,12 +8,10 @@
 """
 from __future__ import annotations
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QComboBox, QSpinBox, QPushButton,
-    QHBoxLayout, QLabel, QDialogButtonBox, QMessageBox
-)
-
 import logging
+
+from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QMessageBox, QSpinBox, QVBoxLayout
+
 _logger = logging.getLogger(__name__)
 
 from modules import settings

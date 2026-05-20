@@ -23,7 +23,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-
 _MAX_ALERTS = 500
 
 
@@ -59,7 +58,7 @@ def _read_cfg() -> dict[str, str]:
             if '=' in line:
                 k, v = line.split('=', 1)
                 out[k.strip().lower()] = v.strip()
-    except Exception as e:
+    except Exception:
         _log.warning('cfg read failed: {e}')
     return out
 
@@ -80,7 +79,7 @@ def _append_log(record: dict[str, Any]) -> None:
     try:
         log.write_text(json.dumps(data, ensure_ascii=False, indent=2),
                        encoding='utf-8')
-    except Exception as e:
+    except Exception:
         _log.warning('cannot write log: {e}')
 
 
@@ -96,7 +95,7 @@ def _post_webhook(url: str, payload: dict[str, Any]) -> None:
         )
         with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
             resp.read(64)
-    except Exception as e:
+    except Exception:
         _log.warning('webhook failed ({url}): {e}')
 
 

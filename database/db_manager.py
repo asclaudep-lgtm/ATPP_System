@@ -111,8 +111,13 @@ class DatabaseManager:
                             elif isinstance(dv, (int, float)):
                                 default = f' DEFAULT {dv}'
                             elif isinstance(dv, str):
-                                default = f" DEFAULT '{dv}'"
-                        sql = f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type_str}{default}{nullable}"
+                                # Escape single quotes to prevent SQL injection
+                                safe_dv = dv.replace("'", "''")
+                                default = f" DEFAULT '{safe_dv}'"
+                        # Quote identifiers to prevent SQL injection
+                        safe_table = f'"{table_name}"'
+                        safe_col = f'"{col.name}"'
+                        sql = f"ALTER TABLE {safe_table} ADD COLUMN {safe_col} {col_type_str}{default}{nullable}"
                         try:
                             conn.execute(text(sql))
                             conn.commit()
@@ -242,7 +247,6 @@ class DatabaseManager:
                 )
                 session.add(admin)
                 session.flush()  # get admin.id for FK references below
-                session.flush()
 
             # Добавляем базовые материалы
             if session.query(Material).count() == 0:
@@ -269,15 +273,15 @@ class DatabaseManager:
             if session.query(Profession).count() == 0:
                 professions = [
                     Profession(name='Токарь', typical_grade=3,
-                              hourly_rates='{"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}'),
+                              hourly_rates={"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}),
                     Profession(name='Фрезеровщик', typical_grade=3,
-                              hourly_rates='{"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}'),
+                              hourly_rates={"1": 200, "2": 220, "3": 250, "4": 280, "5": 320, "6": 360}),
                     Profession(name='Шлифовщик', typical_grade=4,
-                              hourly_rates='{"1": 210, "2": 230, "3": 260, "4": 290, "5": 330, "6": 370}'),
+                              hourly_rates={"1": 210, "2": 230, "3": 260, "4": 290, "5": 330, "6": 370}),
                     Profession(name='Слесарь', typical_grade=3,
-                              hourly_rates='{"1": 190, "2": 210, "3": 240, "4": 270, "5": 310, "6": 350}'),
+                              hourly_rates={"1": 190, "2": 210, "3": 240, "4": 270, "5": 310, "6": 350}),
                     Profession(name='Контролёр', typical_grade=3,
-                              hourly_rates='{"1": 180, "2": 200, "3": 230, "4": 260, "5": 300, "6": 340}'),
+                              hourly_rates={"1": 180, "2": 200, "3": 230, "4": 260, "5": 300, "6": 340}),
                 ]
                 session.add_all(professions)
 

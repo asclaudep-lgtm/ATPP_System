@@ -16,18 +16,29 @@ v7.7 (a–i, 8 улучшений):
 """
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal, QSize
-from PyQt6.QtGui import QFont, QColor, QIcon, QAction
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QFrame, QLabel,
-    QPushButton, QListWidget, QListWidgetItem, QStackedWidget, QMessageBox,
-    QInputDialog, QMenu, QSizePolicy, QToolButton,
+    QFrame,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from database.models import (
-    Product, TechProcess, TPStatus, Operation, Equipment,
+    Product,
+    TechProcess,
+    TPStatus,
 )
-
 
 # Цвет + эмодзи + подпись для статусов ТП
 STATUS_BADGE = {
@@ -165,7 +176,7 @@ class ProductKTPWidget(QWidget):
         try:
             tps = (s.query(TechProcess)
                    .filter(TechProcess.product_id == self.product_id,
-                           ((TechProcess.is_deleted == False)
+                           ((not TechProcess.is_deleted)
                             | (TechProcess.is_deleted.is_(None))))
                    .order_by(TechProcess.is_default_for_product.desc(),
                              TechProcess.number)

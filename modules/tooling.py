@@ -6,11 +6,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import and_
-
 from database.models import (
-    ToolingItem, ToolingIssue, ToolingStatus, OperationTooling,
-    Operation,
+    OperationTooling,
+    ToolingIssue,
+    ToolingItem,
+    ToolingStatus,
 )
 
 

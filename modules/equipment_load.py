@@ -12,15 +12,15 @@ v9-2: Расчёт загрузки оборудования.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import List, Dict, NamedTuple, Optional
-
-from sqlalchemy import func
+from typing import Dict, List, NamedTuple
 
 from database.models import (
-    Equipment, Operation, RouteStep, RouteStepStatus,
-    WorkOrder, WorkOrderItem, WorkOrderStatus,
+    Equipment,
+    Operation,
+    RouteStep,
+    WorkOrder,
+    WorkOrderStatus,
 )
-
 
 # Стандартная рабочая смена, ч.
 DEFAULT_SHIFT_HOURS = 8.0

@@ -14,7 +14,6 @@ from typing import List, Tuple
 
 from database.models import TechProcess
 
-
 # Список секторов в виде (имя, проверка).
 # Каждый сектор даёт равный вклад. 6 секторов × 100 / 6 = 16.67% на каждый.
 _SECTORS: List[str] = [

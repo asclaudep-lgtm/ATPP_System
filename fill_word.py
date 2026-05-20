@@ -1,9 +1,11 @@
-import subprocess, sys, os
+import subprocess
+import sys
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 from docx import Document
-from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt
 
 # --- Get unique passport numbers ---
 ps_script = r'''

@@ -6,13 +6,14 @@
 """
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from docx import Document
-from docx.shared import Cm, Pt, Inches, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
+from docx.shared import Cm, Pt, RGBColor
 
 OUTPUT = Path(__file__).parent.parent / 'resources' / 'templates' / 'ktd_docx'
 

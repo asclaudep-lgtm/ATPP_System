@@ -4,14 +4,27 @@ Each method opens a dialog or adds a widget tab.  Extracted from
 main_window.py to keep the coordinator class under 800 lines.
 """
 
+import logging
+
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QTableWidget, QTableWidgetItem,
-    QComboBox, QLabel, QHBoxLayout, QDoubleSpinBox, QInputDialog,
-    QMessageBox, QFileDialog, QPlainTextEdit, QSplitter,
-    QPushButton, QWidget, QTabWidget,
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFileDialog,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
-import logging
 _logger = logging.getLogger(__name__)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
@@ -48,14 +61,13 @@ class DialogLaunchersMixin:
 
     def _open_doc_dialog(self):
         widget = self.work_area.currentWidget()
-        if not hasattr(widget, 'tp_id'):
-            QMessageBox.information(self, "Документы",
-                                    "Откройте технологический процесс для генерации документов.\n"
-                                    "Дважды кликните по ТП в дереве навигации.")
-            return
+        tp_id = None
+        tp_num = ""
+        if hasattr(widget, 'tp_id'):
+            tp_id = widget.tp_id
+            tp_num = widget._tp.get('number', str(tp_id)) if hasattr(widget, '_tp') else str(tp_id)
         from ui.dialogs.doc_dialog import DocGenerateDialog
-        tp_num = widget._tp.get('number', str(widget.tp_id))
-        dlg = DocGenerateDialog(self.db_manager, widget.tp_id, tp_num, parent=self)
+        dlg = DocGenerateDialog(self.db_manager, tp_id, tp_num, parent=self)
         dlg.exec()
 
     def _export_current_tp(self, fmt):
@@ -247,8 +259,8 @@ class DialogLaunchersMixin:
         dlg.exec()
 
     def _export_cost_1c(self):
-        from modules.onec_exchange import export_cost_data
         from config import EXPORT_DIR
+        from modules.onec_exchange import export_cost_data
         try:
             with self.db_manager.get_session() as s:
                 fp = export_cost_data(s, out_path=EXPORT_DIR / '1c_cost.xml')
@@ -258,8 +270,8 @@ class DialogLaunchersMixin:
             QMessageBox.critical(self, 'Ошибка', str(e))
 
     def _export_timeline_1c(self):
-        from modules.onec_exchange import export_timeline_data
         from config import EXPORT_DIR
+        from modules.onec_exchange import export_timeline_data
         try:
             with self.db_manager.get_session() as s:
                 fp = export_timeline_data(
@@ -285,7 +297,7 @@ class DialogLaunchersMixin:
         dlg.exec()
 
     def _open_unv_tables(self):
-        from modules.unv_tables import lookup_unv, list_categories, CATEGORY_MAP
+        from modules.unv_tables import CATEGORY_MAP, list_categories, lookup_unv
 
         dlg = QDialog(self)
         dlg.setWindowTitle('Таблицы УНВ')
@@ -970,7 +982,7 @@ class DialogLaunchersMixin:
         )
         if not ok:
             return
-        from modules.audit import snapshot_tp, log_change
+        from modules.audit import log_change, snapshot_tp
         ver_id = snapshot_tp(
             self.db_manager,
             tp_id=tp_id,
@@ -994,7 +1006,7 @@ class DialogLaunchersMixin:
                                 f"Снимок сохранён (версия #{ver_id}).")
 
     def _show_tp_history(self, tp_id):
-        from modules.audit import list_versions, list_audit
+        from modules.audit import list_audit, list_versions
 
         versions = list_versions(self.db_manager, tp_id=tp_id)
 
@@ -1193,8 +1205,8 @@ class DialogLaunchersMixin:
                              *, is_variant: bool, title: str, prompt: str,
                              register_default: bool = True,
                              suggested_tp_number=None):
-        from ui.dialogs.journal_register_dialog import JournalRegisterDialog
         from modules import journal as journal_mod
+        from ui.dialogs.journal_register_dialog import JournalRegisterDialog
 
         defaults = {}
         if suggested_tp_number:

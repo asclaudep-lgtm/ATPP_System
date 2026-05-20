@@ -1,10 +1,15 @@
 """PDO analytics — bottleneck report, stuck orders, Gantt timeline."""
 
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QLabel, QPushButton, QGroupBox, QTabWidget,
+    QLabel,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtGui import QFont, QColor
+
 from modules import pdo_analytics
 
 

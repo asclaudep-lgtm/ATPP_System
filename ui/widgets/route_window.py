@@ -16,23 +16,33 @@ RouteWindow — окно «Операционный маршрут детали�
 """
 from __future__ import annotations
 
-from datetime import datetime
 import json
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QBrush, QFont
+from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QFrame, QGroupBox,
-    QSplitter, QTabWidget, QWidget, QMessageBox, QTextEdit,
+    QDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
 )
 
 from database.models import (
-    WorkOrder, WorkOrderItem, RouteStep, RouteStepStatus,
-    ProductionEvent, ProductionIssue, IssueStatus, Operation,
+    IssueStatus,
+    ProductionEvent,
+    RouteStep,
+    RouteStepStatus,
+    WorkOrder,
+    WorkOrderItem,
     WorkOrderStatus,
 )
-
 
 # Цвет/иконка для статусов RouteStep
 ROUTE_STATUS = {

@@ -8,14 +8,19 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import func, case
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from database.models import (
-    IssueStatus, ProductionEvent, ProductionIssue, RouteStep,
-    RouteStepStatus, User, Workshop, WorkOrder, WorkOrderItem,
+    IssueStatus,
+    ProductionEvent,
+    ProductionIssue,
+    RouteStep,
+    RouteStepStatus,
+    User,
+    WorkOrder,
+    Workshop,
 )
-
 
 # ────────────────────────────────────────────────────────────────────────────
 # B7. Выработка за период

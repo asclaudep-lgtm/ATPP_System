@@ -1,13 +1,16 @@
 """Production API — route slips, barcode lookup, QA terminal."""
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.orm import Session
 from typing import Optional
 
-from web.deps import get_db, get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
 from database.models import (
-    WorkOrder, WorkOrderItem, RouteStep, ProductionEvent,
-    ProductionIssue, IssuePhoto,
+    ProductionIssue,
+    RouteStep,
+    WorkOrder,
+    WorkOrderItem,
 )
+from web.deps import get_current_user, get_db
 
 router = APIRouter(tags=["production"])
 

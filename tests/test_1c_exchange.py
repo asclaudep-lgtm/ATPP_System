@@ -1,10 +1,7 @@
 """Тесты модуля интеграции с 1С."""
 import json
-from pathlib import Path
-from xml.etree import ElementTree as ET
-import pytest
 
-from database.models import Product, Material
+from database.models import Product
 
 
 XML_SAMPLE = """<?xml version="1.0" encoding="utf-8"?>

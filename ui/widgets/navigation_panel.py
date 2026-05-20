@@ -3,18 +3,31 @@
 Module buttons moved to ActivityBar. Search moved to TitleBar.
 All styling via QSS selectors (setObjectName / setProperty).
 """
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTreeWidget,
-    QTreeWidgetItem, QPushButton, QLineEdit, QMenu, QMessageBox,
-    QLabel, QFrame, QSizePolicy, QScrollArea,
-)
+import logging
+
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QTabWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from database.models import (
-    Product, ProductGroup, TechProcess, TPStatus,
+    Product,
+    ProductGroup,
+    TechProcess,
+    TPStatus,
 )
 
-import logging
 _logger = logging.getLogger(__name__)
 
 STATUS_BADGE = {
@@ -334,7 +347,7 @@ class NavigationPanel(QWidget):
                     self._product_tree.addTopLevelItem(grp_item)
 
                     q = s.query(Product).filter(
-                        Product.is_deleted == False,
+                        not Product.is_deleted,
                         Product.group_id == g.id,
                     )
                     if search:
@@ -349,7 +362,7 @@ class NavigationPanel(QWidget):
 
                 # Изделия без группы
                 q = s.query(Product).filter(
-                    Product.is_deleted == False,
+                    not Product.is_deleted,
                     Product.group_id.is_(None),
                 )
                 if search:
@@ -376,7 +389,7 @@ class NavigationPanel(QWidget):
         try:
             with self.db_manager.get_session() as s:
                 q = s.query(TechProcess).filter(
-                    TechProcess.is_deleted == False)
+                    not TechProcess.is_deleted)
                 if search:
                     q = q.filter(TechProcess.number.ilike(f"%{search}%"))
                 for tp in q.order_by(TechProcess.number).all():

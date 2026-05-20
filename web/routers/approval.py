@@ -2,10 +2,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from web.deps import get_db, get_current_user
-from web.schemas import ApprovalAction
 from database.models import TechProcess, TPStatus
 from modules.audit import log_change_session
+from web.deps import get_current_user, get_db
+from web.schemas import ApprovalAction
 
 router = APIRouter(tags=["approval"])
 

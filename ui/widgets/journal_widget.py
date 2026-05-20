@@ -6,16 +6,27 @@ from __future__ import annotations
 from datetime import date
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView, QMessageBox, QFileDialog, QInputDialog, QMenu,
+    QAbstractItemView,
+    QComboBox,
+    QFileDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtGui import QColor, QBrush, QAction
 
 from database.models import RegistrationJournal
 from modules import journal as journal_mod
-
 
 COLS = [
     ('entry_no', '№', 50),
@@ -155,7 +166,6 @@ class JournalWidget(QWidget):
         return m
 
     def _import(self, layout: str):
-        from PyQt6.QtWidgets import QFileDialog
         path_str, _ = QFileDialog.getOpenFileName(
             self, 'Импорт журнала из xlsx',
             '', 'Excel (*.xlsx *.xls)')
@@ -407,7 +417,6 @@ class JournalWidget(QWidget):
             self.open_tp.emit(tp_id)
 
     def _export(self, layout: str):
-        from PyQt6.QtWidgets import QFileDialog
         path_str, _ = QFileDialog.getSaveFileName(
             self, 'Экспорт журнала',
             f'Журнал_{layout}.xlsx', 'Excel (*.xlsx)')

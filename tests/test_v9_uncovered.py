@@ -2,7 +2,7 @@
 metrology, scrap_journal, ecn.  Happy path + edge cases."""
 
 import pytest
-from datetime import date, timedelta
+from datetime import date
 
 
 class TestTooling:

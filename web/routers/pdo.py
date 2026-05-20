@@ -1,15 +1,16 @@
 """PDO API v3 — real workflow with OMTS, Tech Dept, Deputy approval."""
 
 import logging
+
 _logger = logging.getLogger(__name__)
 
 from datetime import date
-from fastapi import APIRouter, Depends, Query, HTTPException, Body
-from sqlalchemy.orm import Session
-from typing import Optional
 
-from web.deps import get_db, get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
 from modules import pdo_module
+from web.deps import get_current_user, get_db
 
 router = APIRouter(tags=["pdo"])
 
@@ -61,7 +62,7 @@ def create_order(
     if not product_id and designation:
         p = db.query(Product).filter(
             Product.designation == designation.strip(),
-            Product.is_deleted == False).first()
+            not Product.is_deleted).first()
         if p:
             product_id = p.id
     if not product_id:

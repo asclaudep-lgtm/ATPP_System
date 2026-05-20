@@ -5,13 +5,13 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
-from database.models import (Operation, RouteStep, WorkOrder,
-                              WorkOrderItem, ProductionEvent)
+
+from database.models import Operation, RouteStep
 
 
 @dataclass

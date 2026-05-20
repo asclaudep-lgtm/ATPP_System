@@ -1,15 +1,26 @@
 """
 Диалог создания и редактирования перехода операции
 """
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QDoubleSpinBox, QSpinBox,
-    QPushButton, QTextEdit, QMessageBox, QFrame,
-    QGroupBox, QWidget, QTabWidget
-)
+import math
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-import math
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDoubleSpinBox,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class TransitionDialog(QDialog):

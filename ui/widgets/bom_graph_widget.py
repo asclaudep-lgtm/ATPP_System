@@ -1,13 +1,20 @@
 """Графическое дерево БОМ — QGraphicsScene с узлами-изделиями и связями."""
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QGraphicsView,
-                              QGraphicsScene, QGraphicsItem,
-                              QGraphicsRectItem, QGraphicsTextItem,
-                              QGraphicsLineItem, QPushButton, QHBoxLayout)
-from PyQt6.QtCore import Qt, QRectF, QPointF
-from PyQt6.QtGui import (QPainter, QColor, QPen, QBrush, QFont,
-                          QPainterPath)
+from PyQt6.QtCore import QPointF, QRectF, Qt
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsLineItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsTextItem,
+    QGraphicsView,
+    QHBoxLayout,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
-from modules.bom import get_bom_tree, BOMNode
+from modules.bom import BOMNode, get_bom_tree
 
 
 class BOMNodeItem(QGraphicsRectItem):

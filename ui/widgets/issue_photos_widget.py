@@ -9,10 +9,18 @@ from pathlib import Path
 from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QPixmap, QIcon
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QListView, QListWidget,
-    QListWidgetItem, QMessageBox, QPushButton, QVBoxLayout, QWidget,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QListView,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from modules import issue_photos

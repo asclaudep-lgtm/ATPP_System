@@ -222,7 +222,6 @@ class TestWebAPI:
             "product_id": pid, "number": f"TP-API-{_UID}-004",
         }, headers=headers)
         tpid = r.json()["id"]
-        import time
         r = client.post("/api/editor/work-orders", json={
             "product_id": pid, "tech_process_id": tpid,
             "qty_total": 10, "priority": 5,
@@ -241,7 +240,6 @@ class TestWebAPI:
             "product_id": pid, "number": f"TP-API-{_UID}-005",
         }, headers=headers)
         tpid = r.json()["id"]
-        import time
         r = client.post("/api/editor/work-orders", json={
             "product_id": pid, "tech_process_id": tpid,
             "qty_total": 5,

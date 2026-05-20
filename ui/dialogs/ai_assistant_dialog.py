@@ -1,9 +1,18 @@
 """Диалог AI-помощника технолога."""
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-                              QComboBox, QTableWidget, QTableWidgetItem,
-                              QLabel, QGroupBox, QProgressBar,
-                              QMessageBox, QDialogButtonBox)
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
 
 from database.models import Product
 
@@ -29,7 +38,7 @@ class AIAssistantDialog(QDialog):
         self.product_cb.setEditable(True)
         with self.db_manager.get_session() as s:
             for p in s.query(Product).filter(
-                Product.is_deleted == False
+                not Product.is_deleted
             ).order_by(Product.designation).all():
                 self.product_cb.addItem(
                     f'{p.designation} — {p.name}', p.id)

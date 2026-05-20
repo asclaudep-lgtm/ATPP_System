@@ -13,16 +13,25 @@ WhereIsPartDialog — окно «Где сейчас деталь?» (F3 hotkey)
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QBrush
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
+    QDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
     QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
 )
 
 from database.models import (
-    Product, TechProcess, WorkOrder, WorkOrderItem, RouteStep,
-    RouteStepStatus, WorkOrderStatus,
+    Product,
+    RouteStepStatus,
+    WorkOrder,
+    WorkOrderItem,
+    WorkOrderStatus,
 )
 
 

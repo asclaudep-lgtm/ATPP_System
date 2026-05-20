@@ -6,19 +6,21 @@ chronometry feedback calibration.
 """
 from __future__ import annotations
 
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from sqlalchemy.orm import Session
 
 from database.models import (
-    Product, Material, TechProcess, Operation, Equipment, Profession,
-    TPStatus, WorkOrder, RouteStep,
+    Equipment,
+    Operation,
+    Product,
+    RouteStep,
+    TechProcess,
+    TPStatus,
 )
-from modules.ai_assistant import _build_feature_vector, FEATURE_DIM
 
 
 @dataclass
@@ -75,14 +77,14 @@ def _build_transition_model(session: Session) -> Dict[tuple, Counter]:
     transitions: Dict[tuple, Counter] = defaultdict(Counter)
 
     tps = session.query(TechProcess).filter(
-        TechProcess.is_deleted == False,
+        not TechProcess.is_deleted,
         TechProcess.status == TPStatus.APPROVED,
     ).all()
 
     for tp in tps:
         ops = session.query(Operation).filter(
             Operation.tech_process_id == tp.id,
-            Operation.is_deleted == False,
+            not Operation.is_deleted,
         ).order_by(Operation.sort_order).all()
 
         if len(ops) < 2:
@@ -148,7 +150,7 @@ def _op_averages(session, op_name: str) -> Tuple[float, float, str, Optional[int
     """Вычислить средние параметры операции по имени."""
     ops = session.query(Operation).filter(
         Operation.name.ilike(f'%{op_name}%'),
-        Operation.is_deleted == False,
+        not Operation.is_deleted,
     ).limit(50).all()
 
     if not ops:
@@ -274,7 +276,7 @@ def _find_equipment_options(session, op_name: str) -> Dict[int, dict]:
     """Найти доступные станки для операции по имени."""
     ops = session.query(Operation).filter(
         Operation.name.ilike(f'%{op_name}%'),
-        Operation.is_deleted == False,
+        not Operation.is_deleted,
     ).limit(100).all()
 
     eq_map = {}
@@ -385,7 +387,7 @@ def predict_time_norms(session: Session, *,
     Использует линейную регрессию на исторических данных.
     """
     operations = session.query(Operation).filter(
-        Operation.is_deleted == False,
+        not Operation.is_deleted,
         Operation.t_piece > 0,
     ).limit(500).all()
 
@@ -463,7 +465,6 @@ def calibrate_from_chrono(session: Session, *,
     Для каждой завершённой RouteStep сравнивает фактическое время
     с плановым и обновляет нормы Operation при значимом отклонении.
     """
-    from modules.chronometry import collect_chrono_data, ChronoRecord
 
     steps = session.query(RouteStep).filter(
         RouteStep.finished_at.isnot(None),

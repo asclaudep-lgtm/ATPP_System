@@ -11,16 +11,19 @@ v9-6: Дашборд руководителя.
 """
 from __future__ import annotations
 
-from datetime import datetime, date, timedelta
-from typing import List, Dict, NamedTuple, Optional
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Dict, List, NamedTuple
 
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func
 
 from database.models import (
-    WorkOrder, WorkOrderItem, WorkOrderStatus,
-    RouteStep, RouteStepStatus, Operation, Equipment,
+    Operation,
+    RouteStep,
     ScrapRecord,
+    WorkOrder,
+    WorkOrderItem,
+    WorkOrderStatus,
 )
 from modules.equipment_load import equipment_load
 
@@ -124,14 +127,18 @@ def kpi_snapshot(session, *, days: int = 30) -> KPISnapshot:
 def export_pdf(snapshot: KPISnapshot, out_path: str,
                title: str = 'Дашборд руководителя') -> str:
     """Сохранить PDF-отчёт с KPI-снимком."""
-    from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
     )
 
     # Регистрация шрифтов для кириллицы.

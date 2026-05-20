@@ -3,12 +3,19 @@ v9-2 UI: Загрузка оборудования %.
 """
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QBrush
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpinBox,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QProgressBar, QComboBox,
+    QAbstractItemView,
+    QComboBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from modules.equipment_load import equipment_load, planned_equipment_load

@@ -1,21 +1,21 @@
 """
 Модуль генерации технологической документации
 """
+import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List
-from datetime import datetime
+
 import openpyxl
-from openpyxl.styles import Font, Alignment, Border, Side
 from docx import Document
-from docx.shared import Pt, Cm
+from docx.shared import Pt
+from openpyxl.styles import Alignment, Border, Font, Side
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-from database.models import TechProcess, Operation, Transition
-from config import TEMPLATES_DIR, EXPORT_DIR, product_export_dir
+from config import TEMPLATES_DIR, product_export_dir
+from database.models import Operation, TechProcess
 
-
-import logging
 _logger = logging.getLogger(__name__)
 class DocumentGenerator:
     """Класс для генерации технологической документации."""
@@ -93,7 +93,7 @@ class DocumentGenerator:
         for ch in '\\/:*?"<>|':
             raw = raw.replace(ch, '_')
         return f"МК_{raw}_{ts}"
-    
+
     def generate_route_card(
         self,
         tech_process_id: int,
@@ -110,10 +110,10 @@ class DocumentGenerator:
             Путь к созданному файлу
         """
         tp = self.session.get(TechProcess, tech_process_id)
-        
+
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
-        
+
         if output_format == "xlsx":
             return self._generate_route_card_excel(tp)
         elif output_format == "docx":
@@ -122,13 +122,13 @@ class DocumentGenerator:
             return self._generate_route_card_pdf(tp)
         else:
             raise ValueError(f"Неподдерживаемый формат: {output_format}")
-    
+
     def _generate_route_card_excel(self, tp: TechProcess) -> Path:
         """Генерация маршрутной карты в Excel"""
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Маршрутная карта"
-        
+
         # Настройка ширины столбцов
         ws.column_dimensions['A'].width = 8
         ws.column_dimensions['B'].width = 30
@@ -136,7 +136,7 @@ class DocumentGenerator:
         ws.column_dimensions['D'].width = 15
         ws.column_dimensions['E'].width = 10
         ws.column_dimensions['F'].width = 10
-        
+
         # Заголовок
         ws['A1'] = "МАРШРУТНАЯ КАРТА"
         ws['A1'].font = Font(size=14, bold=True)
@@ -152,18 +152,18 @@ class DocumentGenerator:
         ws[f'B{row}'] = tp.product.designation
         ws[f'D{row}'] = "ТП №:"
         ws[f'E{row}'] = tp.number
-        
+
         row += 1
         ws[f'A{row}'] = "Наименование:"
         ws[f'B{row}'] = tp.product.name
         ws.merge_cells(f'B{row}:F{row}')
-        
+
         row += 1
         ws[f'A{row}'] = "Материал:"
         ws[f'B{row}'] = tp.product.material.name if tp.product.material else ""
-        
+
         row += 2
-        
+
         # Заголовки таблицы операций
         headers = ["№ оп.", "Наименование операции", "Оборудование", "Профессия", "Тшт, мин", "Тпз, мин"]
         for col, header in enumerate(headers, start=1):
@@ -176,24 +176,24 @@ class DocumentGenerator:
                 top=Side(style='thin'),
                 bottom=Side(style='thin')
             )
-        
+
         # Операции
         row += 1
         for operation in self._mtp_operations(tp):
             ws.cell(row=row, column=1, value=operation.number)
             ws.cell(row=row, column=2, value=operation.name)
             ws.cell(row=row, column=3, value=operation.equipment.name if operation.equipment else "")
-            
+
             profession_text = ""
             if operation.profession:
                 profession_text = f"{operation.profession.name}"
                 if operation.grade:
                     profession_text += f" р.{operation.grade}"
             ws.cell(row=row, column=4, value=profession_text)
-            
+
             ws.cell(row=row, column=5, value=operation.t_piece)
             ws.cell(row=row, column=6, value=operation.t_setup)
-            
+
             # Границы
             for col in range(1, 7):
                 ws.cell(row=row, column=col).border = Border(
@@ -202,21 +202,21 @@ class DocumentGenerator:
                     top=Side(style='thin'),
                     bottom=Side(style='thin')
                 )
-            
+
             row += 1
-        
+
         # Подписи
         row += 2
         ws[f'A{row}'] = f"Разработал: {tp.author.full_name if tp.author else ''}"
         ws[f'D{row}'] = f"Дата: {datetime.now().strftime('%d.%m.%Y')}"
-        
+
         # Сохранение
         filename = f"{self._mk_basename(tp)}.xlsx"
         output_path = product_export_dir(tp.product) / filename
         wb.save(output_path)
-        
+
         return output_path
-    
+
     def _generate_route_card_word(self, tp: TechProcess) -> Path:
         """Генерация маршрутной карты в Word с использованием шаблона."""
         template_path = TEMPLATES_DIR / 'ktd_docx' / 'route_card_template.docx'
@@ -301,7 +301,6 @@ class DocumentGenerator:
         if doc_type == 'MK':
             self._fill_operations_table(doc, tp)
 
-        tag = 'MK' if doc_type == 'MK' else 'title'
         suffix = 'route_card' if doc_type == 'MK' else 'title_page'
         filename = f'{suffix}_{tp.number or "TP"}_{now.strftime("%Y%m%d_%H%M")}.docx'
         output_path = product_export_dir(tp.product) / filename
@@ -309,23 +308,31 @@ class DocumentGenerator:
         return output_path
 
     def _replace_in_doc(self, doc, replacements: dict):
-        """Заменить плейсхолдеры во всех параграфах и таблицах документа."""
+        """Replace placeholders in all paragraphs and tables."""
         for paragraph in doc.paragraphs:
-            for key, value in replacements.items():
-                if key in paragraph.text:
-                    for run in paragraph.runs:
-                        if key in run.text:
-                            run.text = run.text.replace(key, value)
-
+            self._replace_in_paragraph(paragraph, replacements)
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        for key, value in replacements.items():
-                            if key in paragraph.text:
-                                for run in paragraph.runs:
-                                    if key in run.text:
-                                        run.text = run.text.replace(key, value)
+                        self._replace_in_paragraph(paragraph, replacements)
+
+    @staticmethod
+    def _replace_in_paragraph(paragraph, replacements: dict):
+        """Replace {{placeholders}} in a paragraph, handling split runs."""
+        full_text = paragraph.text
+        changed = False
+        for key, value in replacements.items():
+            if key in full_text:
+                full_text = full_text.replace(key, str(value))
+                changed = True
+        if changed:
+            for run in paragraph.runs:
+                run.text = ''
+            if paragraph.runs:
+                paragraph.runs[0].text = full_text
+            else:
+                paragraph.add_run(full_text)
 
     def _fill_operations_table(self, doc, tp: TechProcess):
         """Заполнить таблицу операций в шаблоне МК."""
@@ -350,12 +357,16 @@ class DocumentGenerator:
         if target_table is None:
             return
 
-        # Удалить строки-плейсхолдеры (содержащие {{op_number}})
+        # Remove placeholder rows (containing {{) and blank filler rows after header
         rows_to_remove = []
-        for i, row in enumerate(target_table.rows):
-            first_cell_text = row.cells[0].text if row.cells else ''
-            if '{{op_number}}' in first_cell_text:
+        for i in range(1, len(target_table.rows)):
+            row = target_table.rows[i]
+            has_placeholder = any('{{' in (cell.text or '') for cell in row.cells)
+            all_empty = all((cell.text or '').strip() == '' for cell in row.cells)
+            if has_placeholder or all_empty:
                 rows_to_remove.append(i)
+            else:
+                break
         for idx in reversed(rows_to_remove):
             tr = target_table.rows[idx]._tr
             target_table._tbl.remove(tr)
@@ -383,18 +394,21 @@ class DocumentGenerator:
         }
         self._replace_in_doc(doc, totals_replacements)
 
-    def generate_title_page(self, tp_id: int) -> Path:
-        """Сгенерировать титульный лист ТП."""
+    def generate_title_page(self, tp_id: int, output_format: str = "docx") -> Path:
+        """Generate title page (DOCX, XLSX, or PDF)."""
         tp = self.session.get(TechProcess, tp_id)
         if tp is None:
             raise ValueError(f'TechProcess {tp_id} not found')
 
-        template_path = TEMPLATES_DIR / 'ktd_docx' / 'title_page_template.docx'
-        if not template_path.exists():
-            # Fallback: создать простой титульный лист
-            return self._generate_title_page_simple(tp)
+        if output_format == "xlsx":
+            return self._generate_title_page_excel(tp)
+        elif output_format == "pdf":
+            return self._generate_title_page_pdf(tp)
 
-        return self._generate_from_template(tp, template_path, 'title')
+        template_path = TEMPLATES_DIR / 'ktd_docx' / 'title_page_template.docx'
+        if template_path.exists():
+            return self._generate_from_template(tp, template_path, 'title')
+        return self._generate_title_page_simple(tp)
 
     def _generate_title_page_simple(self, tp: TechProcess) -> Path:
         """Запасной генератор титульного листа без шаблона."""
@@ -423,19 +437,85 @@ class DocumentGenerator:
         output_path = product_export_dir(tp.product) / filename
         doc.save(str(output_path))
         return output_path
-    
+
+    def _generate_title_page_excel(self, tp: TechProcess) -> Path:
+        """Generate title page in XLSX format."""
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Титульный лист"
+        ws.column_dimensions['A'].width = 25
+        ws.column_dimensions['B'].width = 50
+
+        ws['A1'] = "ТЕХНОЛОГИЧЕСКИЙ ПРОЦЕСС"
+        ws['A1'].font = Font(size=16, bold=True)
+        ws['A1'].alignment = Alignment(horizontal='center')
+        ws.merge_cells('A1:B1')
+
+        row = 3
+        items = [
+            ("Обозначение:", tp.product.designation),
+            ("Изделие:", tp.product.name),
+            ("Материал:", f"{tp.product.material.name} {tp.product.material.grade}"
+             if tp.product.material else "—"),
+            ("ТП №:", tp.number or "—"),
+            ("Вид технологии:", tp.technology_type.value
+             if hasattr(tp.technology_type, 'value') else str(tp.technology_type or '')),
+            ("Дата:", datetime.now().strftime('%d.%m.%Y')),
+            ("Разработал:", tp.author.full_name if tp.author else "___________"),
+        ]
+        for label, value in items:
+            ws[f'A{row}'] = label
+            ws[f'A{row}'].font = Font(bold=True)
+            ws[f'B{row}'] = str(value)
+            row += 1
+
+        filename = f"title_page_{tp.number or 'TP'}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        output_path = product_export_dir(tp.product) / filename
+        wb.save(str(output_path))
+        return output_path
+
+    def _generate_title_page_pdf(self, tp: TechProcess) -> Path:
+        """Generate title page in PDF format."""
+        filename = f"title_page_{tp.number or 'TP'}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        output_path = product_export_dir(tp.product) / filename
+        c = canvas.Canvas(str(output_path), pagesize=A4)
+        width, height = A4
+
+        c.setFont("Helvetica-Bold", 18)
+        c.drawCentredString(width / 2, height - 100, "ТЕХНОЛОГИЧЕСКИЙ ПРОЦЕСС")
+        c.setFont("Helvetica-Bold", 14)
+        c.drawCentredString(width / 2, height - 130, tp.number or '')
+
+        c.setFont("Helvetica", 11)
+        y = height - 200
+        items = [
+            f"Обозначение: {tp.product.designation}",
+            f"Изделие: {tp.product.name}",
+            f"Материал: {tp.product.material.name} {tp.product.material.grade}"
+            if tp.product.material else "Материал: —",
+            f"ТП №: {tp.number or '—'}",
+            f"Дата: {datetime.now().strftime('%d.%m.%Y')}",
+            f"Разработал: {tp.author.full_name if tp.author else '___________'}",
+        ]
+        for item in items:
+            c.drawString(80, y, item)
+            y -= 22
+
+        c.save()
+        return output_path
+
     def _generate_route_card_pdf(self, tp: TechProcess) -> Path:
         """Генерация маршрутной карты в PDF"""
         filename = f"{self._mk_basename(tp)}.pdf"
         output_path = product_export_dir(tp.product) / filename
-        
+
         c = canvas.Canvas(str(output_path), pagesize=A4)
         width, height = A4
-        
+
         # Заголовок
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(width / 2, height - 50, "МАРШРУТНАЯ КАРТА")
-        
+
         # Информация о детали
         c.setFont("Helvetica", 10)
         y = height - 100
@@ -446,7 +526,7 @@ class DocumentGenerator:
         c.drawString(50, y, f"Материал: {tp.product.material.name if tp.product.material else ''}")
         y -= 20
         c.drawString(50, y, f"ТП №: {tp.number}")
-        
+
         # Таблица операций
         y -= 40
         c.setFont("Helvetica-Bold", 9)
@@ -454,30 +534,30 @@ class DocumentGenerator:
         c.drawString(100, y, "Наименование операции")
         c.drawString(300, y, "Оборудование")
         c.drawString(450, y, "Тшт, мин")
-        
+
         c.setFont("Helvetica", 9)
         y -= 20
-        
+
         for operation in self._mtp_operations(tp):
             if y < 100:  # Новая страница
                 c.showPage()
                 y = height - 50
-            
+
             c.drawString(50, y, operation.number)
             c.drawString(100, y, operation.name[:30])
             c.drawString(300, y, operation.equipment.name[:20] if operation.equipment else "")
             c.drawString(450, y, str(operation.t_piece))
             y -= 15
-        
+
         # Подписи
         y -= 30
         c.drawString(50, y, f"Разработал: {tp.author.full_name if tp.author else ''}")
         c.drawString(350, y, f"Дата: {datetime.now().strftime('%d.%m.%Y')}")
-        
+
         c.save()
-        
+
         return output_path
-    
+
     def generate_operation_card(
         self,
         operation_id: int,
@@ -494,6 +574,8 @@ class DocumentGenerator:
             return self._generate_ok_excel(op, tp, out_dir)
         elif output_format == "pdf":
             return self._generate_ok_pdf(op, tp, out_dir)
+        elif output_format == "docx":
+            return self._generate_ok_word(op, tp)
         else:
             raise ValueError(f"Неподдерживаемый формат: {output_format}")
 
@@ -566,7 +648,6 @@ class DocumentGenerator:
 
     def _generate_ok_pdf(self, op: Operation, tp: TechProcess,
                          out_dir: Path) -> Path:
-        from reportlab.lib.units import mm
         c = canvas.Canvas(str(out_dir / f'{self._mk_basename(tp)}_OK_{op.number}.pdf'),
                           pagesize=A4)
         w, h = A4
@@ -596,6 +677,52 @@ class DocumentGenerator:
         c.save()
         return out_dir / f'{self._mk_basename(tp)}_OK_{op.number}.pdf'
 
+    def _generate_ok_word(self, op: Operation, tp: TechProcess) -> Path:
+        """Generate operation card in DOCX format."""
+        doc = Document()
+        heading = doc.add_heading('ОПЕРАЦИОННАЯ КАРТА (ГОСТ 3.1118-82)', level=1)
+        heading.alignment = 1
+
+        doc.add_paragraph(f"Деталь: {tp.product.designation} — {tp.product.name}")
+        doc.add_paragraph(f"ТП №: {tp.number}")
+        doc.add_paragraph(f"Операция: {op.number} — {op.name}")
+        doc.add_paragraph(
+            f"Оборудование: {op.equipment.name if op.equipment else '—'}   "
+            f"Профессия: {op.profession.name if op.profession else '—'}   "
+            f"Разряд: {op.grade or '—'}   "
+            f"Тпз={op.t_setup or 0:.1f}   "
+            f"Тшт={op.t_piece or 0:.1f}"
+        )
+        doc.add_paragraph("")
+
+        table = doc.add_table(rows=1, cols=8)
+        table.style = 'Table Grid'
+        headers = ["№", "Содержание перехода", "D, мм", "L, мм",
+                   "t, мм", "S", "n, об/мин", "i"]
+        for i, header in enumerate(headers):
+            table.rows[0].cells[i].text = header
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+
+        transitions = sorted(
+            [t for t in op.transitions if not getattr(t, 'is_deleted', False)],
+            key=lambda t: (t.sort_order or 0),
+        )
+        for tr in transitions:
+            row = table.add_row()
+            row.cells[0].text = tr.number or ''
+            row.cells[1].text = tr.text or ''
+            row.cells[2].text = str(tr.diameter or '')
+            row.cells[3].text = str(tr.length or '')
+            row.cells[4].text = str(tr.depth or '')
+            row.cells[5].text = str(tr.feed or '')
+            row.cells[6].text = str(tr.rpm or '')
+            row.cells[7].text = str(tr.passes or 1)
+
+        filename = f"{self._mk_basename(tp)}_OK_{op.number}.docx"
+        output_path = product_export_dir(tp.product) / filename
+        doc.save(str(output_path))
+        return output_path
+
     def generate_material_specification(
         self,
         tech_process_id: int,
@@ -605,6 +732,10 @@ class DocumentGenerator:
         tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
+
+        if output_format == "docx":
+            return self._generate_material_spec_word(tp)
+
         out_dir = product_export_dir(tp)
 
         wb = openpyxl.Workbook()
@@ -658,6 +789,43 @@ class DocumentGenerator:
         wb.save(str(out_path))
         return out_path
 
+    def _generate_material_spec_word(self, tp: TechProcess) -> Path:
+        """Generate material specification in DOCX format."""
+        doc = Document()
+        doc.add_heading('МАТЕРИАЛЬНАЯ СПЕЦИФИКАЦИЯ', level=1)
+        doc.add_paragraph(f"Обозначение: {tp.product.designation}")
+        doc.add_paragraph(f"Изделие: {tp.product.name}")
+        doc.add_paragraph(f"ТП №: {tp.number}")
+        doc.add_paragraph('')
+
+        table = doc.add_table(rows=1, cols=7)
+        table.style = 'Table Grid'
+        headers = ["Поз.", "Наименование материала", "Марка/ГОСТ",
+                   "Норма, кг", "Отходы, %", "Стоимость/дет.", "КИМ"]
+        for i, h in enumerate(headers):
+            table.rows[0].cells[i].text = h
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+
+        for i, mn in enumerate(tp.material_norms):
+            row = table.add_row()
+            row.cells[0].text = str(i + 1)
+            mat = mn.material.name if hasattr(mn, 'material') and mn.material else ''
+            row.cells[1].text = mat
+            grade = ''
+            if hasattr(mn, 'material') and mn.material:
+                grade = f"{mn.material.grade or ''} {mn.material.gost or ''}"
+            row.cells[2].text = grade.strip()
+            row.cells[3].text = str(mn.norm_per_piece or 0)
+            row.cells[4].text = str(mn.waste_percent or 0)
+            row.cells[5].text = str(mn.cost_per_piece or 0)
+            kim = 1.0 - (mn.waste_percent or 0) / 100.0
+            row.cells[6].text = str(round(kim, 3))
+
+        fname = self._mk_basename(tp) + '_material_spec.docx'
+        out_path = product_export_dir(tp.product) / fname
+        doc.save(str(out_path))
+        return out_path
+
     # ──────────────────────────────────────────────────────────────
     # Operation cards — all operations in a TP
     # ──────────────────────────────────────────────────────────────
@@ -678,6 +846,8 @@ class DocumentGenerator:
                 files.append(self._generate_ok_excel(op, tp, out_dir))
             elif output_format == "pdf":
                 files.append(self._generate_ok_pdf(op, tp, out_dir))
+            elif output_format == "docx":
+                files.append(self._generate_ok_word(op, tp))
         return files
 
     # ──────────────────────────────────────────────────────────────
@@ -691,6 +861,12 @@ class DocumentGenerator:
         tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
+
+        if output_format == "docx":
+            return self._generate_sketch_card_word(tp)
+        return self._generate_sketch_card_excel(tp)
+
+    def _generate_sketch_card_excel(self, tp: TechProcess) -> Path:
         out_dir = product_export_dir(tp)
 
         wb = openpyxl.Workbook()
@@ -761,6 +937,42 @@ class DocumentGenerator:
         wb.save(str(out_path))
         return out_path
 
+    def _generate_sketch_card_word(self, tp: TechProcess) -> Path:
+        """Generate sketch card in DOCX using template."""
+        template_path = TEMPLATES_DIR / 'ktd_docx' / 'sketch_card.docx'
+        if template_path.exists():
+            return self._generate_from_template(tp, template_path, 'KE')
+        doc = Document()
+        doc.add_heading('КАРТА ЭСКИЗОВ (КЭ)', level=1)
+        doc.add_paragraph(f"Обозначение: {tp.product.designation}")
+        doc.add_paragraph(f"Изделие: {tp.product.name}")
+        doc.add_paragraph(f"ТП №: {tp.number}")
+        doc.add_paragraph('')
+        table = doc.add_table(rows=1, cols=5)
+        table.style = 'Table Grid'
+        for i, h in enumerate(["Оп.", "Эскиз (файл)", "Тип", "Подпись", "Дата"]):
+            table.rows[0].cells[i].text = h
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+        for op in sorted(tp.operations, key=lambda o: (o.sort_order or 0)):
+            sketches = [sk for sk in (op.sketches or [])
+                        if not getattr(sk, 'is_deleted', False)]
+            if sketches:
+                for sk in sketches:
+                    row = table.add_row()
+                    row.cells[0].text = op.number or ''
+                    row.cells[1].text = sk.original_filename or sk.stored_path or ''
+                    row.cells[2].text = sk.file_type or ''
+                    row.cells[3].text = sk.title or ''
+                    row.cells[4].text = sk.created_at.strftime('%Y-%m-%d') if sk.created_at else ''
+            else:
+                row = table.add_row()
+                row.cells[0].text = op.number or ''
+                row.cells[1].text = '—'
+        fname = self._mk_basename(tp) + '_sketch_card.docx'
+        out_path = product_export_dir(tp.product) / fname
+        doc.save(str(out_path))
+        return out_path
+
     # ──────────────────────────────────────────────────────────────
     # Tooling list (Ведомость оснастки — ВО)
     # ──────────────────────────────────────────────────────────────
@@ -768,10 +980,16 @@ class DocumentGenerator:
     def generate_tooling_list(
         self, tech_process_id: int, output_format: str = "xlsx"
     ) -> Path:
-        """Generate tooling list (ВО) for a TP — tools + tooling items per operation."""
+        """Generate tooling list (ВО) for a TP."""
         tp = self.session.get(TechProcess, tech_process_id)
         if not tp:
             raise ValueError(f"ТП с ID {tech_process_id} не найден")
+
+        if output_format == "docx":
+            return self._generate_tooling_list_word(tp)
+        return self._generate_tooling_list_excel(tp)
+
+    def _generate_tooling_list_excel(self, tp: TechProcess) -> Path:
         out_dir = product_export_dir(tp)
 
         wb = openpyxl.Workbook()
@@ -860,6 +1078,42 @@ class DocumentGenerator:
         wb.save(str(out_path))
         return out_path
 
+    def _generate_tooling_list_word(self, tp: TechProcess) -> Path:
+        """Generate tooling list in DOCX using template."""
+        template_path = TEMPLATES_DIR / 'ktd_docx' / 'tooling_list.docx'
+        if template_path.exists():
+            return self._generate_from_template(tp, template_path, 'VO')
+        # Fallback: simple DOCX
+        doc = Document()
+        doc.add_heading('ВЕДОМОСТЬ ОСНАСТКИ (ВО)', level=1)
+        doc.add_paragraph(f"Обозначение: {tp.product.designation}")
+        doc.add_paragraph(f"Изделие: {tp.product.name}")
+        doc.add_paragraph(f"ТП №: {tp.number}")
+        doc.add_paragraph('')
+        table = doc.add_table(rows=1, cols=7)
+        table.style = 'Table Grid'
+        for i, h in enumerate(["Оп.", "Поз.", "Наименование", "Обозначение",
+                               "Кол.", "Тип", "Примечание"]):
+            table.rows[0].cells[i].text = h
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+        pos = 0
+        for op in sorted(tp.operations, key=lambda o: (o.sort_order or 0)):
+            for ot in (op.tools or []):
+                pos += 1
+                tool = ot.tool
+                row = table.add_row()
+                row.cells[0].text = op.number or ''
+                row.cells[1].text = str(pos)
+                row.cells[2].text = tool.name if tool else ''
+                row.cells[3].text = tool.designation if tool else ''
+                row.cells[4].text = str(ot.quantity or 1)
+                row.cells[5].text = tool.tool_type if tool else ''
+                row.cells[6].text = ''
+        fname = self._mk_basename(tp) + '_tooling_list.docx'
+        out_path = product_export_dir(tp.product) / fname
+        doc.save(str(out_path))
+        return out_path
+
     # ──────────────────────────────────────────────────────────────
     # Material list (Ведомость материалов — ВМ) — delegates
     # ──────────────────────────────────────────────────────────────
@@ -876,7 +1130,7 @@ class DocumentGenerator:
 
     def generate_document_pack(self, tech_process_id: int) -> List[Path]:
         """Generate complete document pack: title page, MK, OK, sketch card,
-        tooling list, material list.  Returns list of file paths.
+        tooling list, material list, control card.  Returns list of file paths.
         """
         import zipfile
         tp = self.session.get(TechProcess, tech_process_id)
@@ -920,7 +1174,13 @@ class DocumentGenerator:
             except Exception:
                 _logger.exception("Unhandled error")
 
-        # 6. ZIP archive
+        # 6. Control card (КК)
+        try:
+            files.append(self.generate_control_card(tech_process_id))
+        except Exception:
+            _logger.exception("Unhandled error")
+
+        # 7. ZIP archive
         zip_name = self._mk_basename(tp) + '_pack.zip'
         zip_path = out_dir / zip_name
         with zipfile.ZipFile(str(zip_path), 'w',
@@ -930,3 +1190,120 @@ class DocumentGenerator:
         files.append(zip_path)
 
         return files
+
+    # ──────────────────────────────────────────────────────────────
+    # Control card (Контрольная карта — КК)
+    # ──────────────────────────────────────────────────────────────
+
+    def generate_control_card(
+        self, tech_process_id: int, output_format: str = "xlsx"
+    ) -> Path:
+        """Generate control card (ГОСТ 3.1502-85)."""
+        tp = self.session.get(TechProcess, tech_process_id)
+        if not tp:
+            raise ValueError(f"ТП с ID {tech_process_id} не найден")
+
+        if output_format == "docx":
+            return self._generate_control_card_word(tp)
+        return self._generate_control_card_excel(tp)
+
+    def _generate_control_card_excel(self, tp: TechProcess) -> Path:
+        out_dir = product_export_dir(tp)
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Контрольная карта"
+        for col, w in zip('ABCDEFG', [6, 30, 25, 15, 15, 25]):
+            ws.column_dimensions[col].width = w
+
+        ws['A1'] = "КОНТРОЛЬНАЯ КАРТА (ГОСТ 3.1502-85)"
+        ws['A1'].font = Font(size=14, bold=True)
+        ws['A1'].alignment = Alignment(horizontal='center')
+        ws.merge_cells('A1:G1')
+
+        row = 3
+        ws[f'A{row}'] = "Обозначение:"; ws[f'B{row}'] = tp.product.designation
+        ws[f'D{row}'] = "ТП №:"; ws[f'E{row}'] = tp.number; row += 1
+        ws[f'A{row}'] = "Изделие:"; ws[f'B{row}'] = tp.product.name
+        row += 2
+
+        headers = ["№", "Контролируемый параметр", "Средство измерения",
+                   "Допуск", "Периодичность", "Исполнитель"]
+        for col, h in enumerate(headers, start=1):
+            cell = ws.cell(row=row, column=col, value=h)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                                 top=Side(style='thin'), bottom=Side(style='thin'))
+        row += 1
+
+        # Extract control-relevant parameters from operations
+        item = 0
+        for op in sorted(tp.operations, key=lambda o: (o.sort_order or 0)):
+            for tr in op.transitions:
+                if getattr(tr, 'is_deleted', False):
+                    continue
+                item += 1
+                params = []
+                if tr.diameter:
+                    params.append(f"D={tr.diameter}")
+                if tr.length:
+                    params.append(f"L={tr.length}")
+                if tr.depth:
+                    params.append(f"t={tr.depth}")
+                param_text = ', '.join(params) if params else tr.text or f"Переход {tr.number}"
+                ws.cell(row=row, column=1, value=str(item)).alignment = \
+                    Alignment(horizontal='center')
+                ws.cell(row=row, column=2, value=param_text)
+                ws.cell(row=row, column=3, value="Штангенциркуль")
+                ws.cell(row=row, column=4, value="По чертежу")
+                ws.cell(row=row, column=5, value="100%")
+                ws.cell(row=row, column=6, value="Контролёр ОТК")
+                for c in range(1, 7):
+                    ws.cell(row=row, column=c).border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin'))
+                row += 1
+
+        fname = self._mk_basename(tp) + '_control_card.xlsx'
+        out_path = out_dir / fname
+        wb.save(str(out_path))
+        return out_path
+
+    def _generate_control_card_word(self, tp: TechProcess) -> Path:
+        """Generate control card in DOCX using template."""
+        template_path = TEMPLATES_DIR / 'ktd_docx' / 'control_card.docx'
+        if template_path.exists():
+            return self._generate_from_template(tp, template_path, 'KK')
+        doc = Document()
+        doc.add_heading('КОНТРОЛЬНАЯ КАРТА (ГОСТ 3.1502-85)', level=1)
+        doc.add_paragraph(f"Обозначение: {tp.product.designation}")
+        doc.add_paragraph(f"Изделие: {tp.product.name}")
+        doc.add_paragraph(f"ТП №: {tp.number}")
+        doc.add_paragraph('')
+        table = doc.add_table(rows=1, cols=6)
+        table.style = 'Table Grid'
+        for i, h in enumerate(["№", "Контролируемый параметр", "Средство измерения",
+                               "Допуск", "Периодичность", "Исполнитель"]):
+            table.rows[0].cells[i].text = h
+            table.rows[0].cells[i].paragraphs[0].runs[0].font.bold = True
+        item = 0
+        for op in sorted(tp.operations, key=lambda o: (o.sort_order or 0)):
+            for tr in op.transitions:
+                if getattr(tr, 'is_deleted', False):
+                    continue
+                item += 1
+                row = table.add_row()
+                row.cells[0].text = str(item)
+                params = []
+                if tr.diameter: params.append(f"D={tr.diameter}")
+                if tr.length: params.append(f"L={tr.length}")
+                if tr.depth: params.append(f"t={tr.depth}")
+                row.cells[1].text = ', '.join(params) if params else (tr.text or '')
+                row.cells[2].text = "Штангенциркуль"
+                row.cells[3].text = "По чертежу"
+                row.cells[4].text = "100%"
+                row.cells[5].text = "Контролёр ОТК"
+        fname = self._mk_basename(tp) + '_control_card.docx'
+        out_path = product_export_dir(tp.product) / fname
+        doc.save(str(out_path))
+        return out_path

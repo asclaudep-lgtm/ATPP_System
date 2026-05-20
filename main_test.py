@@ -2,12 +2,12 @@
 Тестовый запуск приложения АТПП БЕЗ АВТОРИЗАЦИИ
 """
 import sys
-from PyQt6.QtWidgets import QApplication, QMessageBox
-from PyQt6.QtCore import Qt
 
+from PyQt6.QtWidgets import QApplication, QMessageBox
+
+from config import APP_NAME
 from database import DatabaseManager
 from ui import MainWindow
-from config import APP_NAME
 
 
 def main():
@@ -15,7 +15,7 @@ def main():
     # Создаём приложение
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
-    
+
     # Инициализируем базу данных
     try:
         db_manager = DatabaseManager()
@@ -27,7 +27,7 @@ def main():
             f"Не удалось инициализировать базу данных:\n{str(e)}"
         )
         return 1
-    
+
     # ТЕСТОВЫЙ РЕЖИМ: создаём фиктивного пользователя без авторизации
     test_user = {
         'id': 1,
@@ -39,17 +39,17 @@ def main():
         'created_at': None,
         'last_login': None
     }
-    
+
     # Создаём и показываем главное окно
     main_window = MainWindow(db_manager, test_user)
     main_window.show()
-    
+
     # Запускаем цикл обработки событий
     result = app.exec()
-    
+
     # Закрываем соединение с БД
     db_manager.close()
-    
+
     return result
 
 

@@ -9,11 +9,10 @@
 from __future__ import annotations
 
 import io
+import logging
 from pathlib import Path
 from typing import Optional
 
-
-import logging
 _logger = logging.getLogger(__name__)
 class BarcodeError(Exception):
     """Ошибка генерации штрих-кода."""
@@ -148,9 +147,9 @@ def generate_labels_pdf(session, work_order_id: int) -> bytes:
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import mm
-        from reportlab.pdfgen import canvas
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.pdfgen import canvas
     except ImportError as e:
         raise BarcodeError(
             'Библиотека reportlab не установлена.\n'

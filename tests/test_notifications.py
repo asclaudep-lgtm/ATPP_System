@@ -1,5 +1,4 @@
 """Tests for A6 in-app notifications + auto-notify on issue assignment."""
-import pytest
 
 from modules import notifications, production
 from database.models import (

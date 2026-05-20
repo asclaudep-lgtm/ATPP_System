@@ -1,17 +1,30 @@
 """TP editor widget — metadata, operations view, norms, documents."""
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QTabWidget,
-    QLabel, QLineEdit, QComboBox, QPushButton, QTextEdit,
-    QTableWidget, QTableWidgetItem, QMessageBox, QFrame,
-)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
-
-from database.models import (
-    TechProcess, Product, Operation, TPStatus, TPType, TechnologyType,
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
+from database.models import (
+    Operation,
+    TechnologyType,
+    TechProcess,
+    TPStatus,
+    TPType,
+)
 
 STATUS_COLORS = {
     TPStatus.DRAFT:    ('#f39c12', 'Черновик'),
@@ -263,7 +276,7 @@ class TPEditorWidget(QWidget):
         lay.addWidget(QLabel(summary))
 
         # Material norms from BOM
-        from database.models import BOMItem, MaterialNorm
+        from database.models import MaterialNorm
         with self.db_manager.get_session() as s:
             norms = (s.query(MaterialNorm)
                      .filter(MaterialNorm.tech_process_id == self.tp_id)

@@ -1,5 +1,4 @@
 """V12: Тесты MES-интеграции."""
-import pytest
 from database.models import Equipment
 
 

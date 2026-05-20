@@ -1,6 +1,5 @@
 """V12: Тесты OEE и цифрового двойника."""
-import pytest
-from database.models import Equipment, RouteStep
+from database.models import Equipment
 
 
 class TestDigitalTwin:

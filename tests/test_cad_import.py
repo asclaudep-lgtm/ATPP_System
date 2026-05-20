@@ -1,6 +1,5 @@
 """Тесты CAD-импорта."""
 import pytest
-from pathlib import Path
 from database.models import Product, Material
 
 
@@ -107,7 +106,7 @@ class TestCADImport:
             s.add(p)
             s.flush()
 
-            result = auto_fill_product(s, product_id=p.id,
+            auto_fill_product(s, product_id=p.id,
                                        file_path=step_path)
             # Масса не должна перезаписаться (уже заполнена)
             assert p.mass == 5.5

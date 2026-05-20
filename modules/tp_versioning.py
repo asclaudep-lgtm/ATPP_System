@@ -6,10 +6,9 @@ v9-7: Версионирование ТП — diff между снимками.
 from __future__ import annotations
 
 import json
-from typing import List, Dict, Optional
+from typing import List, Optional
 
 from database.models import TPVersion
-
 
 # ── List / load ───────────────────────────────────────────────────
 

@@ -3,16 +3,21 @@
 All endpoints return {items, total, page, page_size} for list operations.
 """
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 from typing import Optional
 
-from web.deps import get_db, get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from database.models import (
-    Product, TechProcess, WorkOrder, Material, Equipment,
-    Operation, TPStatus, WorkOrderStatus,
+    Equipment,
+    Material,
+    Operation,
+    Product,
+    TechProcess,
+    WorkOrder,
 )
+from web.deps import get_current_user, get_db
 
 router = APIRouter(tags=["mobile"])
 
@@ -48,7 +53,7 @@ def mobile_products(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    q = db.query(Product).filter(Product.is_deleted == False)
+    q = db.query(Product).filter(not Product.is_deleted)
     if search:
         q = q.filter(
             (Product.designation.ilike(f"%{search}%")) |
@@ -77,7 +82,7 @@ def mobile_product_detail(
         raise HTTPException(404, "Product not found")
     tps = db.query(TechProcess).filter(
         TechProcess.product_id == product_id,
-        TechProcess.is_deleted == False,
+        not TechProcess.is_deleted,
     ).all()
     return {
         'id': p.id, 'designation': p.designation, 'name': p.name,
@@ -108,7 +113,7 @@ def mobile_tps(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    q = db.query(TechProcess).filter(TechProcess.is_deleted == False)
+    q = db.query(TechProcess).filter(not TechProcess.is_deleted)
     if search:
         q = q.filter(TechProcess.number.ilike(f"%{search}%"))
     if status:
@@ -168,7 +173,7 @@ def mobile_work_orders(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    q = db.query(WorkOrder).filter(WorkOrder.is_deleted == False)
+    q = db.query(WorkOrder).filter(not WorkOrder.is_deleted)
     if search:
         q = q.filter(WorkOrder.number.ilike(f"%{search}%"))
     if status:
@@ -251,7 +256,6 @@ def scan_barcode(code: str,
 
     wo = woi.work_order
     product = wo.product if wo else None
-    tp = wo.tech_process if wo else None
 
     # Найти текущую операцию
     current_op = None
@@ -290,9 +294,10 @@ class MobileActionRequest(BaseModel):
 def mobile_action(body: MobileActionRequest,
                   db: Session = Depends(get_db),
                   user=Depends(get_current_user)):
+    from datetime import datetime as dt
+
     from database.models import WorkOrderItem, WorkOrderItemStatus
     from database.models._production import RouteStep, RouteStepStatus
-    from datetime import datetime as dt
 
     woi = db.query(WorkOrderItem).filter(
         WorkOrderItem.barcode == body.barcode,

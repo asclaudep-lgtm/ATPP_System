@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from web.deps import get_db, get_current_user
 from database.models import Product
-from modules.bom import get_bom_tree, get_bom_flat
+from modules.bom import get_bom_flat, get_bom_tree
+from web.deps import get_current_user, get_db
 
 router = APIRouter(tags=["bom"])
 

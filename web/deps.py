@@ -8,10 +8,10 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 import threading
+
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from database.db_manager import DatabaseManager
 from web.auth import verify_token
@@ -75,3 +75,28 @@ async def get_current_user(
         "role": user.role,
         "full_name": user.full_name,
     }
+
+
+def require_role(*allowed_roles: str):
+    """FastAPI dependency factory: restrict endpoint to specific roles.
+
+    Usage::
+
+        @router.post("/products")
+        def create(user=Depends(require_role("admin", "technologist"))):
+            ...
+    """
+    async def _check(user: dict = Depends(get_current_user)) -> dict:
+        if user.get("role") not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions. Required role: {', '.join(allowed_roles)}",
+            )
+        return user
+    return _check
+
+
+# Pre-built role dependencies for convenience
+require_admin = require_role("admin")
+require_editor = require_role("admin", "technologist", "engineer")
+require_viewer = require_role("admin", "technologist", "engineer", "foreman", "user")

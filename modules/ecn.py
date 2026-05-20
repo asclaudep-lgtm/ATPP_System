@@ -9,15 +9,17 @@ v9-8: Извещения об изменениях (Engineering Change Notice).
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime
-from typing import List, Optional, Iterable
+from typing import Iterable, List, Optional
 
 from database.models import (
-    ECN, ECNApproval, ECNStatus, SignerRole,
-    TechProcess, Product,
+    ECN,
+    ECNApproval,
+    ECNStatus,
+    SignerRole,
 )
 
-import logging
 _logger = logging.getLogger(__name__)
 
 

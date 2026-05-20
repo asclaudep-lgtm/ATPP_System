@@ -1,17 +1,27 @@
 """
 Диалог управления пользователями (только для admin)
 """
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QComboBox, QCheckBox,
-    QPushButton, QTableWidget, QTableWidgetItem,
-    QMessageBox, QHeaderView, QAbstractItemView, QFrame
-)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
 
 from database.models import User
-
 
 ROLES = {
     'admin': 'Администратор',
@@ -218,7 +228,7 @@ class UsersDialog(QDialog):
             QMessageBox.information(self, "Выбор", "Выберите пользователя для редактирования")
             return
 
-        cur_login = self.current_user.get('username', '')
+        self.current_user.get('username', '')
         with self.db_manager.get_session() as session:
             user = session.get(User, user_id)
             if not user:

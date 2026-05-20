@@ -1,5 +1,6 @@
 """Главный файл приложения ATPP (управляемый через launcher)."""
 import sys
+
 from launcher import launch
 
 

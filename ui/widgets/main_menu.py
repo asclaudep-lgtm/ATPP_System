@@ -4,9 +4,9 @@ Creates QActions and exposes them as attributes so MainWindow can
 connect them to its handler methods via triggered.connect().
 """
 
-from PyQt6.QtWidgets import QMenuBar, QMenu
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QMenu, QMenuBar
 
 
 class MainMenu(QMenuBar):

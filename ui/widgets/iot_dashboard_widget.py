@@ -1,11 +1,19 @@
 """IoT-дашборд: мониторинг станков в реальном времени."""
 from datetime import datetime
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                              QTableWidget, QTableWidgetItem, QLabel, QGroupBox,
-                              QSpinBox, QMessageBox)
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from modules.iot_collector import get_all_machine_statuses
 

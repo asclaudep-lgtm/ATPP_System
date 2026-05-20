@@ -1,8 +1,5 @@
 """Dock-панель AI-помощника с подсказками при редактировании ТП."""
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                              QPushButton, QTableWidget, QTableWidgetItem,
-                              QProgressBar)
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 
 class AIAssistantPanel(QWidget):

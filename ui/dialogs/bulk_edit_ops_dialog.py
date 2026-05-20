@@ -4,13 +4,21 @@
 Пользователь отмечает чекбокс рядом с полем — это значит «применить ко
 всем выбранным операциям». Если чекбокс снят — поле не трогается.
 """
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QHBoxLayout, QLabel, QCheckBox,
-    QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDialogButtonBox,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
     QMessageBox,
+    QSpinBox,
+    QVBoxLayout,
 )
 
 from database.models import Equipment, Profession

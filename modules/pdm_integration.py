@@ -18,20 +18,24 @@ from __future__ import annotations
 
 import abc
 import json
+import logging
 import shutil
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Iterable, Optional, Dict, List
+from typing import Iterable, List, Optional
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
+from openpyxl.styles import Alignment, Font
 
 from database.models import (
-    TechProcess, Product, MaterialNorm, Material, Sketch, BOMItem,
+    BOMItem,
+    MaterialNorm,
+    Product,
+    Sketch,
+    TechProcess,
 )
 
-import logging
 _logger = logging.getLogger(__name__)
 from config import EXPORT_DIR, SKETCHES_DIR, _sanitize_designation
 
@@ -48,7 +52,7 @@ def export_specification_xls(
     q = session.query(TechProcess)
     if tp_ids:
         q = q.filter(TechProcess.id.in_(list(tp_ids)))
-    q = q.filter((TechProcess.is_deleted == False) | (TechProcess.is_deleted.is_(None)))
+    q = q.filter((not TechProcess.is_deleted) | (TechProcess.is_deleted.is_(None)))
     tps = q.order_by(TechProcess.number).all()
 
     wb = Workbook()
@@ -163,7 +167,7 @@ class PdmDropWatcher:
             from database.models import Operation
             op = (s.query(Operation)
                   .filter(Operation.tech_process_id == tp.id,
-                          (Operation.is_deleted == False) |
+                          (not Operation.is_deleted) |
                           (Operation.is_deleted.is_(None)))
                   .order_by(Operation.sort_order).first())
             if op is None:
@@ -185,8 +189,7 @@ class PdmDropWatcher:
 
     def _import_cad(self, src: Path):
         """Импорт CAD-файла: создать/обновить Product из геометрии."""
-        from modules.cad_import import (import_cad_to_new_product,
-                                        auto_fill_product)
+        from modules.cad_import import auto_fill_product, import_cad_to_new_product
         with self.db.get_session() as s:
             designation = src.stem.strip()
             product = s.query(Product).filter(
@@ -237,8 +240,8 @@ class MockPdmAdapter(AbstractPdmAdapter):
         return {}
 
     def push_tech_process(self, tp_id: int) -> bool:
-        from database.models import TechProcess
         from database.db_manager import _get_db_manager
+        from database.models import TechProcess
         db = _get_db_manager()
         with db.get_session() as s:
             tp = s.get(TechProcess, tp_id)

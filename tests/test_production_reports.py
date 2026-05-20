@@ -2,9 +2,9 @@
 from datetime import datetime, timedelta
 
 from database.models import (
-    IssueKind, IssueSeverity, IssueStatus, Operation, Product,
-    ProductionIssue, RouteStep, RouteStepStatus, TechProcess, TPStatus,
-    TPType, User, Workshop, WorkOrder, WorkOrderItem, WorkOrderStatus,
+    IssueKind, IssueSeverity, Operation, Product,
+    TechProcess, TPStatus,
+    TPType, User, Workshop,
 )
 from modules import production, production_reports
 

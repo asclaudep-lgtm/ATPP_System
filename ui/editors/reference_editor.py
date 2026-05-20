@@ -4,17 +4,28 @@ Field configs define the form layout; a single QTableWidget + form
 handles CRUD for materials, equipment, tools, and professions.
 """
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QSplitter,
-    QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox,
-    QPushButton, QTextEdit, QTableWidget, QTableWidgetItem,
-    QMessageBox, QInputDialog,
-)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from database.models import Material, Equipment, Tool, Profession
-
+from database.models import Equipment, Material, Profession, Tool
 
 # ——— Field configs ——————————————————————————————————————————————
 

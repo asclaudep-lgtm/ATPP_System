@@ -6,33 +6,32 @@
 - инициализирует БД, показывает диалог авторизации и главное окно
 - при отсутствии UI-модулей выводит fallback UI
 """
+import logging
 import sys
-from typing import Optional
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
-from utils.logger import setup_logging, get_logger
+from utils.logger import get_logger, setup_logging
 
-import logging
 _logger = logging.getLogger(__name__)
 log = get_logger(__name__)
 
 try:
-    from ATPP_System.ui import MainWindow, AuthDialog
+    from ATPP_System.ui import AuthDialog, MainWindow
 except ImportError:
     try:
-        from ui import MainWindow, AuthDialog
+        from ui import AuthDialog, MainWindow
     except ImportError:
         MainWindow = None
         AuthDialog = None
 
-from database import DatabaseManager
 from config import APP_NAME
+from database import DatabaseManager
 
 
 def _fallback_ui(app: QApplication) -> int:
     log.warning("Fallback UI start (no UI modules loaded)")
-    from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
+    from PyQt6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
     fb = QWidget()
     fb.setWindowTitle("ATPP System (fallback)")
     lay = QVBoxLayout(fb)
@@ -58,7 +57,7 @@ def launch() -> int:
     # Применяем тему / шрифт / язык из пользовательских настроек
     try:
         from modules import settings as user_settings
-        from ui.theme import apply_theme, _apply_fluent_runtime, ACCENT_DEFAULT
+        from ui.theme import ACCENT_DEFAULT, _apply_fluent_runtime, apply_theme
         # Fluent theme must be set ONCE before QSS — setTheme() overrides QSS otherwise
         _apply_fluent_runtime(ACCENT_DEFAULT)
         apply_theme(
@@ -71,9 +70,11 @@ def launch() -> int:
 
     # Локализация: загружаем .qm если есть и язык не русский
     try:
-        from PyQt6.QtCore import QTranslator, QLocale
-        from modules import settings as user_settings
         from pathlib import Path
+
+        from PyQt6.QtCore import QTranslator
+
+        from modules import settings as user_settings
         lang = user_settings.get('language', 'ru')
         if lang and lang != 'ru':
             qm_path = Path(__file__).resolve().parent / 'resources' / 'i18n' / f'atpp_{lang}.qm'
@@ -101,6 +102,7 @@ def launch() -> int:
     # Start web server in background thread
     try:
         import threading
+
         import uvicorn
         def _run_web():
             try:
@@ -185,6 +187,7 @@ def launch() -> int:
 
         # Schedule theme reapply on the event loop — QSS needs the loop running
         from PyQt6.QtCore import QTimer
+
         from ui.theme import apply_theme as _reapply
         _font = int(user_settings.get('font_size', 9) or 9)
         QTimer.singleShot(0, lambda: (

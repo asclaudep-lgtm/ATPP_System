@@ -1,7 +1,7 @@
 """Status bar widget — DB indicator, user role, version."""
 
-from PyQt6.QtWidgets import QStatusBar, QLabel
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QLabel, QStatusBar
 
 from config import APP_VERSION
 

@@ -10,13 +10,21 @@ import logging
 import math
 import operator
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
-    QLabel, QLineEdit, QPushButton, QTextEdit, QMessageBox,
-    QSplitter, QGroupBox,
-)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -97,7 +105,7 @@ def safe_eval(expr: str, variables: dict) -> float:
                 right = _eval(comp)
                 op = _CMP_OPS.get(type(op_node))
                 if op is None:
-                    raise _FormulaError(f'Недопустимое сравнение')
+                    raise _FormulaError('Недопустимое сравнение')
                 if not op(left, right):
                     return 0.0
             return 1.0

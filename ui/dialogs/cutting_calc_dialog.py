@@ -1,14 +1,26 @@
 """Диалог калькулятора режимов резания."""
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-                              QComboBox, QDoubleSpinBox, QSpinBox, QLabel,
-                              QPushButton, QGroupBox, QDialogButtonBox,
-                              QMessageBox)
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
-from modules.cutting_calc import (MATERIAL_GROUPS, TOOL_MATERIAL,
-                                   OPERATION_TYPES, calculate_turning,
-                                   calculate_milling, calculate_drilling,
-                                   calculate_grinding)
+from modules.cutting_calc import (
+    MATERIAL_GROUPS,
+    OPERATION_TYPES,
+    TOOL_MATERIAL,
+    calculate_drilling,
+    calculate_grinding,
+    calculate_milling,
+    calculate_turning,
+)
 
 
 class CuttingCalcDialog(QDialog):

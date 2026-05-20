@@ -9,17 +9,16 @@ Watcher-режим (как PdmDropWatcher) мониторит папку на н
 """
 from __future__ import annotations
 
+import logging
 import re
-import struct
-from pathlib import Path
-from typing import Optional, List
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
-from database.models import Product, Material
 
+from database.models import Product
 
-import logging
 _logger = logging.getLogger(__name__)
 @dataclass
 class CadGeometry:

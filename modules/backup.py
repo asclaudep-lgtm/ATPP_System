@@ -18,9 +18,10 @@
 """
 from __future__ import annotations
 
+import logging
+
 from utils.logger import get_logger
 
-import logging
 _logger = logging.getLogger(__name__)
 _log = get_logger(__name__)
 
@@ -29,16 +30,13 @@ import os
 import shutil
 import socket
 import subprocess
-import sys
 import time
-import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional, Tuple
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote, urlparse
 
-from config import BASE_DIR, DATABASE_URL, DATA_DIR
-
+from config import BASE_DIR, DATA_DIR, DATABASE_URL
 
 BACKUP_DIR = BASE_DIR / 'data' / 'backups'
 KEEP_DAILY = 30           # последние N ежедневных
@@ -554,6 +552,7 @@ def backup_summary() -> Tuple[List[Path], Optional[Path]]:
 # ──────────────────────────────────────────────────────────────────────────
 
 import threading
+
 
 class BackupScheduler:
     """Фоновый планировщик авто-бекапов с настраиваемым интервалом.

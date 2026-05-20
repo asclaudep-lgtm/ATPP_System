@@ -9,17 +9,16 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, field
 from datetime import date as date_type
 from pathlib import Path
 from typing import Iterable, List, Optional
-from dataclasses import dataclass, field
 from xml.etree import ElementTree as ET
 
 from sqlalchemy.orm import Session
-from database.models import (Product, Material, TechProcess, CostCalculation,
-                              WorkOrder, RouteStep, BOMItem, AssemblyLevel)
-from modules.bom import add_bom_item
 
+from database.models import AssemblyLevel, BOMItem, Material, Product, TechProcess, WorkOrder
+from modules.bom import add_bom_item
 
 # ──────────────────────────────────────────────────────────────
 # Result types
@@ -263,14 +262,15 @@ def export_cost_data(session: Session, *,
     производственную и полную себестоимость, цену, прибыль.
     """
     if out_path is None:
-        from config import EXPORT_DIR
         from datetime import datetime
+
+        from config import EXPORT_DIR
         out_path = EXPORT_DIR / \
             f'1c_cost_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xml'
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     tp_query = session.query(TechProcess).filter(
-        TechProcess.is_deleted == False)
+        not TechProcess.is_deleted)
     if tp_ids is not None:
         tp_list = list(tp_ids)
         tp_query = tp_query.filter(TechProcess.id.in_(tp_list))
@@ -317,14 +317,15 @@ def export_timeline_data(session: Session, *,
                          out_path: Optional[Path] = None) -> Path:
     """Экспорт сроков выполнения нарядов в 1C XML."""
     if out_path is None:
-        from config import EXPORT_DIR
         from datetime import datetime
+
+        from config import EXPORT_DIR
         out_path = EXPORT_DIR / \
             f'1c_timeline_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xml'
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     wo_query = session.query(WorkOrder).filter(
-        WorkOrder.is_deleted == False)
+        not WorkOrder.is_deleted)
     if wo_ids is not None:
         wo_list = list(wo_ids)
         wo_query = wo_query.filter(WorkOrder.id.in_(wo_list))
@@ -370,9 +371,11 @@ def export_specification_xls_v2(session: Session, *,
                                 out_path: Optional[Path] = None,
                                 include_bom: bool = False) -> Path:
     """Расширенный экспорт спецификации в XLSX с опциональным BOM."""
-    import openpyxl
-    from config import EXPORT_DIR
     from datetime import datetime
+
+    import openpyxl
+
+    from config import EXPORT_DIR
 
     if out_path is None:
         out_path = EXPORT_DIR / \
@@ -390,7 +393,7 @@ def export_specification_xls_v2(session: Session, *,
     ws.append(headers)
 
     tp_query = session.query(TechProcess).filter(
-        TechProcess.is_deleted == False)
+        not TechProcess.is_deleted)
     if tp_ids is not None:
         tp_list = list(tp_ids)
         tp_query = tp_query.filter(TechProcess.id.in_(tp_list))

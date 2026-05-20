@@ -7,25 +7,34 @@
 
 Все три отчёта строятся одним SQL и могут быть выгружены в xlsx.
 """
+import logging
 from datetime import datetime
-from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTableWidget,
-    QTableWidgetItem, QPushButton, QLabel, QSpinBox, QFileDialog,
-    QMessageBox, QHeaderView, QAbstractItemView,
+    QAbstractItemView,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
-
 from sqlalchemy import func
 
 from database.models import (
-    TechProcess, Operation, Equipment, Profession, MaterialNorm, Material,
-    Product,
+    Equipment,
+    Material,
+    MaterialNorm,
+    Operation,
+    Profession,
 )
 
-import logging
 _logger = logging.getLogger(__name__)
 from config import EXPORT_DIR
 
@@ -116,7 +125,7 @@ class AnalyticsWidget(QWidget):
             func.sum(func.coalesce(Operation.t_main, 0)),
             func.sum(func.coalesce(Operation.t_auxiliary, 0)),
         ).join(Operation, Operation.equipment_id == Equipment.id)
-            .filter((Operation.is_deleted == False) | (Operation.is_deleted.is_(None)))
+            .filter((not Operation.is_deleted) | (Operation.is_deleted.is_(None)))
             .group_by(Equipment.id)
             .order_by(func.count(Operation.id).desc()).all())
 
@@ -143,7 +152,7 @@ class AnalyticsWidget(QWidget):
             func.count(Operation.id),
             func.sum(func.coalesce(Operation.t_piece, 0)),
         ).join(Operation, Operation.profession_id == Profession.id)
-            .filter((Operation.is_deleted == False) | (Operation.is_deleted.is_(None)))
+            .filter((not Operation.is_deleted) | (Operation.is_deleted.is_(None)))
             .group_by(Profession.id)
             .order_by(func.count(Operation.id).desc()).all())
         self._tab_prof.setRowCount(0)
@@ -180,7 +189,7 @@ class AnalyticsWidget(QWidget):
             Operation.shop,
             func.count(Operation.id),
             func.sum(func.coalesce(Operation.t_piece, 0)),
-        ).filter((Operation.is_deleted == False) | (Operation.is_deleted.is_(None)),
+        ).filter((not Operation.is_deleted) | (Operation.is_deleted.is_(None)),
                  Operation.shop.isnot(None))
             .group_by(Operation.shop)
             .order_by(func.count(Operation.id).desc()).all())
